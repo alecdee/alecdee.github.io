@@ -1,0 +1,54 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Javascript Template</title>
+<style type="text/css">
+*
+{
+	padding:0;
+	border:0;
+	border-collapse:collapse;
+	margin:0;
+	outline:none;
+	text-decoration:none;
+	font-size:100%;
+	vertical-align:baseline;
+}
+#JSTElem canvas
+{
+	display:block;
+	margin:auto;
+	margin-top:2rem;
+	border:2px solid #ccccff;
+}
+</style>
+</head>
+<body>
+<div id="JSTElem"></div>
+<script type="text/javascript">
+/*Author: Alec Dee*/
+/*jshint bitwise: false*/
+/*jshint eqeqeq: true*/
+function JSTMain()
+{
+	var parent=document.getElementById("JSTElem");
+	var canvas=document.createElement("canvas");
+	parent.appendChild(canvas);
+	var ctx=canvas.getContext("2d");
+	canvas.width=500;
+	canvas.height=500;
+	for (var x=0;x<500;x+=50)
+	{
+		for (var y=0;y<500;y+=50)
+		{
+			ctx.fillStyle=(x+y)%100?"#ccccff":"#f8f8f8";
+			ctx.fillRect(x,y,50,50);
+		}
+	}
+	console.log("done");
+}
+JSTMain();
+</script>
+</body>
+</html>

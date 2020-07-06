@@ -1,0 +1,453 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Prime Number Generator in Python</title>
+	<link rel="stylesheet" href="../style/style.css" type="text/css">
+	<script type="text/javascript" src="../style/style.js"></script>
+	<style type="text/css">.lalign td {text-align:left;}</style>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Introduction ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Introduction</h1>
+<p>Based on the code posted <a href="http://code.activestate.com/recipes/117119-sieve-of-eratosthenes/">here</a>, we present a prime number generator in python that is faster than the
+examples posted and uses very little memory.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Implementation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Implementation</h1>
+<p>Here is the full generator. The source can also be downloaded from here:
+<a href="./primegen.py">primegen.py</a></p>
+<br>
+<div class="codeblock langpython">def primegen(maxn=float("inf"),count=float("inf")):
+	#Sequentially output primes. Outputs all p&lt;maxn or the first 'count' primes.
+	for n in (2,3,5,7,11,13,17,19,23,29,31,37,41,43,47):
+		if n&gt;=maxn or count&lt;=0: return
+		yield n
+		count-=1
+	#Recursive generator for upcoming factors.
+	r,sq,n=7,49,49
+	it=iter(primegen())
+	while next(it)&lt;r: pass
+	comp=dict()
+	jump=(1,6,5,4,3,2,1,4,3,2,1,2,1,4,3,
+	      2,1,2,1,4,3,2,1,6,5,4,3,2,1,2)
+	while n&lt;maxn and count&gt;0:
+		#See if we have a factor of n.
+		f=comp.pop(n,0)
+		if n==sq:
+			#n=r*r is the next prime square we're waiting for.
+			f,r=r,next(it)
+			sq=r*r
+		elif f==0:
+			#n!=sq and isn't in comp, so it's prime.
+			yield n
+			count-=1
+		if f:
+			#We've found a factor of n. Add it to comp.
+			q=n//f
+			q+=jump[q%30]
+			while q*f in comp: q+=jump[q%30]
+			comp[q*f]=f
+		n+=jump[n%30]</div>
+<br>
+<p>It can be used like so:</p>
+<br>
+<div class="codeblock langpython">print("First 20 primes : "+str(list(primegen(count=20))))
+print("Primes under 100: "+str(list(primegen(100))))
+print("Loop iterator test:")
+for p in primegen():
+	if p&gt;50: break
+	print(p)
+</div>
+<br>
+<p>Output:</p>
+<br>
+<div class="consoleblock">First 20 primes : [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71]
+Primes under 100: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
+Loop iterator test:
+2
+3
+5
+7
+11
+13
+17
+19
+23
+29
+31
+37
+41
+43
+47</div>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Performance ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Performance</h1>
+<p>Our performance data has been generated from <a href="./profiling.zip">profiling.zip</a> using
+pypy and python2. <a href="./primegen.py">primegen.py</a> will need to be included in the same
+folder. The generators used for profiling were taken from the
+<a href="http://code.activestate.com/recipes/117119-sieve-of-eratosthenes/">page</a> posted above,
+and each generator is denoted by the last name of its author.</p>
+<br>
+<p>The following table shows the time and memory used to iterate over all primes less than 10^8. The
+ability to skip more composites per iteration, and inlining adding factors to <i>comp</i>, allows our
+algorithm to perform about 36% faster than the next best.</p>
+<br>
+<table class="datatable headerrow">
+<tr><td>name</td><td>pypy time</td><td>python time</td><td>python memory</td></tr>
+<tr><td>Eppstein</td><td>35.224741 s</td><td>90.981296 s</td><td>1,428,453 kb</td></tr>
+<tr><td>Martelli</td><td>27.677543 s</td><td>50.961456 s</td><td>  663,365 kb</td></tr>
+<tr><td>Beneicke</td><td>19.934447 s</td><td>27.801068 s</td><td>  663,365 kb</td></tr>
+<tr><td> Hofstra</td><td>19.873980 s</td><td>26.751923 s</td><td>  663,365 kb</td></tr>
+<tr><td>Hochberg</td><td>17.373026 s</td><td>27.437753 s</td><td>  663,365 kb</td></tr>
+<tr><td>    Ness</td><td> 7.683209 s</td><td>21.108297 s</td><td>      340 kb</td></tr>
+<tr><td>     Dee</td><td> 4.474881 s</td><td>17.486053 s</td><td>      337 kb</td></tr>
+</table>
+<br>
+<p>The following graph shows the time taken to iterate up to 10^7. Even though these algorithms involve
+finding a factor of <i>n</i>, their performance appears linear with respect to <i>n</i>.</p>
+<br>
+<img src="graph.svg" style="width:100%;" alt="performance comparison graph">
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Explanation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Explanation</h1>
+<p>The algorithm relies on having a rolling dictionary of upcoming composite numbers, and being able to
+retrieve their factors quickly. We'll first analyze a simple version of this dictionary and then
+look at ways to speed it up.</p>
+<br>
+<p>Our dictionary of composites, hence named <i>comp</i>, will return a factor of <i>n</i> if <i>n</i> is composite,
+otherwise it will have no entry for <i>n</i>. That is, if <i>n</i> is composite, <i>comp[n]=f</i> for <i>n%f=0</i>, otherwise <i>n</i>
+is prime and <i>comp[n]</i> will be missing.</p>
+<br>
+<p>We will build <i>comp</i> as we iterate over <i>n=2,3,4,...</i> For every iteration we will find a factor, <i>f</i>, of
+<i>n</i> using <i>f=comp[n]</i>. If <i>n</i> is prime, we'll take <i>f=n</i>. Otherwise, the factor will be used to calculate
+the next composite not already in <i>comp</i> that's a multiple of <i>f</i>. That is, we'll iterate over values of
+<i>n+k*f</i> for <i>k=1,2,3,...</i> until we find a value not in <i>comp</i>. This will give us the next entry
+<i>comp[n+k*d]=f</i>.</p>
+<br>
+<p>The code for this is much more succinct than the derivation:</p>
+<br>
+<div class="codeblock langpython">comp=dict()
+n=2
+while True:
+	if n in comp:
+		#n is composite and n%f=0
+		f=comp.pop(n)
+	else:
+		#n is prime
+		f=n
+	#Find first value of n+k*f not in comp.
+	k=1
+	while n+k*f in comp:
+		k+=1
+	comp[n+k*f]=f
+	n+=1</div>
+<br>
+<p>Indeed, this version is sufficient for a simple prime number generator:</p>
+<br>
+<div class="codeblock langpython">def primegen():
+	comp=dict()
+	n=2
+	while True:
+		if n in comp:
+			f=comp.pop(n)
+		else:
+			yield n
+			f=n
+		k=1
+		while n+k*f in comp:
+			k+=1
+		comp[n+k*f]=f
+		n+=1</div>
+<br>
+<p>The first big improvement comes from Will Ness, who noted that prime factors are being added to <i>comp</i>
+before they need to be. That is, for a prime <i>p</i>, we don't need to be tracking <i>p</i> as a factor of <i>n</i>
+until <i>n=p^2</i>. For <i>n&lt;p^2</i>, there will be some other prime factor of <i>n</i> that will identify <i>n</i> as a
+composite.</p>
+<br>
+<p>For example, consider <i>p=7</i>. We can see that for <i>n=8,9,...,48</i>, all values will either be prime, or
+have 2, 3, or 5 as a factor:</p>
+<br>
+<table class="datatable lalign">
+<tr><td> 8=2*4  </td><td>22=2*11 </td><td>36=2*18</td></tr>
+<tr><td> 9=3*3  </td><td>23=prime</td><td>37=prime</td></tr>
+<tr><td>10=2*5  </td><td>24=2*12 </td><td>38=2*19</td></tr>
+<tr><td>11=prime</td><td>25=5*5  </td><td>39=3*13</td></tr>
+<tr><td>12=2*6  </td><td>26=2*13 </td><td>40=2*20</td></tr>
+<tr><td>13=prime</td><td>27=3*9  </td><td>41=prime</td></tr>
+<tr><td>14=2*7  </td><td>28=2*14 </td><td>42=2*21</td></tr>
+<tr><td>15=3*5  </td><td>29=prime</td><td>43=prime</td></tr>
+<tr><td>16=2*8  </td><td>30=2*15 </td><td>44=2*22</td></tr>
+<tr><td>17=prime</td><td>31=prime</td><td>45=3*15</td></tr>
+<tr><td>18=2*9  </td><td>32=2*16 </td><td>46=2*23</td></tr>
+<tr><td>19=prime</td><td>33=3*11 </td><td>47=prime</td></tr>
+<tr><td>20=2*10 </td><td>34=2*17 </td><td>48=2*24</td></tr>
+<tr><td>21=3*7  </td><td>35=5*7  </td><td>49=7*7</td></tr>
+</table>
+<br>
+<p>It isn't until <i>n=49</i> that the smallest factor is 7. Using the simple generator we have so far, let us
+see what comp is when <i>n=49</i>:</p>
+<br>
+<div class="codeblock langpython">comp={58: 29, 62: 31, 51: 17, 74: 37, 57: 19, 52: 13, 50: 2, 82: 41,
+      49: 7 , 86: 43, 55: 11, 60: 5 , 69: 23, 94: 47, 54: 3}</div>
+<br>
+<p>There are a total of 15 entries! We know that we only need to have 4 at most: 2, 3, 5, and 7. These
+extra entries increase the values skipped over in the <i>n+k*f</i> loop and increase the number of entries
+that need to be ignored when we call <i>if n in comp</i>.</p>
+<br>
+<p>We can improve on this by delaying the addition of <i>p</i> until we pass <i>n&gt;=p^2</i>, and just rely on the
+other factors to identify composites. The main problem of this is tracking what the next <i>p</i> will be
+when <i>n=p^2</i>, which is the exact problem we're already trying to solve with our prime generator!</p>
+<br>
+<p>Fortunately, we can solve this easily by making a recursive call to the <i>primegen</i> iterator we already
+have. This new iterator will solely be used for tracking the next factor we need to add. We need to
+be careful about making an infinite number of recursive calls to <i>primegen</i> however, so we're going to
+manually output the first 2 primes first and then use our main loop.</p>
+<br>
+<div class="codeblock langpython">def primegen():
+	yield 2
+	yield 3
+	comp=dict()
+	r,sq=2,4
+	it=iter(primegen())
+	while next(it)&lt;r: pass
+	n=4
+	while True:
+		#If comp returns a non-zero value, n is composite with factor f.
+		f=comp.pop(n,0)
+		if n==sq:
+			#n=r*r is the next prime square we're waiting for. Add r to comp.
+			f=r
+			r=next(it)
+			sq=r*r
+		elif f==0:
+			#n isn't a prime square and isn't in comp, so it's prime.
+			yield n
+		if f:
+			#We've found a factor of n. Add the next value of n+k*f to comp.
+			k=1
+			while n+k*f in comp:
+				k+=1
+			comp[n+k*f]=f
+		n+=1</div>
+<br>
+<p>Here, <i>sq=r^2</i> where <i>sq</i> is the square we're watching for and <i>r</i> is the next prime we'll add to <i>comp</i>. If
+we check what <i>comp</i> contains when <i>n=49</i>, it's what we'd expect: {50: 5, 51: 3, 52: 2}. Note that 7 is
+not an entry because it is implicitly stored in <i>r</i>.</p>
+<br>
+<p>The last remaining way to speed up the algorithm is skip numbers that we know have a factor. For
+instance, every even number greater than 2 is a composite divisible by 2. Every third number is
+divisible by 3, etc... In general, if we choose to skip composites divisible by primes <i>2,3,...,p</i>,
+then we will be able to skip a larger and larger fraction of integers described by the formula:
+<i>y=1-(1/2)*(2/3)*(4/5)*...*((p-1)/p)</i>.</p>
+<br>
+<table class="datatable headerrow" style="text-align:center;">
+<tr><td>p</td><td>fraction skipped</td></tr>
+<tr><td>*</td><td>0.000000</td></tr>
+<tr><td>2</td><td>0.500000</td></tr>
+<tr><td>3</td><td>0.666667</td></tr>
+<tr><td>5</td><td>0.733333</td></tr>
+<tr><td>7</td><td>0.771429</td></tr>
+<tr><td>11</td><td>0.792208</td></tr>
+<tr><td>13</td><td>0.808192</td></tr>
+<tr><td>17</td><td>0.819475</td></tr>
+<tr><td>19</td><td>0.828976</td></tr>
+<tr><td>23</td><td>0.836412</td></tr>
+</table>
+<br>
+<p>For the purpose of this generator, we choose to skip integers divisible by 2, 3, and 5. By the table
+above, this will allow us to skip 73% of all integers we need to test. To do this we'll create a
+table that tells us how far to jump from <i>n</i> so that <i>n+jump</i> is not divisible by 2, 3, or 5. To
+simplify this table, note that <i>r</i> is divisible by 2, 3, or 5, if and only if <i>r+30</i> is also divisible
+by 2, 3, or 5. Thus, to calculate how far from <i>n</i> to jump so <i>n+jump</i> isn't divisible by 2, 3, or 5, we
+may write <i>n</i> as <i>n=q*30+r</i> for some <i>0&lt;r&lt;=30</i> and use <i>r</i> to find the jump value.</p>
+<br>
+<p>To derive the jump table, we begin by looking at the values 0 to 29:</p>
+<br>
+<table class="datatable">
+<tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr>
+<tr><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr>
+<tr><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td></tr>
+<tr><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td><td>23</td></tr>
+<tr><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr>
+</table>
+<br>
+<p>We now cross off all values divisible by 2, 3, or 5, leaving:</p>
+<br>
+<table class="datatable">
+<tr><td>&nbsp;&nbsp;</td><td>1</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td></tr>
+<tr><td>&nbsp;&nbsp;</td><td>7</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>11</td></tr>
+<tr><td>&nbsp;&nbsp;</td><td>13</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>17</td></tr>
+<tr><td>&nbsp;&nbsp;</td><td>19</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>23</td></tr>
+<tr><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;</td><td>29</td></tr>
+</table>
+<br>
+<p>Our jump table will be calculated as follows: given some entry on the table, how many spaces do we
+have to jump to reach the next value not divisible by 2, 3, or 5. We have</p>
+<br>
+<table class="datatable">
+<tr><td>1</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td></tr>
+<tr><td>1</td><td>4</td><td>3</td><td>2</td><td>1</td><td>2</td></tr>
+<tr><td>1</td><td>4</td><td>3</td><td>2</td><td>1</td><td>2</td></tr>
+<tr><td>1</td><td>4</td><td>3</td><td>2</td><td>1</td><td>6</td></tr>
+<tr><td>5</td><td>4</td><td>3</td><td>2</td><td>1</td><td>2</td></tr>
+</table>
+<br>
+<p>Or, in python:</p>
+<br>
+<div class="codeblock langpython">jump=(1,6,5,4,3,2,1,4,3,2,1,2,1,4,3,
+      2,1,2,1,4,3,2,1,6,5,4,3,2,1,2)</div>
+<br>
+<p>We can now calculate the next value of <i>n</i> with <i>n+=jump[n%30]</i>.</p>
+<br>
+<p>Before we simply drop this table into the main loop of our prime generator, we need to modify the
+section that adds upcoming composites to <i>comp</i>. Previously, when we added values to <i>comp</i>, we knew
+that <i>n</i> would iterate over all positive integers without skipping any values. Because of our new jump
+table, we introduce the possibility that we'll jump over a composite that <i>comp</i> is expecting us to
+hit.</p>
+<br>
+<div class="codeblock langpython">k=1
+while n+k*f in comp:
+	k+=1
+comp[n+k*f]=f</div>
+<br>
+<p>To fix this section, we'll make use of the jump table. Our fixed loop must jump over all the values
+that <i>n</i> will jump over, and still be a multiple of <i>f</i>. We can do this by factoring <i>f</i> out of <i>n</i>, and
+then jumping over values when we check for composites already in <i>comp</i>. Our new loop will look like
+so:</p>
+<br>
+<div class="codeblock langpython">q=n//f
+q+=jump[q%30]
+while q*f in comp: q+=jump[q%30]
+comp[q*f]=f</div>
+<br>
+<p>We'll present what our generator currently looks like, but note that it *doesn't work correctly*.</p>
+<br>
+<div class="codeblock langpython">def primegen():
+	yield 2
+	yield 3
+	comp=dict()
+	r,sq=2,4
+	it=iter(primegen())
+	while next(it)&lt;r: pass
+	n=4
+	jump=(1,6,5,4,3,2,1,4,3,2,1,2,1,4,3,
+	      2,1,2,1,4,3,2,1,6,5,4,3,2,1,2)
+	while True:
+		#If comp returns a non-zero value, n is composite with factor f.
+		f=comp.pop(n,0)
+		if n==sq:
+			#n=r*r is the next prime square we're waiting for. Add r to comp.
+			f=r
+			r=next(it)
+			sq=r*r
+		elif f==0:
+			#n isn't a prime square and isn't in comp, so it's prime.
+			yield n
+		if f:
+			#We've found a factor of n. Add the next value of n+k*f to comp.
+			q=n//f
+			q+=jump[q%30]
+			while q*f in comp: q+=jump[q%30]
+			comp[q*f]=f
+		n+=jump[n%30]</div>
+<br>
+<p>The last modification we need to make is to the primes we manually yield. We must yield at least 2,
+3, and 5 to prevent them from being skipped by <i>jump</i>, and we must also yield 7 to prevent <i>primegen()</i>
+from making infinite recursive calls. We also want to yield as many as possible to minimize the
+number of recursive calls, but we can't yield any prime greater than 7^2=49. Thus, we'll yield all
+primes up 49. We'll also rearrange some of the code and add convenience checks for the maximum value
+of <i>n</i> and maximum number of primes to generate.</p>
+<br>
+<p>Here is the final version of our prime generator:</p>
+<br>
+<div class="codeblock langpython">def primegen(maxn=None,count=None):
+	#Sequentially output primes. Outputs all p&lt;maxn or the first 'count' primes.
+	if  maxn==None:  maxn=float("inf")
+	if count==None: count=float("inf")
+	for n in (2,3,5,7,11,13,17,19,23,29,31,37,41,43,47):
+		if n&gt;=maxn or count&lt;=0: return
+		yield n
+		count-=1
+	#Recursive generator for upcoming factors.
+	r,sq,n=7,49,49
+	it=iter(primegen())
+	while next(it)&lt;r: pass
+	comp=dict()
+	jump=(1,6,5,4,3,2,1,4,3,2,1,2,1,4,3,
+	      2,1,2,1,4,3,2,1,6,5,4,3,2,1,2)
+	while n&lt;maxn and count&gt;0:
+		#See if we have a factor of n.
+		f=comp.pop(n,0)
+		if n==sq:
+			#n=r*r is the next prime square we're waiting for.
+			f,r=r,next(it)
+			sq=r*r
+		elif f==0:
+			#n!=sq and isn't in comp, so it's prime.
+			yield n
+			count-=1
+		if f:
+			#We've found a factor of n. Add it to comp.
+			q=n//f
+			q+=jump[q%30]
+			while q*f in comp: q+=jump[q%30]
+			comp[q*f]=f
+		n+=jump[n%30]</div>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Notes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Notes</h1>
+<p>We have explained how the prime generating algorithm works and shown that it is faster than current
+related algorithms. We now list some current ideas for improving it.</p>
+<br>
+<p>One trivial improvement is to increase the primes we jump around (2,3, and 5). This has the drawback
+of increasing the jump table size for every prime we add, and every additional prime skips fewer and
+fewer numbers.</p>
+<br>
+<p>When we are querying if the current value of <i>n</i> is composite, <i>f=comp.pop(n,0)</i>, <i>n</i> will either be the
+minimum key of <i>comp</i> or it will not be in <i>comp</i> at all. Any data structure which could exploit this
+will allow for a nice speedup.</p>
+<br>
+<p>We could potentially speed up the algorithm by precalculating the jump table used when calculating
+the next composite of <i>f</i>. That is</p>
+<br>
+<div class="codeblock langpython">ujump=((1,6),(7,4),(11,2),(13,4),(17,2),(19,4),(23,6),(29,2))
+fjump=[0]*30
+...
+if f:
+	for u in ujump: fjump[(u[0]*f)%30]=u[1]*f
+	q=n+fjump[n%30]
+	while q in comp: q+=fjump[q%30]
+	comp[q]=f</div>
+<br>
+<p>In practice, the table precalculation adds more time than is saves (6.88s vs the current 4.65s).</p>
+<br>
+<p>Another algorithm we could use relies on primality testing. It would look like so:</p>
+<br>
+<div class="codeblock langpython">def isprime(n):
+	#return true iff n is prime
+
+def primegen():
+	n=2
+	while True:
+		if isprime(n): yield n
+		n+=1</div>
+<br>
+<p>It is conceptually simple, uses constant memory, and takes <i>O(log(n)^2)</i> time using the Rabin-Miller
+primality test. In practice, the <i>isprime()</i> function is too slow to compete with the current <i>primegen</i>
+for real-world values of <i>n</i>.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 31 Dec 2017 - Modified on 4 Jul 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>

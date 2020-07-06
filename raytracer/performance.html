@@ -1,0 +1,188 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Python Performance Testing</title>
+	<link rel="stylesheet" href="../style/style.css" type="text/css">
+	<script type="text/javascript" src="../style/style.js"></script>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Performance ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_performance"><h1>Performance</h1>
+<p>While working on my <a href="./index.html">python ray tracer</a>, it became apparent
+that in order to render any decent quality scenes, I would need to go out of my way to reduce
+rendering time as much as possible.</p>
+<br>
+<p>For instance, the high quality render below is 600x600 pixels, has 1M triangles (500K per sphere),
+and uses 64K rays per pixel. It took 4 hours to render using the CPython extension I made, and 124
+hours to render in PyPy.</p>
+<br>
+<br>
+<img src="./render3d.png" style="display:block;width:66%;margin:auto" alt="Ray Traced 3D Scene.">
+<br>
+<br>
+<p>As the ray tracer matured, I tried different environments and algorithms to increase performance.
+The table below shows why performance is so important, as most render times can stretch into days or
+weeks.</p>
+<br>
+<table class="datatable headerrow">
+<tr><td>Environment</td><td>Time (hours)</td></tr>
+<tr><td>Python3 (single)</td><td>3308</td></tr>
+<tr><td>Python3 (multi)</td><td>1963</td></tr>
+<tr><td>PyPy3 (single)</td><td>339</td></tr>
+<tr><td>PyPy3 (multi)</td><td>124</td></tr>
+<tr><td>C (single)</td><td>20</td></tr>
+<tr><td>C (multi)</td><td>4</td></tr>
+</table>
+<br>
+<p>Here, "C" is a CPython extension I made, "single" means single threaded, and "multi" means multi
+threaded. Timing was performed using the scene above and an i5-8300H processor. The top 3 times were
+estimated by extrapolating lower ray-per-pixel renders. It would have taken about 239 days to
+properly do all the timing otherwise.</p>
+<br>
+<p>My attempts to speed up the python ray tracer proceeded in roughly this order:</p>
+<br>
+<table class="listtable">
+<tr><td>1. PyPy</td></tr>
+<tr><td>2. BVH</td></tr>
+<tr><td>3. Class Member Access</td></tr>
+<tr><td>4. Multiprocessing</td></tr>
+<tr><td>5. Numpy</td></tr>
+<tr><td>6. Numba</td></tr>
+<tr><td>7. Cython</td></tr>
+<tr><td>8. C extension</td></tr>
+</table>
+<br>
+<p>I will summarize the issues I faced below.</p>
+<br>
+<h2>PyPy</h2>
+<br>
+<p>I used PyPy essentially from the start. It worked well as a drop in replacement for CPython with
+almost no issues or modifications. As the timings above show, it offered a 10 to 20 times
+increase in performance.</p>
+<br>
+<h2>BVH</h2>
+<br>
+<p>This is explained in a later section, but for the scenes I was working with, the BVH
+made ray-triangle queries logarithmic in time complexity on average. BVH performance can obviously
+degrade on scenes with lots of holes, like a Sierpinski cube, but the chances of it degrading to
+linear complexity are low.</p>
+<br>
+<p>BVH traversal dominates the runtime of the ray tracer, even when considering ray-triangle
+intersection tests. Since the BVH uses AABBs for its bounding primitives, simplifying its ray
+intersection test and using precalculations sped up the whole ray tracer by a few percent. Also, one
+trick for speeding up leaf processing is to avoid a ray-AABB test if the leaf AABB is close to its
+parent's AABB in volume.</p>
+<br>
+<h2>Class Member Access</h2>
+<br>
+<p>In python, accessing a class's member variable many times can be extremely slow. For instance,
+rewriting</p>
+<br>
+<div class="codeblock langpython">for i in range(1000000):
+	func(position.x)
+</div>
+<br>
+<p>to</p>
+<br>
+<div class="codeblock langpython">x=position.x
+for i in range(1000000):
+	func(x)
+</div>
+<br>
+<p>can be much faster. This comes up fairly often given the object oriented nature of a ray tracer
+and the large number of loops it uses. In the case of building a BVH node's bounding box, accessing
+<i>Vector.elem</i> directly instead of using the overloaded <i>Vector.__getitem__(self,i)</i>, sped
+up BVH construction by 50%.</p>
+<br>
+<h2>Multiprocessing</h2>
+<br>
+<p>Unlike other languages, CPython's GIL prevents <i>Scene.render()</i> from being easily
+multithreaded. Instead separate processes have to be used with the multiprocessing module. This
+involves pickling the current state of python, loading the source file into a new process, and
+unpickling the state in the new process.</p>
+<br>
+<p>For my test scene, this leads to around 2GB of memory for each process in CPython, since none of
+the memory can easily be shared. This required me to drop the number of processes to 2 to avoid
+having the OS start writing to the paging file. PyPy is a bit better with 1.5GB of memory used.</p>
+<br>
+<p>Currently, due to the circular references in the ray tracer, the pickling module enters an
+infinite recursion when trying to pickle a scene. To get around this, each process has to be started
+before anything about the ray tracer is loaded. This means the time spent creating and initializing
+the scene needs to also be duplicated for each process.</p>
+<br>
+<p>The easiest way to split work in the ray tracer is let each process work on it's own pixel. In
+order to avoid having <i>pool.map</i> recreate the scene every time it was called for the 600x600
+pixels in the image, I decided to spawn each process once and use a shared variable to track what
+pixels had already been claimed. My first attempt was to create the variable in the calling process
+and make the variable a member of the <i>LoopProc</i> function, but PyPy under Windows wouldn't
+find the variable in the spawned processes. Eventually, I found out that I needed to pass the
+variable through an initialization function when creating the pool, and attach the variable to
+<i>LoopProc</i> there. PyPy under linux had no such problem.</p>
+<br>
+<p>There are other ways to have <i>multiprocessing.Pool</i> split the work, but using a shared
+variable offered the smoothest performance, since some pixels can take longer than others.</p>
+<br>
+<p>Due to the high memory usage and near random memory accesses, using every CPU and virtual CPU
+had very quick diminishing returns. I found it best to use <i>processes=os.cpu_count()//2</i>.</p>
+<br>
+<p>When rendering the 4D scene with multiprocessing, one of the processes had a tendency to silently
+die and leave the calling process hanging when calling <i>pool.close()</i> or <i>pool.join()</i>. I
+never found a reason why, but dropping the rays-per-pixel from 64K to 32K seemed to fix the issue.</p>
+<br>
+<p>In the end, I decided to remove multiprocessing from <a href="./RayTracer.py">RayTracer.py</a>
+and make a separate multiprocessing version, RayTracer_multi.py, in <a href="./raytracer_extra.zip">raytracer_extra.zip</a>
+for simplicity's sake.</p>
+<br>
+<h2>Numpy</h2>
+<br>
+<p>Numpy is often recommended as a way to speed up computation heavy python scripts. However, this
+comes with the caveat of needing to work on large blocks of data to be effective. I tried converting
+my vector class to use numpy's vectors, but the function call overhead, and the conversion to/from
+numpy float types, made ray tracing even slower.</p>
+<br>
+<p>Obviously, numpy is good at workloads often seen in data science. For workloads with lots of
+small vectors and matrices being created and destroyed, it will probably make things slower.</p>
+<br>
+<h2>Numba</h2>
+<br>
+<p>Numba's site markets itself as being able to compile python code down to C to get a huge speedup.
+For *pure* math functions, this is feasible. For anything involving any amount of object orientation,
+however, rewriting a function to be JIT-able by numba will often make it more complicated than just
+using C.</p>
+<br>
+<h2>Cython</h2>
+<br>
+<p>Cython fell into the same problem as Numba. Most of the ray tracer would need to be rewritten in
+cython, and cython's float types would need to be used everywhere in order to avoid conversion
+overhead with CPython. I decided the increase in complexity wasn't worth it.</p>
+<br>
+<h2>C Extension</h2>
+<br>
+<p>After seeing the increase in complexity that numba, numpy, or cython would bring I decided that
+it would be best to avoid using hybrid environments and just write the rendering portion in C. Using
+the C module is as simple as including 2 lines. No other code needs to be modified, and all
+subsequent calls to <i>Scene.render</i> will use the C renderer.</p>
+<br>
+<div class="codeblock langpython">import RayTracer_C_Ext
+Scene.render=lambda self,prog=0: RayTracer_C_Ext.render(self,prog)
+</div>
+<br>
+<p>Code for the C module is in <a href="./raytracer_extra.zip">raytracer_extra.zip</a>, and an
+example of its use can be seen in RayTracer_C.py. It is effectively a copy of the python source,
+translated to C with some low-level optimizations and multithreading.</p>
+<br>
+<p>Eventually I would like the pure python ray tracer to be capable of rendering the test scene in a
+few hours instead of a few days. PyPy, proper multithreading, and a more optimized ray tracer look
+the best bet for that.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 22 Dec 2019 - Modified on 4 Jul 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>

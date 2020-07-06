@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Hiding Commands</title>
+	<link rel="stylesheet" href="../style/style.css" type="text/css">
+	<script type="text/javascript" src="../style/style.js"></script>
+	<style type="text/css">
+		.code_hidden
+		{
+			position: absolute;
+			left: -1000rem;
+			top: -1000rem;
+		}
+	</style>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
+
+<div class="content"><h1>Hiding Commands</h1>
+<p>This first example is a normal block of code. If a user copies it, the text <i>echo "normal"</i>
+will be literally copied to the user's clipboard.</p>
+<br>
+<div class="codeblock">echo "normal"</div>
+<br>
+<p>This next block has text hidden between <i>echo</i> and <i>"hidden"</i>.</p>
+<br>
+<div class="codeblock">echo<span class="code_hidden">&gt;/dev/null;<br>echo "some hidden text";<br>echo</span> "hidden"</div>
+<br>
+<p>If it's copy and pasted into a text editor you can see the additional lines it contains:</p>
+<br>
+<div class="codeblock">echo&gt;/dev/null;
+echo "some hidden text";
+echo "hidden"</div>
+<br>
+<p>Because the hidden lines end in line breaks, they will be executed as soon as they are pasted
+into a console - without warning the user. The hidden lines are also inserted between <i>echo</i>
+and <i>"hidden"</i> to ensure that the user copies all of them. If the hidden text was inserted at
+the very beginning or end of the command, the user might not copy it.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 10 Jun 2020 - Modified on 4 Jul 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>

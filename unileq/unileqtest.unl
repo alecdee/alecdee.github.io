@@ -1,0 +1,219 @@
+#Author: Alec Dee
+#Various pieces of code to test a unileq interpreter. Tests are in the form
+#
+#     Test #
+#     Expected result
+#     Code
+#
+#Uncommenting the test code should produce the expected result. Only one test
+#should be uncommented at a time.
+
+#--------------------------------------------------------------------------------
+#Numbers
+
+#Test 1
+#Valid: does nothing
+#0 0x8000 18446744073709551615
+
+#--------------------------------------------------------------------------------
+#Arithmetic
+
+#Test 2
+#Valid: does nothing
+#0 0 0-1
+
+#Test 3
+#Valid: does nothing
+#1+2 0 0-1
+
+#Test 4
+#Error: leading operator
+#+1
+
+#Test 5
+#Error: trailing operator
+#1+
+
+#--------------------------------------------------------------------------------
+#Labels
+
+#Test 6
+#Error: unable to find label
+#lbl
+
+#Test 7
+#Valid: does nothing
+#lbl: 0 0 0-1
+
+#Test 8
+#Valid: does nothing
+#lbl:lbl2: 0 0 0-1
+
+#Test 9
+#Valid: does nothing
+#lbl: 1 0 lbl-1
+
+#Test 10
+#Error: unexpected token
+#:
+
+#Test 11
+#Error: operating on declaration
+#0+lbl:0
+
+#Test 12
+#Error: operating on declaration
+#0 lbl:+0
+
+#Test 13
+#Valid: does nothing
+#0 ? ?-3
+
+#Test 14
+#Valid: does nothing
+#0 ? 0-3+?
+
+#Test 15
+#Error: unseparated tokens
+#0?
+
+#Test 16
+#Error: unseparated tokens
+#?0
+
+#Test 17
+#Error: unseparated tokens
+#lbl?
+
+#Test 18
+#Error: unseparated tokens
+#?lbl
+
+#Test 19
+#Error: unexpected token
+#?:
+
+#Test 20
+#Error: unexpected token
+#lbl: :
+
+#--------------------------------------------------------------------------------
+#Sublabels
+
+#Test 21
+#Error: unable to find label
+#.x
+
+#Test 22
+#Error: unable to find label
+#.
+
+#Test 23
+#Error: unable to find label
+#lbl: .
+
+#Test 24
+#Valid: does nothing
+#lbl: .: 0 0 0-1
+
+#Test 25
+#Valid: does nothing
+#lbl: ..: 0 0 0-1
+
+#Test 26
+#Valid: does nothing
+#lbl:..x: 0 0 0-1
+
+#Test 27
+#Valid: does nothing
+#lbl:...x: 0 0 0-1
+
+#Test 28
+#Valid: does nothing
+#.: 0 0 0-1
+
+#Test 29
+#Valid: does nothing
+#..: 0 0 0-1
+
+#Test 30
+#Valid: does nothing
+#lbl.x:0 0 0-1
+
+#Test 31
+#Valid: does nothing
+#lbl: .1:0 lbl.1 0-1
+
+#Test 32
+#Valid: does nothing
+#lbl: .x lbl.x:0 0-1
+
+#Test 33
+#Error: duplicate label
+#lbl: .x: lbl.x:0 0-1
+
+#Test 34
+#Error: duplicate label
+#lbl0: .x:0 lbl1: .y:0 0-1
+
+#Test 35
+#Valid: does nothing
+#lbl: .x:0 ..y:0 .x.y-2 lbl.x.y
+
+#--------------------------------------------------------------------------------
+#Self modification tests. Make sure that we can modify A, B, and C as expected.
+
+#Test 36
+#Valid: prints ABC\n
+#Tests if an instruction can modify its jump parameter without affecting its
+#jump. Also tests if writing to -1 will jump.
+#|
+?+2 neg+0  ?+1
+0-1 char+0 ?+1
+?+2 neg+1  ?+1
+0-1 char+1 ?+1
+?+2 neg+2  ?+1
+0-1 char+2 ?+1
+?+2 neg+3  ?+1
+0-1 char+3 0-1
+ neg:4 10 16 22
+char:65 66 67 10
+|#
+
+#--------------------------------------------------------------------------------
+#Hello, World!
+
+#Test 37
+#Valid: prints "Hello, World!" and tests utf8 support
+#|
+z:z z måin
+neg:0-1 one:1
+måin:
+       .len  one   0-1   #if len=0, goto -1
+       0-1   .data ?+1   #print a letter ¯\_(ツ)_/¯
+       0-2+? neg   måin  #increment pointer and loop
+.data: 72 101 108 108 111 44 0x20  #Hello,
+       87 111 114 108 100 33 10    #World!
+måin.len: måin.len-måin.data+1
+|#
+
+#--------------------------------------------------------------------------------
+#Comments
+
+#Test 38
+#Valid: does nothing
+#||#
+#0 0 0-1
+
+#Test 39
+#Valid: does nothing
+# #|
+# comment
+# |#
+# 0 0 0-1
+
+#Test 40
+#Error: unterminated block quote
+##|
+
+

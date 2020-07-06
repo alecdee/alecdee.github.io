@@ -1,0 +1,169 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Tetris AI</title>
+	<link rel="stylesheet" href="../style/style.css" type="text/css">
+	<script type="text/javascript" src="../style/style.js"></script>
+	<style type="text/css">
+		.tetris
+		{
+			display:block;
+			width:50%;
+			height:10rem;
+			margin-left:auto;
+			margin-right:auto;
+			text-align:center;
+		}
+		.tetris b
+		{
+			border:none;
+			background:none;
+		}
+	</style>
+	<script type="text/javascript" src="./tetris.js"></script>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Simulation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Simulation</h1>
+<p>The AI is available in python as <a href="./Tetris.py">Tetris.py</a> and can be played in any
+terminal.</p>
+<br>
+<div class="tetris"><b>Loading javascript...</b>
+<script type="text/javascript">window.addEventListener("load",function(){tetris_onload(0);})</script>
+</div>
+<br>
+<p>The simulation above allows the user to press <i>I</i> to toggle the AI between: playing for the
+user, providing optimal placement suggestions, and doing nothing. This allows the user to mess up
+the state of the board and then turn on the AI to see it recover.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Notes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Notes</h1>
+<p><a href="./Tetris.py">Tetris.py</a> is a pure python tetris AI I've made that can run in any
+console. It was designed to clear as many lines as possible, and therefore play as long as
+possible.</p>
+<br>
+<p>The AI itself uses a set of metrics that are computed from the tetris board. These metrics are
+each given a weight and added together to give a board its fitness score. The final set I used is
+shown below.</p>
+<br>
+<table class="datatable headerrow">
+<tr><td>Metric</td><td>Description</td></tr>
+<tr><td>sum holes</td><td>The count of all holes on the grid. A cell is a hole is it is empty and a
+filled cell is above it.</td></tr>
+<tr><td>sum height</td><td>The sum of the column heights.</td></tr>
+<tr><td>row flip</td><td>The number of times neighboring cells flip between empty and filled along a
+row.</td></tr>
+<tr><td>column flip</td><td>The number of times neighboring cells flip between empty and filled
+along a column.</td></tr>
+<tr><td>piece height</td><td>The height of the top block of the most recently placed piece. Do not
+take into account line clears.</td></tr>
+<tr><td>sum well</td><td>The sum of squared well heights. A well is an opening 1 cell wide, which
+happens to function as a chokepoint.</td></tr>
+</table>
+<br>
+<p>The AI maps out all possible moves it can make (with the option to add human-like lag), and
+records the final board states with their scores. The AI then backtracks from these final states to
+generate a map of the most optimal move to make given any position on the board.</p>
+<br>
+<p>If a new piece is spawned, or the board changes, then a new map is generated. At each frame, the
+AI looks at the current piece position, looks at the map it has made, and can immediately see what
+move to make next.</p>
+<br>
+<p>I used <a href="https://www.colinfahey.com/tetris/tetris.html">Colin Fahey's</a> metrics as a
+starting point and created a bunch of my. I then set about finding the minimum set of metrics that
+yielded good performance.</p>
+<br>
+<p>Finding the set of optimal weights was difficult, mostly because their performance couldn't be
+predicted or approximated. The AI had to play several games with the weights to get their average
+performance. The performance of weights was also very jagged and full of local minima. For that
+reason, I used <a href="https://en.wikipedia.org/wiki/Particle_swarm_optimization">particle swarm
+optimization</a> and added the ability for a particle to randomly reset itself if it became
+stuck.</p>
+<br>
+<p>When I had settled on the final set of metrics and weights, the AI was able to clear 19,032,064
+lines before I forced it to terminate. During that time, it totally cleared the board 23,588
+times.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Standards ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<!--<div class="content"><div class="title">Standards</div>
+Historically, most popular tetris implementations have used their own interpretation of how the game
+should play frame-by-frame, with the most notable differences occurring in spawning, rotation, and
+controls. This has led the Tetris Company to propose a standardized ruleset
+(<a href="http://tetris.wikia.com/wiki/Tetris_Guideline">here</a>) which has not
+officially been released to the public. Since many of the rules are fairly complex in order to
+accomodate other game modes, we outline our own rules here:
+
+states/frames
+different kicks
+
+Coloring is based off the current Tetris Company standard:
+
+svg
+</div>-->
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Metrics ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<!--<div class="content"><div class="title">Metrics</div>
+Colin Fahey
+used/unused metrics and explanations.
+</div>-->
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ AI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<!--<div class="content"><div class="title">AI</div>
+PSO for AI<br>
+simplified testing environment<br>
+actual mapping
+	ai lag frames
+	lookup cell
+	next move
+	suggest position
+height histogram and testing setup (0 lag, etc)<br>
+a*x*e^(-b*x^2)+c
+Data:
+Lines 19032064, Time 207070.729594
+ H: pieces
+ 0: 23588
+ 1: 1107704
+ 2: 6933174
+ 3: 12129869
+ 4: 12051837
+ 5: 8486038
+ 6: 4290841
+ 7: 1684403
+ 8: 587242
+ 9: 193098
+10: 63114
+11: 19795
+12: 6435
+13: 2086
+14: 673
+15: 203
+16: 50
+17: 12
+18: 0
+19: 0
+20: 0
+  = 47580162
+P(H>h)=1-p(0)-p(1)-...-p(h)
+P(H>21)=y
+pieces=1/y
+</div>-->
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Conclusion ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<!--<div class="content"><div class="title">Conclusion</div>
+brython performance issues<br>
+4-line clearing AI<br>
+full line test on better hardware
+</div>-->
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 27 May 2018 - Modified on 6 Jul 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>

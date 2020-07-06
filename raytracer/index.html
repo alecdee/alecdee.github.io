@@ -1,0 +1,2028 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Hyperdimensional Ray Tracing</title>
+	<link rel="stylesheet" href="../style/style.css" type="text/css">
+	<script type="text/javascript" src="../style/style.js"></script>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Outline ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Incorporate questions from https://www.reddit.com/r/GraphicsProgramming/comments/bajme3
+scene
+	camera
+	rays
+		multithreading
+	mesh
+meshes
+	vertices
+	triangles
+	normal
+	barycenter
+	collision
+	instancing
+primitives
+	cubes
+	spheres
+materials
+	spawning rays vs changing direction (1 rpp = ?)
+	lights
+	fresnel
+	lambert
+	beer
+BVH
+	AABB
+	construction
+	SAH
+	traversal
+	leaf types
+	instancing
+-->
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Introduction ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Introduction</h1>
+<p><a href="https://en.wikipedia.org/wiki/Ray_tracing_(graphics)">Ray tracing</a> is a rendering
+technique that simulates rays of light bouncing around a scene. It produces extremely realistic
+images compared to traditional forms of rendering, but it can take hundreds of times longer to
+render a given scene.</p>
+<br>
+<p>In this article, we will present a ray tracer written in pure python (without numpy or GPU
+acceleration) that can work in arbitrary dimensional space, and describe how it works. Specifically,
+we will present an unbiased, monte carlo ray tracer, otherwise called a
+<a href="https://en.wikipedia.org/wiki/Path_tracing">path tracer</a>.</p>
+<br>
+<p>Contents:</p>
+<table class="listtable">
+<tr><td><a href="#content_implementation">Implementation</a></td></tr>
+<tr><td><a href="#content_overview">Overview</a></td></tr>
+<tr><td><a href="#content_meshes">Meshes</a></td></tr>
+<tr><td><a href="#content_primitives">Primitives</a></td></tr>
+<tr><td><a href="#content_materials">Materials</a></td></tr>
+<tr><td><a href="#content_bvh">BVH</a></td></tr>
+<tr><td><a href="#content_notes">Notes</a></td></tr>
+</table>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Implementation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_implementation"><h1>Implementation</h1>
+<p>The full ray tracer can be downloaded here: <a href="./RayTracer.py">RayTracer.py</a></p>
+<br>
+<p>By default, the ray tracer will render a quick, low quality version of the scene below. On a
+low-end CPU, the render will take 20 minutes using <a href="https://pypy.org">PyPy</a>, and 2 hours
+using regular python.</p>
+<br>
+<br>
+<img src="./render3d.png" style="display:block;width:66%;margin:auto" alt="Ray Traced 3D Scene.">
+<br>
+<br>
+<p>The high quality render above is 600x600 pixels, has 1M triangles (500K per sphere), and uses
+64K rays per pixel. It took 124 hours to render using PyPy and a separate, multithreaded version of
+the ray tracer (<a href="./raytracer_extra.zip">here</a>).</p>
+<br>
+<p>The left sphere exhibits glass refraction, the middle sphere exhibits reflection, and the cube
+exhibits subsurface scattering.</p>
+<br>
+<br>
+<img src="./render4d.png" style="display:block;width:66%;margin:auto" alt="Ray Traced 4D Scene.">
+<br>
+<br>
+<p>The 4D scene above was rendered using render4d.py in <a href="./raytracer_extra.zip">raytracer_extra.zip</a>.
+It shows a rotated, blue hypercube floating above another hypercube acting as a floor. Both hypercubes
+have the same material properties, however, the floor hypercube shows volumetric effects while the
+blue hypercube is sharply defined. This difference could be caused by an error in collision
+detection, or certain rays missing the floor in 4D.</p>
+<br>
+<br>
+<img src="./bunny3d.png" style="display:block;width:66%;margin:auto" alt="Stanford Bunny.">
+<br>
+<br>
+<p>38 instanced copies of the stanford bunny, each with different materials and transformations.</p>
+<br>
+<br>
+<img src="./render3drand.png" style="display:block;width:66%;margin:auto" alt="Bad PRNG effect.">
+<br>
+<br>
+<p>An impressionist style of rendering that is actually the result of a horribly biased random
+number generator.</p>
+<br>
+<br>
+<img src="./epsilon32.png" style="display:block;width:66%;margin:auto" alt="Bad epsilon effect.">
+<br>
+<br>
+<p>An improperly set epsilon in the ray-triangle intersection algorithm caused rays to become stuck
+inside of the mirror sphere. This resulted in the infinite mirror effect seen above.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Overview ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_overview"><h1>Overview</h1>
+<p>The major feature that this ray tracer presents is its ability to render arbitrary dimensional
+scenes. That is, it can render in 3D, 4D, or any other number of dimensions. In this article, we'll
+go over the main concepts that make up this ray tracer. In many cases, it will look exactly the same
+as a normal 3D ray tracer.</p>
+<br>
+<p>In general, a ray tracer works by simulating rays of light bouncing around a world and recording
+what rays end up in the camera. The hard part of a ray tracer is keeping track of the objects in the
+world, efficiently checking them for collisions with a ray, and determining how a ray should bounce
+off different materials such as glass or metal.</p>
+<br>
+<p>The building block of our ray tracer is the matrix/vector library. It simplifies the math we use and
+allows us to more easily handle geometry in higher dimensions. The rest of the ray tracer is
+organized around the "scene". The scene contains many things, such as the camera, the objects that
+make up the world, how many rays per pixel we'll use, and how many times a ray can bounce around.</p>
+<br>
+<p>Here are the basic concepts of a scene.</p>
+<br>
+<h2>Camera</h2>
+<br>
+<p>Before we set anything up, we must go over the most important optimization we can make for our ray
+tracer, since it will shape how we build the tracer. In the scene, there will be many sources
+emitting light rays, but only a few percent of rays will ever reach the camera and the rest will be
+discarded. Each of these rays take valuable computation time, so it is in our interest to discard
+any rays which we will never see. Taking this into consideration, we can instead choose to emit rays
+from the camera and see which ones hit a light source. This is sometimes refered to as "eye based"
+ray tracing, and it allows the scene to have any number of lights without changing performance.</p>
+<br>
+<br>
+<svg version="1.1" viewBox="0 0 1000 350" class="diagram">
+<g transform="translate(0,0)" stroke-width="1px" class="highstroke">
+	<line x1="300" y1="50" x2="313" y2="155"/>
+	<line x1="170" y1="165" x2="313" y2="155"/>
+	<line x1="300" y1="50" x2="305" y2="162"/>
+	<line x1="170" y1="168" x2="305" y2="162"/>
+	<line x1="300" y1="50" x2="298" y2="169"/>
+	<line x1="170" y1="170" x2="298" y2="169"/>
+</g>
+<g transform="translate(300,50)" stroke-width="1px" class="highstroke">
+	<line x1="80" y1="0" x2="-80" y2="0"/>
+	<line x1="69" y1="40" x2="-69" y2="-40"/>
+	<line x1="40" y1="69" x2="-40" y2="-69"/>
+	<line x1="0" y1="0" x2="-0" y2="-80"/>
+	<line x1="-40" y1="69" x2="40" y2="-69"/>
+	<line x1="-69" y1="40" x2="69" y2="-40"/>
+	<circle cx="0" cy="0" r="25" stroke-width="4px" class="bgstroke highfill"/>
+</g>
+<g transform="translate(320,150)" text-anchor="middle">
+	<rect x="0" y="0" width="40" height="40" transform="rotate(45)"/>
+	<text x="0" y="80">object</text>
+</g>
+<g transform="translate(100,170)" text-anchor="middle">
+	<line x1="0" y1="0" x2="60" y2="-60"/>
+	<line x1="0" y1="0" x2="60" y2="60"/>
+	<line x1="60" y1="-60" x2="60" y2="60"/>
+	<circle cx="0" cy="0" r="6"/>
+	<text x="30" y="85">camera</text>
+</g>
+<g transform="translate(100,300)">
+	<text x="0" y="0">Source based rays. Note that only</text>
+	<text x="0" y="0" dy="1.3em">a few rays reach the camera.</text>
+</g>
+<line x1="500" y1="0" x2="500" y2="350"/>
+<g transform="translate(500,0)" stroke-width="1px" class="highstroke">
+	<line x1="300" y1="50" x2="313" y2="155"/>
+	<line x1="100" y1="170" x2="313" y2="155"/>
+	<line x1="300" y1="50" x2="305" y2="162"/>
+	<line x1="100" y1="170" x2="305" y2="162"/>
+	<line x1="300" y1="50" x2="298" y2="169"/>
+	<line x1="100" y1="170" x2="298" y2="169"/>
+</g>
+<g transform="translate(800,50)" stroke-width="3px" class="highstroke">
+	<circle cx="0" cy="0" r="25" stroke-width="4px" class="bgstroke highfill"/>
+</g>
+<g transform="translate(820,150)" text-anchor="middle">
+	<rect x="0" y="0" width="40" height="40" transform="rotate(45)"/>
+	<text x="0" y="80">object</text>
+</g>
+<g transform="translate(600,170)" text-anchor="middle">
+	<line x1="0" y1="0" x2="60" y2="-60"/>
+	<line x1="0" y1="0" x2="60" y2="60"/>
+	<line x1="60" y1="-60" x2="60" y2="60"/>
+	<circle cx="0" cy="0" r="6"/>
+	<text x="30" y="85">camera</text>
+</g>
+<g transform="translate(670,300)">
+	<text x="0" y="0">Eye based rays.</text>
+</g>
+</svg>
+<br>
+<br>
+<p>To set up the camera, we will give it the image pixel dimensions, camera position and direction, and
+field of view. Using these values, we will calculate a virtual rectangle that will tell us where to
+shoot a ray for a given (x,y) pixel coordinate.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 240" class="diagram">
+<g transform="translate(500,120)">
+	<line x1="-36" y1="-41" x2="-36" y2="41" class="dimstroke"/>
+	<line x1="-50" y1="-25" x2="100" y2="-50" class="dimstroke"/>
+	<line x1="-20" y1="-45" x2="-20" y2="45" class="dimstroke"/>
+	<line x1="-50" y1="-12" x2="100" y2="-25" class="dimstroke"/>
+	<line x1="0" y1="-50" x2="0" y2="50" class="dimstroke"/>
+	<line x1="-50" y1="0" x2="100" y2="0" class="dimstroke"/>
+	<line x1="25" y1="-56" x2="25" y2="56" class="dimstroke"/>
+	<line x1="-50" y1="12" x2="100" y2="25" class="dimstroke"/>
+	<line x1="57" y1="-64" x2="57" y2="64" class="dimstroke"/>
+	<line x1="-50" y1="25" x2="100" y2="50" class="dimstroke"/>
+	<line x1="-50" y1="-38" x2="-50" y2="38"/>
+	<line x1="-50" y1="-38" x2="100" y2="-75"/>
+	<line x1="100" y1="-75" x2="100" y2="75"/>
+	<line x1="-50" y1="38" x2="100" y2="75"/>
+	<line x1="-120" y1="0" x2="-50" y2="-38"/>
+	<line x1="-120" y1="0" x2="-50" y2="38"/>
+	<line x1="-120" y1="0" x2="100" y2="-75"/>
+	<line x1="-120" y1="0" x2="100" y2="75"/>
+	<circle cx="-120" cy="0" r="6"/>
+	<g>
+		<text x="-135" y="0" text-anchor="end">(0,0,0)</text>
+		<text x="110" y="-70">(cx, cy,-1)</text>
+		<text x="110" y="85">(cx,-cy,-1)</text>
+		<text x="-30" y="-65" text-anchor="end">(-cx, cy,-1)</text>
+		<text x="-30" y="68" text-anchor="end">(-cx,-cy,-1)</text>
+	</g>
+</g>
+</svg>
+<br>
+<p>By convention, we fix <i>cz=-1</i>. To calculate the exact values of <i>cx</i> and <i>cy</i> in the above diagram, we
+take</p>
+<br>
+<div class="codeblock langpython">cx=tan(fov*3.141593/360.0)
+cy=-cx*image_height/image_width
+cz=-1.0
+</div>
+<br>
+<p>Keep in mind: negative z values are in front of the camera, and positive z values are behind the
+camera. Also, a typical value for <i>fov</i> in video games is 90 degrees. We now need to rotate the
+<i>(cx,cy,cz)</i> coordinates to be in world space. Assume that <i>camera_rotate</i> is a rotation matrix set up
+with the camera's angles. Then the world space coordinates of our camera's projection will be</p>
+<br>
+<div class="codeblock langpython">camera_rotate=Matrix(z_angle,y_angle,x_angle,...)
+bot_left=camera_rotate*Vector(-cx,-cy,cz,...)
+right   =camera_rotate*Vector(cx*2,0,0,...)
+up      =camera_rotate*Vector(0,cy*2,0,...)
+</div>
+<br>
+<p>We set up the vectors in 3D coordinates with unused elements being 0, and we use the rotation matrix
+to point the camera properly in higher dimensions. Now, to shoot a ray for a given <i>(x,y)</i> pixel
+coordinate, we simply translate the image coordinates into world coordinates like so:</p>
+<br>
+<div class="codeblock">u=x/image_width
+v=y/image_height
+raypos=camera_pos
+raydir=bot_left+u*right+v*up
+</div>
+<br>
+<h2>Rays</h2>
+<br>
+<p>Once a ray has been created, we will keep track of it as <i>raypos+u*raydir</i>, where <i>u</i> represents some
+distance along the ray. We will consider the ray to hit an object if <i>raypos+u*raydir</i> intersects
+some point of the object. In particular, the object with the smallest non-negative value of <i>u</i> will
+be the next object that the ray hits. That is, it will be closest object that the ray can "see".</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 200" class="diagram">
+<g transform="translate(300,70)" text-anchor="middle">
+	<line x1="0" y1="0" x2="600" y2="0" class="highstroke"/>
+	<line x1="590" y1="-10" x2="600" y2="0" class="highstroke"/>
+	<line x1="590" y1="10" x2="600" y2="0" class="highstroke"/>
+	<circle cx="0" cy="0" r="12" stroke="none" class="highfill"/>
+	<circle cx="190" cy="0" r="20"/>
+	<circle cx="440" cy="0" r="20"/>
+	<circle cx="-160" cy="0" r="20"/>
+	<g>
+		<text x="-160" y="60">u = -2</text>
+		<text x="-160" y="60" dy="1.3em">ignored</text>
+		<text x="0" y="60">u = 0</text>
+		<text x="190" y="60">u = 3</text>
+		<text x="190" y="60" dy="1.3em">closest</text>
+		<text x="440" y="60">u = 7</text>
+	</g>
+</g>
+</svg>
+<br>
+<p>If no object satisfies this condition, then the ray disappears into the void. Otherwise, we update
+its position with <i>raypos+=u*raydir</i> and continue bouncing the ray around. How the ray bounces off
+of objects will be covered in the materials section, and how to find an intersection will be covered
+in the mesh section.</p>
+<br>
+<p>It is important to note that rays bounce around the scene chaotically, and because of this they are
+very noisy. A scene that is rendered by shooting a single ray per pixel will look more like noise
+than a coherent image. To compensate for this, thousands of rays must be shot per pixel. This
+obviously slows rendering down, however, it is also very easy to parallelize across any number of
+threads. Most ray tracers will assign a different set of pixels to different threads since there
+will be minimal memory contention.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Meshes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_meshes"><h1>Meshes</h1>
+<p>Every solid object in our scene will be a mesh of some sort. Meshes serve to contain collision
+detection information, geometry faces, and material properties. A face, in particular, is the most
+basic building block of a solid object's geometry. In a traditional 3D scene, a face would be a
+triangle, and in 4D a face would be a tetrahedron. Every object we want to render will need to
+somehow be broken down into faces in order for the scene to interpret the object. A 3D box, for
+instance, would need to be broken down into 12 triangles before being added to the scene.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 320" class="diagram">
+<g transform="translate(400,250)">
+	<g class="dimstroke dimfill">
+		<circle cx="26" cy="-52" r="5"/>
+		<line x1="0" y1="0" x2="26" y2="-52"/>
+		<line x1="26" y1="-52" x2="156" y2="-52"/>
+		<line x1="26" y1="-52" x2="26" y2="-182"/>
+		<line x1="0" y1="0" x2="156" y2="-52"/>
+		<line x1="156" y1="-52" x2="26" y2="-182"/>
+		<line x1="0" y1="0" x2="26" y2="-182"/>
+	</g>
+	<circle cx="0" cy="0" r="5"/>
+	<circle cx="130" cy="0" r="5"/>
+	<circle cx="156" cy="-52" r="5"/>
+	<circle cx="0" cy="-130" r="5"/>
+	<circle cx="26" cy="-182" r="5"/>
+	<circle cx="130" cy="-130" r="5"/>
+	<circle cx="156" cy="-182" r="5"/>
+	<line x1="156" y1="-52" x2="130" y2="0"/>
+	<line x1="130" y1="0" x2="0" y2="0"/>
+	<line x1="0" y1="-130" x2="26" y2="-182"/>
+	<line x1="26" y1="-182" x2="156" y2="-182"/>
+	<line x1="156" y1="-182" x2="130" y2="-130"/>
+	<line x1="130" y1="-130" x2="0" y2="-130"/>
+	<line x1="0" y1="0" x2="0" y2="-130"/>
+	<line x1="130" y1="0" x2="130" y2="-130"/>
+	<line x1="156" y1="-52" x2="156" y2="-182"/>
+	<line x1="25" y1="-182" x2="130" y2="-130"/>
+	<line x1="0" y1="0" x2="130" y2="-130"/>
+	<line x1="156" y1="-52" x2="130" y2="-130"/>
+</g>
+</svg>
+<br>
+<p>In order to make use of this geometry for determining collisions with rays, we'll first need to
+establish normal vectors and barycentric coordinates.</p>
+<br>
+<h2>Normals</h2>
+<br>
+<p>Each face is made up of <i>n</i> vertices (points) and a normal vector, where <i>n</i> is the dimension we're
+working in. The vertices simply define the boundaries of the face. The normal vector, however, is
+used for our collision detection as well as determining what points are inside or outside the mesh.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 240" class="diagram">
+<g transform="translate(400,120)">
+	<circle cx="0" cy="0" r="5"/>
+	<circle cx="150" cy="-40" r="5"/>
+	<circle cx="116" cy="52" r="5"/>
+	<line x1="0" y1="0" x2="150" y2="-40"/>
+	<line x1="150" y1="-40" x2="116" y2="52"/>
+	<line x1="116" y1="52" x2="0" y2="0"/>
+</g>
+<g transform="translate(495,125)" class="highstroke">
+	<line x1="0" y1="0" x2="0" y2="-80"/>
+	<line x1="0" y1="-80" x2="-10" y2="-70"/>
+	<line x1="0" y1="-80" x2="10" y2="-70"/>
+</g>
+</svg>
+<br>
+<p>A normal vector is simply a vector that points perpendicular to a plane. To define a plane in <i>n</i>
+dimensions, we will need <i>n-1</i> linearly independent vectors to decide a its direction, and 1 vector to
+decide its offset. Hence, each face in our mesh should be capable of defining a plane and therefore
+also defining normal vector.</p>
+<br>
+<p>Since, the normal is perpendicular to all points on a plane, we can use it to determine if a point
+is on the same plane as the face. That is, if the <i>normal*(p-offset)=normal*(v-offset)</i>, for some
+point <i>p</i> and some face vertex <i>v</i>, then the point is on the face's plane. Using this, we can calculate
+where along a ray's ray it will hit the face's plane and then perform an additional collision test.</p>
+<br>
+<p>In addition to coplanarity calculations, a face normal can be given a direction to determine which
+side of the plane is outside the mesh, and which side is inside. By convention, all normals are set
+to point towards the outside of the mesh. In our ray tracer, if a ray is colliding with a face and
+the dot product <i>raydir*normal</i> is negative, then we will know that the ray is on the outside
+of the mesh and pointing inwards. If the dot product is positive, then we are on the inside of the
+mesh and pointing outwards.</p>
+<br>
+<p>Normal vectors can be calculated using a vector cross product. For 2D, the cross product requires 1
+vector, and for 3D, the cross product requires 2 vectors. In general, we need <i>n-1</i> vectors for an
+<i>n</i>-dimensional cross product.</p>
+<br>
+<p>In 2D and 3D, the cross product can be expressed with a short, closed-form expression. For arbitrary
+dimensions, however, we must calculate the determinant of a special matrix to find the cross
+product. If <i>v[0],v[1],...,v[n-1]</i> are the vertices of a face, then the cross product can be
+calculated like so</p>
+<br>
+<div class="codeblock">w[1] = v[1]-v[0]
+w[2] = v[2]-v[0]
+...
+
+e[0] = (1,0,0,...)
+e[1] = (0,1,0,...)
+e[2] = (0,0,1,...)
+...
+
+           ( w[1].x  w[1].y  w[1].z ... )
+cross = det( w[2].x  w[2].y  w[2].z ... )
+           ( ...     ...     ...    ... )
+           ( e[0]    e[2]    e[3]   ... )
+
+normal = cross.normalize()
+</div>
+<br>
+<p>In this case, normalizing the cross product is optional, but it only needs to be calculated once and
+it will let us avoid costly square roots in the main loop of the ray tracer. Note that face "normal"
+and "normalize" are two different concepts here.</p>
+<br>
+<p>Now that we have the face normal, we can project the point <i>p</i> where the ray will hit the face's plane
+using</p>
+<br>
+<div class="codeblock">p=raypos-face.vertex[0]
+den=raydir*face.normal
+dist=-(p*face.normal)/den
+p+=raydir*dist
+</div>
+<br>
+<p>The code also gives us the distance to the point <i>p</i>. Now that we have a point on the face's plane, we
+will need to determine if it is inside the face's borders. The way we'll do that is with barycentric
+coordinates.</p>
+<br>
+<h2>Barycentric Coordinates</h2>
+<br>
+<p>Given vertices <i>v[0],v[1],...,v[n-1]</i> barycentric coordinates are a set of scalar coefficients
+<i>u[0],u[1],...,u[n-1]</i> such that <i>u[0]*v[0]+u[1]*v[1]+...+u[n-1]*v[n-1]=p</i> for some point <i>p</i>. That is,
+they are a way of transforming a set of coordinates in global space into a set of coordinates in the
+vertices' space. For a convex polygon, such as a mesh face, the coefficients will also have the
+property <i>u[i]&gt;=0</i> for all <i>i</i> and <i>u[0]+u[1]+...+u[n-1]=1</i> if and only if <i>p</i> is inside the face.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 320" class="diagram">
+<g transform="translate(200,120)">
+	<circle cx="0" cy="0" r="5"/>
+	<circle cx="150" cy="-40" r="5"/>
+	<circle cx="116" cy="52" r="5"/>
+	<line x1="0" y1="0" x2="150" y2="-40"/>
+	<line x1="150" y1="-40" x2="116" y2="52"/>
+	<line x1="116" y1="52" x2="0" y2="0"/>
+	<!--
+	x=0.2*0+0.5*150+0.3*116 =109.8
+	y=0.2*0+0.5*(-40)+0.3*52=-4.4
+	-->
+	<circle cx="109.8" cy="-4.4" r="5" class="highstroke highfill"/>
+	<g>
+		<text x="-10" y="0" dy="0.4em" text-anchor="end">v0</text>
+		<text x="150" y="-40" dy="-0.7em">v1</text>
+		<text x="116" y="52" dy="1.3em">v2</text>
+		<text x="109.8" y="15" text-anchor="middle">p</text>
+		<text x="-30" y="120">p = 0.2*v0 + 0.5*v1 + 0.3*v2</text>
+		<text x="-30" y="120" dy="1.5em">Inside!</text>
+	</g>
+</g>
+<g transform="translate(600,120)">
+	<circle cx="0" cy="0" r="5"/>
+	<circle cx="150" cy="-40" r="5"/>
+	<circle cx="116" cy="52" r="5"/>
+	<line x1="0" y1="0" x2="150" y2="-40"/>
+	<line x1="150" y1="-40" x2="116" y2="52"/>
+	<line x1="116" y1="52" x2="0" y2="0"/>
+	<!--
+	x=0.2*0-0.5*150+0.3*116 =-40.2
+	y=0.2*0-0.5*(-40)+0.3*52=35.6
+	-->
+	<circle cx="-40.2" cy="35.6" r="5" class="highstroke highfill"/>
+	<g>
+		<text x="-10" y="0" dy="0.4em" text-anchor="end">v0</text>
+		<text x="150" y="-40" dy="-0.7em">v1</text>
+		<text x="116" y="52" dy="1.3em">v2</text>
+		<text x="-40.2" y="55" text-anchor="middle">p</text>
+		<text x="-30" y="120">p = 0.2*v0 + (-0.5)*v1 + 0.3*v2</text>
+		<text x="-30" y="120" dy="1.5em">Outside!</text>
+	</g>
+</g>
+</svg>
+<br>
+<p>To calculate the barycentric coordinates, we repeat our beginning equations:</p>
+<br>
+<div class="codeblock">u[0]+u[1]+...+u[n-1]=1
+u[0]*v[0]+u[1]*v[1]+...+u[n-1]*v[n-1]=p</div>
+<br>
+<p>We can use the first line to substitute for <i>u[0]</i> like so:</p>
+<br>
+<div class="codeblock">u[0]=1-u[1]-...-u[n-1]
+
+(1-u[1]-...-u[n-1])*v[0]+u[1]*v[1]+...+u[n-1]*v[n-1]=p
+      v[0]+u[1]*(v[1]-v[0])+...+u[n-1]*(v[n-1]-v[0])=p
+           u[1]*(v[1]-v[0])+...+u[n-1]*(v[n-1]-v[0])=p-v[0]</div>
+<br>
+<p>By setting <i>p'=p-v[0]</i> and <i>w[i]=v[i]-v[0]</i>, we have <i>u[1]*w[1]+...+u[n-1]*w[n-1]=p'</i>. Applying the dot
+product of vectors <i>w[1],w[2],...,w[n-1]</i> to this equation allows us to set up a system of equations
+to solve for <i>u</i>.</p>
+<br>
+<div class="codeblock">u[1]*(w[1]*w[1])+u[2]*(w[1]*w[2])+...+u[n-1]*(w[1]*w[n-1])=w[1]*p'
+u[1]*(w[2]*w[1])+u[2]*(w[2]*w[2])+...+u[n-1]*(w[2]*w[n-1])=w[2]*p'
+u[1]*(w[3]*w[1])+u[2]*(w[3]*w[2])+...+u[n-1]*(w[3]*w[n-1])=w[3]*p'
+...</div>
+<br>
+<p>Solving this system of equations is simple, but will be too time consuming to use for the billions
+of face collisions we will be checking. Without knowing <i>p</i>, what we can do instead is calculate a set
+of barycentric vectors. These vectors will be stored and then used to easily compute the barycentric
+coordinates. Here is the matrix we will use for this.</p>
+<br>
+<div class="codeblock">    [ w[1]*w[1]  w[1]*w[2]  ...  w[1]*w[n-1]  |  w[1] ]
+M = [ w[2]*w[1]  w[2]*w[2]  ...  w[2]*w[n-1]  |  w[2] ]
+    [ w[3]*w[1]  w[3]*w[2]  ...  w[3]*w[n-1]  |  w[3] ]
+    [ ...        ...        ...  ...          |  ...  ]
+</div>
+<br>
+<p>In the ray tracer, we only set up the left-hand side of <i>M</i>. We then calculate the barycentric
+vectors like so</p>
+<br>
+<div class="codeblock">    [ w[1]*w[1]  w[1]*w[2]  ...  w[1]*w[n-1] ]
+M = [ w[2]*w[1]  w[2]*w[2]  ...  w[2]*w[n-1] ]
+    [ w[3]*w[1]  w[3]*w[2]  ...  w[3]*w[n-1] ]
+    [ ...        ...        ...  ...         ]
+
+              [ w[1] ]
+bary = (M^-1)*[ w[2] ]
+              [ w[3] ]
+              [ ...  ]</div>
+<br>
+<p>That is, we multiply <i>M^-1</i> by a column vector of vectors, which yields our set of barycentric
+vectors. During collision, we can calculate the barycentric coordinates using the simple dot product
+<i>u[i+1]=bary[i]*(p-v[0])</i>, given <i>u[0]=1-u[1]-u[2]-...</i>.</p>
+<br>
+<p>With the normal and barycentric vectors of the face, we can now perform collision detection.</p>
+<br>
+<h2>Collision Detection</h2>
+<br>
+<p>Going over the previous subsections, we assume that we have a ray with a given position and
+direction, and a triangle with normal and barycentric vectors. We now want to determine if the ray
+intersects the triangle.</p>
+<br>
+<p>We'll first use the normal vector to project the ray onto the same plane as the face vertices. Then,
+we can use barycentric coordinates to determine if that projected point is inside the face
+boundaries.</p>
+<br>
+<div class="codeblock langpython">def intersect(face,raypos,raydir):
+	#First, project the ray onto the face's plane.
+	den=raydir*face.normal
+	if abs(den)&lt;=1e-20: return False
+	p=raypos-face.vertex[0]
+	dist=-(p*face.normal)/den
+	if dist&lt;0: return False
+	p+=raydir*dist
+	#Make sure the barycentric coordinates of the point are within the face.
+	s=0.0
+	for bary in face.baryvec:
+		u=bary*p
+		s+=u
+		if u&lt;0.0 or s&gt;1.0:
+			return False
+	#We intersect the face at distance 'dist'.
+	return True
+</div>
+<br>
+<h2>Instancing</h2>
+<br>
+<p>Most scenes that comprise a game or movie are made of duplicate objects distributed throughout the
+scene. Typically, ray tracers focus purely on rendering an array of triangles that they're given as
+a way to simplify the ray tracer. This means that they lack any ability to efficiently store a
+duplicate of an object in a scene. That is, if there are 2 duplicate meshes with a million triangles
+each, then the scene will contain 2 million triangles.</p>
+<br>
+<p>Mesh instancing allows us to leave a pointer to a mesh in the scene, instead of all the mesh's
+faces. How this works is by inserting a bounding box into the scene where the duplicate mesh would
+be. If a ray intersects the bounding box, then we transform the ray into the original mesh's local
+space and check for collision.</p>
+<br>
+<p>Inserting a bounding box will be made simpler with the introduction of the bounding volume hierarchy
+described in a later section.</p>
+<br>
+<h2>Transforms</h2>
+<br>
+<p>When we place a mesh (or a mesh instance) into the scene, we will often want to rotate, shift, or
+scale the mesh into a new orientation. There are many articles that describe rotation in 2 and 3
+dimensions, but relatively few for arbitrary dimensions. Thus, we will cover it here.</p>
+<br>
+<p>All transforms that the ray tracer can perform are of the form <i>p'=p*A+b</i> for some matrix <i>A</i> and some
+vector <i>b</i>. The matrix <i>A</i> holds all scaling and rotation information, while the vector <i>b</i> holds the
+offset.</p>
+<br>
+<p>Rotation occurs along a 2D plane, *NOT* around an axis. One of the most common misconceptions when
+working is 3 dimensions is to say "rotate around the X axis" or "rotate around vector V". This
+terminology just so happens to work for 3 dimensions, but fails for all others. Instead, it would be
+more correct to say "rotate along the YZ plane" for instance.</p>
+<br>
+<p>It follows that creating a rotation matrix in <i>n</i> dimensions will take <i>n*(n-1)/2</i> angles. If a matrix's
+elements can be accessed as a linear array, then we may rotate a matrix as shown below.</p>
+<br>
+<div class="codeblock langpython">def rotate(elem,n,angs):
+	#Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles.
+	angpos=0
+	for j in range(1,n):
+		for i in range(j):
+			cs=math.cos(angs[angpos])
+			sn=math.sin(angs[angpos])
+			angpos+=1
+			ival,jval=i,j
+			for r in range(n):
+				t0,t1=elem[ival],elem[jval]
+				elem[ival]=t0*cs+t1*sn
+				elem[jval]=t1*cs-t0*sn
+				ival+=n
+				jval+=n
+</div>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Primitives ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_primitives"><h1>Primitives</h1>
+<p>For the purposes of creating scenes easily, there are 2 geometric primitives we provide by default
+in the ray tracer: cubes and spheres. The primary reason for choosing these primitives is that they
+have analogs in all dimensions. Furthermore, their geometry is symmetric about each axis, so they
+should be simple to construct.</p>
+<br>
+<h2>Cubes</h2>
+<br>
+<p>In dimension <i>n</i>, a cube will have <i>2^n</i> vertices and <i>2*n!</i> faces, although in 1
+dimensional space each face is no different from a vertex.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 310" class="diagram">
+<g transform="translate(700,220)">
+	<g class="dimstroke dimfill">
+		<circle cx="26" cy="-52" r="5"/>
+		<line x1="0" y1="0" x2="26" y2="-52"/>
+		<line x1="26" y1="-52" x2="156" y2="-52"/>
+		<line x1="26" y1="-52" x2="26" y2="-182"/>
+		<line x1="0" y1="0" x2="156" y2="-52"/>
+		<line x1="156" y1="-52" x2="26" y2="-182"/>
+		<line x1="0" y1="0" x2="26" y2="-182"/>
+	</g>
+	<circle cx="0" cy="0" r="5"/>
+	<circle cx="130" cy="0" r="5"/>
+	<circle cx="156" cy="-52" r="5"/>
+	<circle cx="0" cy="-130" r="5"/>
+	<circle cx="26" cy="-182" r="5"/>
+	<circle cx="130" cy="-130" r="5"/>
+	<circle cx="156" cy="-182" r="5"/>
+	<line x1="156" y1="-52" x2="130" y2="0"/>
+	<line x1="130" y1="0" x2="0" y2="0"/>
+	<line x1="0" y1="-130" x2="26" y2="-182"/>
+	<line x1="26" y1="-182" x2="156" y2="-182"/>
+	<line x1="156" y1="-182" x2="130" y2="-130"/>
+	<line x1="130" y1="-130" x2="0" y2="-130"/>
+	<line x1="0" y1="0" x2="0" y2="-130"/>
+	<line x1="130" y1="0" x2="130" y2="-130"/>
+	<line x1="156" y1="-52" x2="156" y2="-182"/>
+	<line x1="25" y1="-182" x2="130" y2="-130"/>
+	<line x1="0" y1="0" x2="130" y2="-130"/>
+	<line x1="156" y1="-52" x2="130" y2="-130"/>
+	<text x="40" y="50" dy="-1.5em" text-anchor="middle" transform="scale(2)">3D</text>
+</g>
+<g transform="translate(400,220)">
+	<circle cx="0" cy="-26" r="5"/>
+	<circle cx="130" cy="-26" r="5"/>
+	<circle cx="0" cy="-156" r="5"/>
+	<circle cx="130" cy="-156" r="5"/>
+	<line x1="130" y1="-26" x2="0" y2="-26"/>
+	<line x1="130" y1="-156" x2="0" y2="-156"/>
+	<line x1="0" y1="-26" x2="0" y2="-156"/>
+	<line x1="130" y1="-26" x2="130" y2="-156"/>
+	<text x="32.5" y="50" dy="-1.5em" text-anchor="middle" transform="scale(2)">2D</text>
+</g>
+<g transform="translate(100,220)">
+	<circle cx="0" cy="-91" r="5"/>
+	<circle cx="130" cy="-91" r="5"/>
+	<line x1="130" y1="-91" x2="0" y2="-91"/>
+	<text x="32.5" y="50" dy="-1.5em" text-anchor="middle" transform="scale(2)">1D</text>
+</g>
+</svg>
+<br>
+<p>Generating the vertices of the cube is simple. First, create vector with <i>n</i> elements. Then,
+loop over all integers from <i>0</i> to <i>2^n-1</i>. For a given integer, if bit position <i>i</i>
+is <i>0</i>, set element <i>i</i> of the vector to <i>-1</i>, otherwise set the element to <i>1</i>.</p>
+<br>
+<div class="codeblock langpython">for i in range(1&lt;&lt;dim):
+	v=Vector(dim)
+	for j in range(dim):
+		v[j]=((i&gt;&gt;j)&amp;1)*2-1
+	addvertex(v)
+</div>
+<br>
+<p>Generating the faces, on the other hand, is currently an open problem to perform optimally.
+The algorithm that we'll use exchanges simplicity for suboptimal performance. All that it involves
+to find the vertices of a face is finding all <i>v(0)&lt;v(1)&lt;...&lt;v(n-1)</i> for all
+combinations of <i>v(i) in {0,1,2,...,2^(n-1)-1}</i>. For each combination, we'll create a face
+using vertices on each separate side of the cube. Since there are <i>2*n</i> such sides, and our
+vertex selector generates <i>(n-1)!</i> faces, this yields <i>2*n!</i> total faces.</p>
+<br>
+<div class="codeblock langpython">sim=dim-1
+combos,perm=1,[0]*sim
+for i in range(sim): combos*=i+1
+for f in range(2*dim):
+	#Given a fixed axis and side of the cube, generate the dim-1 dimensioned surface.
+	#Each surface will be made up of sim! simplexes.
+	axis=f&gt;&gt;1
+	base=(f&1)&lt;&lt;axis
+	for combo in range(combos):
+		for i in range(sim):
+			j=combo%(i+1)
+			combo//=i+1
+			perm[i],perm[j]=perm[j],1&lt;&lt;(i+(i&gt;=axis))
+		#Find the vertices of the simplex. If the number of permutation inversions is
+		#odd, then the sign of the normal will be negative.
+		vertarr=[0]*dim
+		for i in range(sim): vertarr[i+1]=vertarr[i]+perm[i]
+		if vertarr[sim]&gt;=self.verts: continue
+		addface(vertarr,mat)
+</div>
+<br>
+<p>If the number of inversions in <i>perm</i> is odd, then sign of the face normal will need to be
+flipped depending on the parity of <i>axis</i> and <i>f</i>. However, determining the correct
+orientation can be done more simply by making sure the face normal points away from the origin.</p>
+<br>
+<h2>Spheres</h2>
+<br>
+<p>By comparison to cubes, hyperspheres are abnormally hard to tessellate. Many algorithms that make
+sense in 2D and 3D end up creating concave folds and creases in 4D+ spaces. In particular, the
+geodesic algorithm for 3D sphere tessellation fails to translate to 4D.</p>
+<br>
+<p>We consider a mesh to be a hypersphere if:</p>
+<br>
+<table class="listtable">
+<tr><td>&bull;</td><td>All vertices are a distance of 1 from the origin.</td></tr>
+<tr><td>&bull;</td><td>All faces point away from the origin.</td></tr>
+<tr><td>&bull;</td><td>Any vertex not part of a face is coplanar or behind the face.</td></tr>
+<tr><td>&bull;</td><td>There are no holes in the mesh when looking outward from the origin.</td></tr>
+<tr><td>&bull;</td><td>As the number of faces increases, the surface area approaches that of the <i>n</i>-sphere.</td></tr>
+</table>
+<br>
+<p>From testing, there are only 2 methods that create a sphere satisfying these constraints.</p>
+<br>
+<p>One method is to generate random vertices on the unit sphere, attempt to spread them out, and
+perform gift wrapping. This method has the problems of generating an unknown number of faces, it's
+polynomial in time, and two successive calls will yield two different sphere.</p>
+<br>
+<p>The other method, and the one we use, is to extend the UV sphere algorithm for <i>n</i>
+dimensions. The biggest problem with UV spheres is that the faces near the equator will be very
+large, and the faces near the poles will be very small. In other words, a very uneven distribution.
+However, it has a linear time construction and produces the same sphere if called twice.<p>
+<br>
+<p>Creating a hypersphere with the UV algorithm is conceptually simple. Assume we want to divide
+each axis into <i>k</i> segments and that we start with a 1D sphere (a line). Then, to create a 2D
+sphere, we rotate the 1D sphere along the XY plane. To create a 3D sphere, we rotate the 2D sphere
+along the YZ plane, etc.</p>
+<br>
+<p>This can be seen more easily with a picture. To create a 2D sphere from a 1D sphere, we rotate a
+line (a 1D sphere) around the XY plane:</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 300" class="diagram">
+<g transform="translate(100,150)">
+	<circle cx="0" cy="0" r="80" class="dimstroke bgfill"/>
+	<line x1="80" y1="0" x2="-80" y2="-0" class="highstroke"/>
+	<circle cx="80" cy="0" r="3" class="highstroke highfill"/>
+	<circle cx="-80" cy="0" r="3" class="highstroke highfill"/>
+</g>
+<g transform="translate(366,150)">
+	<circle cx="0" cy="0" r="80" class="dimstroke bgfill"/>
+	<line x1="69" y1="40" x2="-69" y2="-40" class="highstroke"/>
+	<line x1="80" y1="0" x2="69" y2="40"/>
+	<line x1="-80" y1="0" x2="-69" y2="-40"/>
+	<circle cx="80" cy="0" r="3"/>
+	<circle cx="69" cy="40" r="3" class="highstroke highfill"/>
+	<circle cx="-80" cy="0" r="3"/>
+	<circle cx="-69" cy="-40" r="3" class="highstroke highfill"/>
+</g>
+<g transform="translate(632,150)">
+	<circle cx="0" cy="0" r="80" class="dimstroke bgfill"/>
+	<line x1="40" y1="69" x2="-40" y2="-69" class="highstroke"/>
+	<line x1="80" y1="0" x2="69" y2="40"/>
+	<line x1="69" y1="40" x2="40" y2="69"/>
+	<line x1="-80" y1="0" x2="-69" y2="-40"/>
+	<line x1="-69" y1="-40" x2="-40" y2="-69"/>
+	<circle cx="80" cy="0" r="3"/>
+	<circle cx="69" cy="40" r="3"/>
+	<circle cx="40" cy="69" r="3" class="highstroke highfill"/>
+	<circle cx="-80" cy="0" r="3"/>
+	<circle cx="-69" cy="-40" r="3"/>
+	<circle cx="-40" cy="-69" r="3" class="highstroke highfill"/>
+</g>
+<g transform="translate(898,150)">
+	<circle cx="0" cy="0" r="80" class="dimstroke bgfill"/>
+	<line x1="80" y1="0" x2="69" y2="40"/>
+	<line x1="69" y1="40" x2="40" y2="69"/>
+	<line x1="40" y1="69" x2="0" y2="80"/>
+	<line x1="0" y1="80" x2="-40" y2="69"/>
+	<line x1="-40" y1="69" x2="-69" y2="40"/>
+	<line x1="-69" y1="40" x2="-80" y2="0"/>
+	<line x1="-80" y1="0" x2="-69" y2="-40"/>
+	<line x1="-69" y1="-40" x2="-40" y2="-69"/>
+	<line x1="-40" y1="-69" x2="-0" y2="-80"/>
+	<line x1="-0" y1="-80" x2="40" y2="-69"/>
+	<line x1="40" y1="-69" x2="69" y2="-40"/>
+	<line x1="69" y1="-40" x2="80" y2="0"/>
+	<circle cx="80" cy="0" r="3"/>
+	<circle cx="69" cy="40" r="3"/>
+	<circle cx="40" cy="69" r="3"/>
+	<circle cx="0" cy="80" r="3"/>
+	<circle cx="-40" cy="69" r="3"/>
+	<circle cx="-69" cy="40" r="3"/>
+	<circle cx="-80" cy="0" r="3"/>
+	<circle cx="-69" cy="-40" r="3"/>
+	<circle cx="-40" cy="-69" r="3"/>
+	<circle cx="-0" cy="-80" r="3"/>
+	<circle cx="40" cy="-69" r="3"/>
+	<circle cx="69" cy="-40" r="3"/>
+</g>
+</svg>
+<br>
+<p>To create a 3D sphere from a 2D sphere, we rotate a circle (a 2D sphere) around the YZ plane:</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 300" class="diagram">
+<g transform="translate(100,140)">
+	<line x1="-90" y1="10" x2="-71" y2="7" class="highstroke"/>
+	<line x1="87" y1="9" x2="65" y2="7" class="highstroke"/>
+	<line x1="-71" y1="7" x2="-45" y2="6" class="highstroke"/>
+	<line x1="65" y1="7" x2="39" y2="6" class="highstroke"/>
+	<line x1="-45" y1="6" x2="-17" y2="5" class="highstroke"/>
+	<line x1="39" y1="6" x2="11" y2="5" class="highstroke"/>
+	<line x1="-17" y1="5" x2="11" y2="5" class="highstroke"/>
+	<circle cx="-71" cy="7" r="3" class="highstroke highfill"/>
+	<circle cx="65" cy="7" r="3" class="highstroke highfill"/>
+	<circle cx="-45" cy="6" r="3" class="highstroke highfill"/>
+	<circle cx="39" cy="6" r="3" class="highstroke highfill"/>
+	<circle cx="-17" cy="5" r="3" class="highstroke highfill"/>
+	<circle cx="11" cy="5" r="3" class="highstroke highfill"/>
+	<line x1="-31" y1="16" x2="48" y2="15" class="highstroke"/>
+	<line x1="-31" y1="16" x2="-85" y2="13" class="highstroke"/>
+	<line x1="48" y1="15" x2="90" y2="12" class="highstroke"/>
+	<line x1="-85" y1="13" x2="-90" y2="10" class="highstroke"/>
+	<line x1="90" y1="12" x2="87" y2="9" class="highstroke"/>
+	<circle cx="-31" cy="16" r="3" class="highstroke highfill"/>
+	<circle cx="48" cy="15" r="3" class="highstroke highfill"/>
+	<circle cx="-85" cy="13" r="3" class="highstroke highfill"/>
+	<circle cx="90" cy="12" r="3" class="highstroke highfill"/>
+	<circle cx="-90" cy="10" r="3" class="highstroke highfill"/>
+	<circle cx="87" cy="9" r="3" class="highstroke highfill"/>
+</g>
+<g transform="translate(366,140)">
+	<line x1="-90" y1="10" x2="-71" y2="7" class="dimstroke"/>
+	<line x1="-90" y1="10" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-80" y1="-32" x2="-63" y2="-29" class="highstroke"/>
+	<line x1="87" y1="9" x2="65" y2="7" class="dimstroke"/>
+	<line x1="87" y1="9" x2="57" y2="36" class="dimstroke"/>
+	<line x1="74" y1="53" x2="57" y2="36" class="highstroke"/>
+	<line x1="-71" y1="7" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-45" y2="6" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-39" y2="-20" class="highstroke"/>
+	<line x1="65" y1="7" x2="57" y2="36" class="dimstroke"/>
+	<line x1="65" y1="7" x2="39" y2="6" class="dimstroke"/>
+	<line x1="65" y1="7" x2="35" y2="20" class="dimstroke"/>
+	<line x1="57" y1="36" x2="35" y2="20" class="highstroke"/>
+	<line x1="-45" y1="6" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-17" y2="5" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-14" y2="-8" class="highstroke"/>
+	<line x1="39" y1="6" x2="35" y2="20" class="dimstroke"/>
+	<line x1="39" y1="6" x2="11" y2="5" class="dimstroke"/>
+	<line x1="35" y1="20" x2="11" y2="5" class="highstroke"/>
+	<line x1="-17" y1="5" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-17" y1="5" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-14" y1="-8" x2="11" y2="5" class="highstroke"/>
+	<circle cx="-71" cy="7" r="3" class="dimstroke dimfill"/>
+	<circle cx="-63" cy="-29" r="3" class="highstroke highfill"/>
+	<circle cx="65" cy="7" r="3" class="dimstroke dimfill"/>
+	<circle cx="57" cy="36" r="3" class="highstroke highfill"/>
+	<circle cx="-45" cy="6" r="3" class="dimstroke dimfill"/>
+	<circle cx="-39" cy="-20" r="3" class="highstroke highfill"/>
+	<circle cx="39" cy="6" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="20" r="3" class="highstroke highfill"/>
+	<circle cx="-17" cy="5" r="3" class="dimstroke dimfill"/>
+	<circle cx="-14" cy="-8" r="3" class="highstroke highfill"/>
+	<circle cx="11" cy="5" r="3" class="highstroke highfill"/>
+	<line x1="-31" y1="16" x2="48" y2="15"/>
+	<line x1="-31" y1="16" x2="38" y2="53" class="highstroke"/>
+	<line x1="-31" y1="16" x2="-85" y2="13"/>
+	<line x1="-31" y1="16" x2="-77" y2="-19" class="highstroke"/>
+	<line x1="48" y1="15" x2="38" y2="53"/>
+	<line x1="48" y1="15" x2="90" y2="12"/>
+	<line x1="48" y1="15" x2="75" y2="63"/>
+	<line x1="38" y1="53" x2="75" y2="63" class="highstroke"/>
+	<line x1="-85" y1="13" x2="-77" y2="-19"/>
+	<line x1="-85" y1="13" x2="-90" y2="10"/>
+	<line x1="-85" y1="13" x2="-80" y2="-32"/>
+	<line x1="-77" y1="-19" x2="-80" y2="-32" class="highstroke"/>
+	<line x1="90" y1="12" x2="75" y2="63"/>
+	<line x1="90" y1="12" x2="87" y2="9"/>
+	<line x1="90" y1="12" x2="74" y2="53"/>
+	<line x1="75" y1="63" x2="74" y2="53" class="highstroke"/>
+	<line x1="-90" y1="10" x2="-80" y2="-32"/>
+	<line x1="87" y1="9" x2="74" y2="53"/>
+	<circle cx="-31" cy="16" r="3" class="highstroke highfill"/>
+	<circle cx="48" cy="15" r="3"/>
+	<circle cx="38" cy="53" r="3" class="highstroke highfill"/>
+	<circle cx="-85" cy="13" r="3"/>
+	<circle cx="-77" cy="-19" r="3" class="highstroke highfill"/>
+	<circle cx="90" cy="12" r="3"/>
+	<circle cx="75" cy="63" r="3" class="highstroke highfill"/>
+	<circle cx="-90" cy="10" r="3"/>
+	<circle cx="-80" cy="-32" r="3" class="highstroke highfill"/>
+	<circle cx="87" cy="9" r="3"/>
+	<circle cx="74" cy="53" r="3" class="highstroke highfill"/>
+</g>
+<g transform="translate(632,140)">
+	<line x1="-90" y1="10" x2="-71" y2="7" class="dimstroke"/>
+	<line x1="-90" y1="10" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-80" y1="-32" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-80" y1="-32" x2="-37" y2="-58" class="dimstroke"/>
+	<line x1="-53" y1="-65" x2="-37" y2="-58" class="highstroke"/>
+	<line x1="87" y1="9" x2="65" y2="7" class="dimstroke"/>
+	<line x1="87" y1="9" x2="57" y2="36" class="dimstroke"/>
+	<line x1="74" y1="53" x2="57" y2="36" class="dimstroke"/>
+	<line x1="74" y1="53" x2="35" y2="57" class="dimstroke"/>
+	<line x1="41" y1="81" x2="35" y2="57" class="highstroke"/>
+	<line x1="-71" y1="7" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-45" y2="6" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-37" y2="-58" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-20" y2="-40" class="dimstroke"/>
+	<line x1="-37" y1="-58" x2="-20" y2="-40" class="highstroke"/>
+	<line x1="65" y1="7" x2="57" y2="36" class="dimstroke"/>
+	<line x1="65" y1="7" x2="39" y2="6" class="dimstroke"/>
+	<line x1="65" y1="7" x2="35" y2="20" class="dimstroke"/>
+	<line x1="57" y1="36" x2="35" y2="57" class="dimstroke"/>
+	<line x1="57" y1="36" x2="35" y2="20" class="dimstroke"/>
+	<line x1="57" y1="36" x2="24" y2="30" class="dimstroke"/>
+	<line x1="35" y1="57" x2="24" y2="30" class="highstroke"/>
+	<line x1="-45" y1="6" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-17" y2="5" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-20" y2="-40" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-4" y2="-18" class="dimstroke"/>
+	<line x1="-20" y1="-40" x2="-4" y2="-18" class="highstroke"/>
+	<line x1="39" y1="6" x2="35" y2="20" class="dimstroke"/>
+	<line x1="39" y1="6" x2="11" y2="5" class="dimstroke"/>
+	<line x1="35" y1="20" x2="24" y2="30" class="dimstroke"/>
+	<line x1="35" y1="20" x2="11" y2="5" class="dimstroke"/>
+	<line x1="24" y1="30" x2="11" y2="5" class="highstroke"/>
+	<line x1="-17" y1="5" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-17" y1="5" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-14" y1="-8" x2="-4" y2="-18" class="dimstroke"/>
+	<line x1="-14" y1="-8" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-4" y1="-18" x2="11" y2="5" class="highstroke"/>
+	<circle cx="-71" cy="7" r="3" class="dimstroke dimfill"/>
+	<circle cx="-63" cy="-29" r="3" class="dimstroke dimfill"/>
+	<circle cx="-37" cy="-58" r="3" class="highstroke highfill"/>
+	<circle cx="65" cy="7" r="3" class="dimstroke dimfill"/>
+	<circle cx="57" cy="36" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="57" r="3" class="highstroke highfill"/>
+	<circle cx="-45" cy="6" r="3" class="dimstroke dimfill"/>
+	<circle cx="-39" cy="-20" r="3" class="dimstroke dimfill"/>
+	<circle cx="-20" cy="-40" r="3" class="highstroke highfill"/>
+	<circle cx="39" cy="6" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="20" r="3" class="dimstroke dimfill"/>
+	<circle cx="24" cy="30" r="3" class="highstroke highfill"/>
+	<circle cx="-17" cy="5" r="3" class="dimstroke dimfill"/>
+	<circle cx="-14" cy="-8" r="3" class="dimstroke dimfill"/>
+	<circle cx="-4" cy="-18" r="3" class="highstroke highfill"/>
+	<circle cx="11" cy="5" r="3" class="highstroke highfill"/>
+	<line x1="-31" y1="16" x2="48" y2="15"/>
+	<line x1="-31" y1="16" x2="38" y2="53"/>
+	<line x1="-31" y1="16" x2="11" y2="77" class="highstroke"/>
+	<line x1="-31" y1="16" x2="-85" y2="13"/>
+	<line x1="-31" y1="16" x2="-77" y2="-19"/>
+	<line x1="-31" y1="16" x2="-56" y2="-44" class="highstroke"/>
+	<line x1="48" y1="15" x2="38" y2="53"/>
+	<line x1="48" y1="15" x2="90" y2="12"/>
+	<line x1="48" y1="15" x2="75" y2="63"/>
+	<line x1="38" y1="53" x2="11" y2="77"/>
+	<line x1="38" y1="53" x2="75" y2="63"/>
+	<line x1="38" y1="53" x2="37" y2="96"/>
+	<line x1="11" y1="77" x2="37" y2="96" class="highstroke"/>
+	<line x1="-85" y1="13" x2="-77" y2="-19"/>
+	<line x1="-85" y1="13" x2="-90" y2="10"/>
+	<line x1="-85" y1="13" x2="-80" y2="-32"/>
+	<line x1="-77" y1="-19" x2="-56" y2="-44"/>
+	<line x1="-77" y1="-19" x2="-80" y2="-32"/>
+	<line x1="-77" y1="-19" x2="-53" y2="-65"/>
+	<line x1="-56" y1="-44" x2="-53" y2="-65" class="highstroke"/>
+	<line x1="90" y1="12" x2="75" y2="63"/>
+	<line x1="90" y1="12" x2="87" y2="9"/>
+	<line x1="90" y1="12" x2="74" y2="53"/>
+	<line x1="75" y1="63" x2="37" y2="96"/>
+	<line x1="75" y1="63" x2="74" y2="53"/>
+	<line x1="75" y1="63" x2="41" y2="81"/>
+	<line x1="37" y1="96" x2="41" y2="81" class="highstroke"/>
+	<line x1="-90" y1="10" x2="-80" y2="-32"/>
+	<line x1="-80" y1="-32" x2="-53" y2="-65"/>
+	<line x1="87" y1="9" x2="74" y2="53"/>
+	<line x1="74" y1="53" x2="41" y2="81"/>
+	<circle cx="-31" cy="16" r="3" class="highstroke highfill"/>
+	<circle cx="48" cy="15" r="3"/>
+	<circle cx="38" cy="53" r="3"/>
+	<circle cx="11" cy="77" r="3" class="highstroke highfill"/>
+	<circle cx="-85" cy="13" r="3"/>
+	<circle cx="-77" cy="-19" r="3"/>
+	<circle cx="-56" cy="-44" r="3" class="highstroke highfill"/>
+	<circle cx="90" cy="12" r="3"/>
+	<circle cx="75" cy="63" r="3"/>
+	<circle cx="37" cy="96" r="3" class="highstroke highfill"/>
+	<circle cx="-90" cy="10" r="3"/>
+	<circle cx="-80" cy="-32" r="3"/>
+	<circle cx="-53" cy="-65" r="3" class="highstroke highfill"/>
+	<circle cx="87" cy="9" r="3"/>
+	<circle cx="74" cy="53" r="3"/>
+	<circle cx="41" cy="81" r="3" class="highstroke highfill"/>
+</g>
+<g transform="translate(898,140)">
+	<line x1="-11" y1="102" x2="-37" y2="74" class="dimstroke"/>
+	<line x1="-53" y1="85" x2="-37" y2="74" class="dimstroke"/>
+	<line x1="-53" y1="85" x2="-63" y2="44" class="dimstroke"/>
+	<line x1="-80" y1="51" x2="-63" y2="44" class="dimstroke"/>
+	<line x1="-80" y1="51" x2="-71" y2="7" class="dimstroke"/>
+	<line x1="-90" y1="10" x2="-71" y2="7" class="dimstroke"/>
+	<line x1="-90" y1="10" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-80" y1="-32" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-80" y1="-32" x2="-37" y2="-58" class="dimstroke"/>
+	<line x1="-53" y1="-65" x2="-37" y2="-58" class="dimstroke"/>
+	<line x1="87" y1="9" x2="65" y2="7" class="dimstroke"/>
+	<line x1="87" y1="9" x2="57" y2="36" class="dimstroke"/>
+	<line x1="87" y1="9" x2="57" y2="-23" class="dimstroke"/>
+	<line x1="74" y1="53" x2="57" y2="36" class="dimstroke"/>
+	<line x1="74" y1="53" x2="35" y2="57" class="dimstroke"/>
+	<line x1="41" y1="81" x2="35" y2="57" class="dimstroke"/>
+	<line x1="41" y1="81" x2="6" y2="62" class="dimstroke"/>
+	<line x1="0" y1="88" x2="-37" y2="74" class="dimstroke"/>
+	<line x1="0" y1="88" x2="6" y2="62" class="dimstroke"/>
+	<line x1="0" y1="88" x2="-20" y2="53" class="dimstroke"/>
+	<line x1="-37" y1="74" x2="-63" y2="44" class="dimstroke"/>
+	<line x1="-37" y1="74" x2="-20" y2="53" class="dimstroke"/>
+	<line x1="-37" y1="74" x2="-39" y2="32" class="dimstroke"/>
+	<line x1="-63" y1="44" x2="-71" y2="7" class="dimstroke"/>
+	<line x1="-63" y1="44" x2="-39" y2="32" class="dimstroke"/>
+	<line x1="-63" y1="44" x2="-45" y2="6" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-63" y2="-29" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-45" y2="6" class="dimstroke"/>
+	<line x1="-71" y1="7" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-37" y2="-58" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-63" y1="-29" x2="-20" y2="-40" class="dimstroke"/>
+	<line x1="-37" y1="-58" x2="-0" y2="-72" class="dimstroke"/>
+	<line x1="-37" y1="-58" x2="-20" y2="-40" class="dimstroke"/>
+	<line x1="-37" y1="-58" x2="6" y2="-49" class="dimstroke"/>
+	<line x1="-0" y1="-72" x2="6" y2="-49" class="dimstroke"/>
+	<line x1="-0" y1="-72" x2="35" y2="-43" class="dimstroke"/>
+	<line x1="41" y1="-64" x2="35" y2="-43" class="dimstroke"/>
+	<line x1="41" y1="-64" x2="57" y2="-23" class="dimstroke"/>
+	<line x1="74" y1="-35" x2="57" y2="-23" class="dimstroke"/>
+	<line x1="65" y1="7" x2="57" y2="36" class="dimstroke"/>
+	<line x1="65" y1="7" x2="57" y2="-23" class="dimstroke"/>
+	<line x1="65" y1="7" x2="39" y2="6" class="dimstroke"/>
+	<line x1="65" y1="7" x2="35" y2="20" class="dimstroke"/>
+	<line x1="65" y1="7" x2="35" y2="-9" class="dimstroke"/>
+	<line x1="57" y1="36" x2="35" y2="57" class="dimstroke"/>
+	<line x1="57" y1="36" x2="35" y2="20" class="dimstroke"/>
+	<line x1="57" y1="36" x2="24" y2="30" class="dimstroke"/>
+	<line x1="35" y1="57" x2="6" y2="62" class="dimstroke"/>
+	<line x1="35" y1="57" x2="24" y2="30" class="dimstroke"/>
+	<line x1="35" y1="57" x2="10" y2="34" class="dimstroke"/>
+	<line x1="6" y1="62" x2="-20" y2="53" class="dimstroke"/>
+	<line x1="6" y1="62" x2="10" y2="34" class="dimstroke"/>
+	<line x1="6" y1="62" x2="-4" y2="29" class="dimstroke"/>
+	<line x1="-20" y1="53" x2="-39" y2="32" class="dimstroke"/>
+	<line x1="-20" y1="53" x2="-4" y2="29" class="dimstroke"/>
+	<line x1="-20" y1="53" x2="-14" y2="19" class="dimstroke"/>
+	<line x1="-39" y1="32" x2="-45" y2="6" class="dimstroke"/>
+	<line x1="-39" y1="32" x2="-14" y2="19" class="dimstroke"/>
+	<line x1="-39" y1="32" x2="-17" y2="5" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-39" y2="-20" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-17" y2="5" class="dimstroke"/>
+	<line x1="-45" y1="6" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-20" y2="-40" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-39" y1="-20" x2="-4" y2="-18" class="dimstroke"/>
+	<line x1="-20" y1="-40" x2="6" y2="-49" class="dimstroke"/>
+	<line x1="-20" y1="-40" x2="-4" y2="-18" class="dimstroke"/>
+	<line x1="-20" y1="-40" x2="10" y2="-22" class="dimstroke"/>
+	<line x1="6" y1="-49" x2="35" y2="-43" class="dimstroke"/>
+	<line x1="6" y1="-49" x2="10" y2="-22" class="dimstroke"/>
+	<line x1="6" y1="-49" x2="24" y2="-19" class="dimstroke"/>
+	<line x1="35" y1="-43" x2="57" y2="-23" class="dimstroke"/>
+	<line x1="35" y1="-43" x2="24" y2="-19" class="dimstroke"/>
+	<line x1="35" y1="-43" x2="35" y2="-9" class="dimstroke"/>
+	<line x1="57" y1="-23" x2="35" y2="-9" class="dimstroke"/>
+	<line x1="39" y1="6" x2="35" y2="20" class="dimstroke"/>
+	<line x1="39" y1="6" x2="35" y2="-9" class="dimstroke"/>
+	<line x1="39" y1="6" x2="11" y2="5" class="dimstroke"/>
+	<line x1="35" y1="20" x2="24" y2="30" class="dimstroke"/>
+	<line x1="35" y1="20" x2="11" y2="5" class="dimstroke"/>
+	<line x1="24" y1="30" x2="10" y2="34" class="dimstroke"/>
+	<line x1="24" y1="30" x2="11" y2="5" class="dimstroke"/>
+	<line x1="10" y1="34" x2="-4" y2="29" class="dimstroke"/>
+	<line x1="10" y1="34" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-4" y1="29" x2="-14" y2="19" class="dimstroke"/>
+	<line x1="-4" y1="29" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-14" y1="19" x2="-17" y2="5" class="dimstroke"/>
+	<line x1="-14" y1="19" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-17" y1="5" x2="-14" y2="-8" class="dimstroke"/>
+	<line x1="-17" y1="5" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-14" y1="-8" x2="-4" y2="-18" class="dimstroke"/>
+	<line x1="-14" y1="-8" x2="11" y2="5" class="dimstroke"/>
+	<line x1="-4" y1="-18" x2="10" y2="-22" class="dimstroke"/>
+	<line x1="-4" y1="-18" x2="11" y2="5" class="dimstroke"/>
+	<line x1="10" y1="-22" x2="24" y2="-19" class="dimstroke"/>
+	<line x1="10" y1="-22" x2="11" y2="5" class="dimstroke"/>
+	<line x1="24" y1="-19" x2="35" y2="-9" class="dimstroke"/>
+	<line x1="24" y1="-19" x2="11" y2="5" class="dimstroke"/>
+	<line x1="35" y1="-9" x2="11" y2="5" class="dimstroke"/>
+	<circle cx="-37" cy="74" r="3" class="dimstroke dimfill"/>
+	<circle cx="-63" cy="44" r="3" class="dimstroke dimfill"/>
+	<circle cx="-71" cy="7" r="3" class="dimstroke dimfill"/>
+	<circle cx="-63" cy="-29" r="3" class="dimstroke dimfill"/>
+	<circle cx="-37" cy="-58" r="3" class="dimstroke dimfill"/>
+	<circle cx="65" cy="7" r="3" class="dimstroke dimfill"/>
+	<circle cx="57" cy="36" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="57" r="3" class="dimstroke dimfill"/>
+	<circle cx="6" cy="62" r="3" class="dimstroke dimfill"/>
+	<circle cx="-20" cy="53" r="3" class="dimstroke dimfill"/>
+	<circle cx="-39" cy="32" r="3" class="dimstroke dimfill"/>
+	<circle cx="-45" cy="6" r="3" class="dimstroke dimfill"/>
+	<circle cx="-39" cy="-20" r="3" class="dimstroke dimfill"/>
+	<circle cx="-20" cy="-40" r="3" class="dimstroke dimfill"/>
+	<circle cx="6" cy="-49" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="-43" r="3" class="dimstroke dimfill"/>
+	<circle cx="57" cy="-23" r="3" class="dimstroke dimfill"/>
+	<circle cx="39" cy="6" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="20" r="3" class="dimstroke dimfill"/>
+	<circle cx="24" cy="30" r="3" class="dimstroke dimfill"/>
+	<circle cx="10" cy="34" r="3" class="dimstroke dimfill"/>
+	<circle cx="-4" cy="29" r="3" class="dimstroke dimfill"/>
+	<circle cx="-14" cy="19" r="3" class="dimstroke dimfill"/>
+	<circle cx="-17" cy="5" r="3" class="dimstroke dimfill"/>
+	<circle cx="-14" cy="-8" r="3" class="dimstroke dimfill"/>
+	<circle cx="-4" cy="-18" r="3" class="dimstroke dimfill"/>
+	<circle cx="10" cy="-22" r="3" class="dimstroke dimfill"/>
+	<circle cx="24" cy="-19" r="3" class="dimstroke dimfill"/>
+	<circle cx="35" cy="-9" r="3" class="dimstroke dimfill"/>
+	<circle cx="11" cy="5" r="3" class="dimstroke dimfill"/>
+	<line x1="-31" y1="16" x2="48" y2="15"/>
+	<line x1="-31" y1="16" x2="38" y2="53"/>
+	<line x1="-31" y1="16" x2="11" y2="77"/>
+	<line x1="-31" y1="16" x2="-24" y2="83"/>
+	<line x1="-31" y1="16" x2="-56" y2="71"/>
+	<line x1="-31" y1="16" x2="-77" y2="45"/>
+	<line x1="-31" y1="16" x2="-85" y2="13"/>
+	<line x1="-31" y1="16" x2="-77" y2="-19"/>
+	<line x1="-31" y1="16" x2="-56" y2="-44"/>
+	<line x1="-31" y1="16" x2="-24" y2="-56"/>
+	<line x1="-31" y1="16" x2="11" y2="-48"/>
+	<line x1="-31" y1="16" x2="38" y2="-23"/>
+	<line x1="48" y1="15" x2="38" y2="53"/>
+	<line x1="48" y1="15" x2="38" y2="-23"/>
+	<line x1="48" y1="15" x2="90" y2="12"/>
+	<line x1="48" y1="15" x2="75" y2="63"/>
+	<line x1="48" y1="15" x2="75" y2="-39"/>
+	<line x1="38" y1="53" x2="11" y2="77"/>
+	<line x1="38" y1="53" x2="75" y2="63"/>
+	<line x1="38" y1="53" x2="37" y2="96"/>
+	<line x1="11" y1="77" x2="-24" y2="83"/>
+	<line x1="11" y1="77" x2="37" y2="96"/>
+	<line x1="11" y1="77" x2="-11" y2="102"/>
+	<line x1="-24" y1="83" x2="-56" y2="71"/>
+	<line x1="-24" y1="83" x2="-11" y2="102"/>
+	<line x1="-24" y1="83" x2="-53" y2="85"/>
+	<line x1="-56" y1="71" x2="-77" y2="45"/>
+	<line x1="-56" y1="71" x2="-53" y2="85"/>
+	<line x1="-56" y1="71" x2="-80" y2="51"/>
+	<line x1="-77" y1="45" x2="-85" y2="13"/>
+	<line x1="-77" y1="45" x2="-80" y2="51"/>
+	<line x1="-77" y1="45" x2="-90" y2="10"/>
+	<line x1="-85" y1="13" x2="-77" y2="-19"/>
+	<line x1="-85" y1="13" x2="-90" y2="10"/>
+	<line x1="-85" y1="13" x2="-80" y2="-32"/>
+	<line x1="-77" y1="-19" x2="-56" y2="-44"/>
+	<line x1="-77" y1="-19" x2="-80" y2="-32"/>
+	<line x1="-77" y1="-19" x2="-53" y2="-65"/>
+	<line x1="-56" y1="-44" x2="-24" y2="-56"/>
+	<line x1="-56" y1="-44" x2="-53" y2="-65"/>
+	<line x1="-56" y1="-44" x2="-11" y2="-81"/>
+	<line x1="-24" y1="-56" x2="11" y2="-48"/>
+	<line x1="-24" y1="-56" x2="-11" y2="-81"/>
+	<line x1="-24" y1="-56" x2="37" y2="-73"/>
+	<line x1="11" y1="-48" x2="38" y2="-23"/>
+	<line x1="11" y1="-48" x2="37" y2="-73"/>
+	<line x1="11" y1="-48" x2="75" y2="-39"/>
+	<line x1="38" y1="-23" x2="75" y2="-39"/>
+	<line x1="90" y1="12" x2="75" y2="63"/>
+	<line x1="90" y1="12" x2="75" y2="-39"/>
+	<line x1="90" y1="12" x2="87" y2="9"/>
+	<line x1="90" y1="12" x2="74" y2="53"/>
+	<line x1="90" y1="12" x2="74" y2="-35"/>
+	<line x1="75" y1="63" x2="37" y2="96"/>
+	<line x1="75" y1="63" x2="74" y2="53"/>
+	<line x1="75" y1="63" x2="41" y2="81"/>
+	<line x1="37" y1="96" x2="-11" y2="102"/>
+	<line x1="37" y1="96" x2="41" y2="81"/>
+	<line x1="37" y1="96" x2="0" y2="88"/>
+	<line x1="-11" y1="102" x2="-53" y2="85"/>
+	<line x1="-11" y1="102" x2="0" y2="88"/>
+	<line x1="-53" y1="85" x2="-80" y2="51"/>
+	<line x1="-80" y1="51" x2="-90" y2="10"/>
+	<line x1="-90" y1="10" x2="-80" y2="-32"/>
+	<line x1="-80" y1="-32" x2="-53" y2="-65"/>
+	<line x1="-53" y1="-65" x2="-11" y2="-81"/>
+	<line x1="-53" y1="-65" x2="-0" y2="-72"/>
+	<line x1="-11" y1="-81" x2="37" y2="-73"/>
+	<line x1="-11" y1="-81" x2="-0" y2="-72"/>
+	<line x1="-11" y1="-81" x2="41" y2="-64"/>
+	<line x1="37" y1="-73" x2="75" y2="-39"/>
+	<line x1="37" y1="-73" x2="41" y2="-64"/>
+	<line x1="37" y1="-73" x2="74" y2="-35"/>
+	<line x1="75" y1="-39" x2="74" y2="-35"/>
+	<line x1="87" y1="9" x2="74" y2="53"/>
+	<line x1="87" y1="9" x2="74" y2="-35"/>
+	<line x1="74" y1="53" x2="41" y2="81"/>
+	<line x1="41" y1="81" x2="0" y2="88"/>
+	<line x1="-0" y1="-72" x2="41" y2="-64"/>
+	<line x1="41" y1="-64" x2="74" y2="-35"/>
+	<circle cx="-31" cy="16" r="3"/>
+	<circle cx="48" cy="15" r="3"/>
+	<circle cx="38" cy="53" r="3"/>
+	<circle cx="11" cy="77" r="3"/>
+	<circle cx="-24" cy="83" r="3"/>
+	<circle cx="-56" cy="71" r="3"/>
+	<circle cx="-77" cy="45" r="3"/>
+	<circle cx="-85" cy="13" r="3"/>
+	<circle cx="-77" cy="-19" r="3"/>
+	<circle cx="-56" cy="-44" r="3"/>
+	<circle cx="-24" cy="-56" r="3"/>
+	<circle cx="11" cy="-48" r="3"/>
+	<circle cx="38" cy="-23" r="3"/>
+	<circle cx="90" cy="12" r="3"/>
+	<circle cx="75" cy="63" r="3"/>
+	<circle cx="37" cy="96" r="3"/>
+	<circle cx="-11" cy="102" r="3"/>
+	<circle cx="-53" cy="85" r="3"/>
+	<circle cx="-80" cy="51" r="3"/>
+	<circle cx="-90" cy="10" r="3"/>
+	<circle cx="-80" cy="-32" r="3"/>
+	<circle cx="-53" cy="-65" r="3"/>
+	<circle cx="-11" cy="-81" r="3"/>
+	<circle cx="37" cy="-73" r="3"/>
+	<circle cx="75" cy="-39" r="3"/>
+	<circle cx="87" cy="9" r="3"/>
+	<circle cx="74" cy="53" r="3"/>
+	<circle cx="41" cy="81" r="3"/>
+	<circle cx="0" cy="88" r="3"/>
+	<circle cx="-0" cy="-72" r="3"/>
+	<circle cx="41" cy="-64" r="3"/>
+	<circle cx="74" cy="-35" r="3"/>
+</g>
+</svg>
+<br>
+<p>Rotating along the XZ plane would also work. For higher dimensions, there will be many planes to
+choose to rotate along.</p>
+<br>
+<p>It should be noted that we choose the number of segments to be even. This allows the UV sphere to
+have the same arrangement of vertices around each pole and avoid a flat a appearance at one of the
+poles.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Materials ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_materials"><h1>Materials</h1>
+<p>When a ray hits a face, we need to decide which direction it will go next and how its color will
+change. For instance, if the ray hits a mirror, it should reflect off perfectly. But if the ray hits
+a diffuse surface, it should scatter randomly.</p>
+<br>
+<p>One of the biggest differences between a ray tracer and a ray tracer is what a ray does when it hits
+a face. A ray tracer that uses 1 ray per pixel will not really use 1 ray. At each point when a ray
+hits a surface, multiple rays will be spawned going in different directions depending on the
+properties of the material. In a ray tracer, no new rays will be spawned. Instead, at each
+collision, the tracer will randomly decide which direction the ray should go next after calculating
+the probabilities of different scattering phenomena.</p>
+<br>
+<p>Material properties, if done properly, should not depend on the dimension of the space we're working
+in. At most, it should only depend on the relative angle of a ray and a face normal, which can be
+calculated as a simple dot product. Thus we don't need to use any higher dimensional algebra in this
+section.</p>
+<br>
+<h2>Lights and Color</h2>
+<br>
+<p>In the real world, the color of an object is determined by the wavelengths of light it emits. For
+most objects, this corresponds to the wavelengths of light it reflects. So, an apple is red because
+it reflects wavelengths in the red spectrum.</p>
+<br>
+<p>Since our ray tracer uses the RGB model of color that's common with computers and images, we'll need
+to find a way to approximate how a ray of light changes its color. One way would be to convert the
+RGB values into wavelengths, calculate what wavelengths should be reflected, and then convert back
+to RGB. This conversion is more complicated that we want for an approximation, so instead we'll take
+the multiple of the material's RGB values and the ray's RGB values as the new color of the ray.</p>
+<br>
+<div class="codeblock langpython">for i in range(3):
+	color[i]*=material.color[i]
+</div>
+<br>
+<p>Each material will also have a luminosity value, AKA a brightness value. This is again a
+simplification. In reality, a light source would emit different wavelengths of light with a random
+probability. For the simplified model, a material's luminosity determines the magnitude of the light
+being emitted from the object, and thus the intensity of the RGB values that would reach the viewer.</p>
+<br>
+<div class="codeblock langpython">ret=[0,0,0]
+for i in range(3):
+	color[i]*=material.color[i]
+	ret[i]+=material.luminosity*color[i]
+</div>
+<br>
+<p>At first glance, it might seem natural that luminosity values will be between 0 and 1. 1 being total
+illumination, and 0 being total darkness. This will end up producing scenes that are extremely dark.
+Instead, it is better to think of the luminosity as a way to overcome the ratio of rays that never
+reach a light source compared to the rays that do. For instance, if only 1 in 30 rays will ever
+reach a light source, the lights will need to have a luminosity of 30 for the scene to have an
+average luminosity of 1.</p>
+<br>
+<p>Note that the fact that we're shooting rays from the viewer does not change the color that is
+reported back. The calculations that we're performing would work the same when performed in reverse,
+from the light's point of view.</p>
+<br>
+<h2>Reflection</h2>
+<br>
+<p>The most common interaction light has with an object is reflection. Indeed, when most people think
+of light rays hitting an object, they also think of those rays immediately bouncing off the surface
+of the object. One of the first objects people see in the morning, a mirror, also works off this
+phenomenon.</p>
+<br>
+<p>When reflecting, the diffusion of the material determines whether it will be a perfect, mirror-like
+reflection, or whether it will be a totally random, matte reflection.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 320" class="diagram">
+<defs>
+	<g id="arrow">
+		<line x1="0" y1="0" x2="100" y2="0"/>
+		<line x1="100" y1="0" x2="90" y2="-6"/>
+		<line x1="100" y1="0" x2="90" y2="6"/>
+	</g>
+</defs>
+<g transform="translate(200,110)">
+	<rect x="0" y="150" width="200" height="8" stroke-width="0"/>
+	<line x1="0" y1="0" x2="60" y2="150" class="highstroke"/>
+	<use xlink:href="#arrow" transform="translate(60,150) rotate(-68)" class="highstroke"/>
+	<line x1="30" y1="0" x2="90" y2="150" class="highstroke"/>
+	<use xlink:href="#arrow" transform="translate(90,150) rotate(-68)" class="highstroke"/>
+	<line x1="60" y1="0" x2="120" y2="150" class="highstroke"/>
+	<use xlink:href="#arrow" transform="translate(120,150) rotate(-68)" class="highstroke"/>
+	<text x="50" y="0" dy="-1.5em" text-anchor="middle" transform="scale(2)">Mirror</text>
+</g>
+<g transform="translate(600,110)">
+	<rect x="0" y="150" width="200" height="8" stroke-width="0"/>
+	<line x1="0" y1="0" x2="60" y2="150" class="highstroke"/>
+	<use xlink:href="#arrow" transform="translate(60,150) rotate(-168)" class="highstroke"/>
+	<line x1="30" y1="0" x2="90" y2="150" class="highstroke"/>
+	<use xlink:href="#arrow" transform="translate(90,150) rotate(-38)" class="highstroke"/>
+	<line x1="60" y1="0" x2="120" y2="150" class="highstroke"/>
+	<use xlink:href="#arrow" transform="translate(120,150) rotate(-98)" class="highstroke"/>
+	<text x="50" y="0" dy="-1.5em" text-anchor="middle" transform="scale(2)">Matte</text>
+</g>
+</svg>
+<br>
+<p>Each material will have a diffusion value, between 0 and 1, that determines whether the surface acts
+like a mirror or matte surface respectively. Although it is easy to calculate the new direction of
+the ray when diffusion is exactly 0 or 1, it is much more difficult for any value in between. The
+mathematically correct way to calculate the new direction would be to assign a pdf to each angle
+depending on the diffusion and then randomly select the new angle for the ray. In 2 dimensions, this
+calculation is fairly straight forward, given that there's 1 equation to solve with 1 unknown. In
+higher dimensions, however, there will still be 1 equation to solve with multiple unknowns. Choosing
+the new direction in this case becomes complicated and time consuming.</p>
+<br>
+<p>Instead, we simplify our diffusion calculation by linearly interpolating between perfect reflection
+and matte reflection. The calculation is given below:</p>
+<br>
+<div class="codeblock langpython">dot=raydir*face.normal
+raydir+=face.normal*(2.0*dot)
+rand=RandomVector()
+if rand*face.normal&lt;0.0: rand=-rand
+raydir+=(rand-raydir)*material.diffusion
+</div>
+<br>
+<p>A common mistake when generating random unit vectors is to use a uniform random function for each
+element of the vector. This will bias the vector towards the "corners" of the unit sphere when
+normalized. Instead, the vector should be generated using a gaussian random function. The code for
+this is also given below:</p>
+<br>
+<div class="codeblock langpython">def RandomVector():
+	dim=3
+	vec=Vector(dim)
+	norm=0.0
+	for i in range(dim):
+		vec[i]=random.gauss(0,1)
+		norm+=vec[i]*vec[i]
+	vec/=math.sqrt(norm)
+	return vec
+</div>
+<br>
+<p>In the render at the top of the page, the sphere in back is a mirror with a diffusion of 0, and the
+walls are perfectly matte with a diffusion of 1.</p>
+<br>
+<h2>Refraction</h2>
+<br>
+<p>The second most recognizable phenomenon of light is refraction. When light is refracted, it doesn't
+bounce off the object as in reflection, instead it continues through the object with its direction
+bent. This is what causes objects to appear to shift when looking through glass or water.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 280" class="diagram">
+<g transform="translate(500,140)">
+	<circle cx="0" cy="0" r="80" class="bgfill"/>
+	<line x1="-150" y1="-60" x2="-53" y2="-60" class="highstroke"/>
+	<line x1="-53" y1="-60" x2="70" y2="-39" class="highstroke"/>
+	<line x1="70" y1="-39" x2="150" y2="-10" class="highstroke"/>
+	<line x1="-150" y1="-20" x2="-77" y2="-20" class="highstroke"/>
+	<line x1="-77" y1="-20" x2="79" y2="-13" class="highstroke"/>
+	<line x1="79" y1="-13" x2="150" y2="-7" class="highstroke"/>
+	<line x1="-150" y1="20" x2="-77" y2="20" class="highstroke"/>
+	<line x1="-77" y1="20" x2="79" y2="13" class="highstroke"/>
+	<line x1="79" y1="13" x2="150" y2="7" class="highstroke"/>
+	<line x1="-150" y1="60" x2="-53" y2="60" class="highstroke"/>
+	<line x1="-53" y1="60" x2="70" y2="39" class="highstroke"/>
+	<line x1="70" y1="39" x2="150" y2="10" class="highstroke"/>
+</g>
+</svg>
+<br>
+<p>Refraction is something that occurs between two mediums, usually air and whatever object the ray is
+hitting. How the light gets bend depends on the index of refraction of the two mediums, the angle of
+incidence, and the angle of refraction. We label then <i>idx0</i>, <i>idx1</i>, <i>ang0</i>, and <i>ang1</i> respectively.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 260" class="diagram">
+<g transform="translate(500,130)">
+	<circle cx="0" cy="0" r="30" stroke-width="1.5px" class="bgfill"/>
+	<rect x="-18" y="-34" width="82" height="34" stroke-width="0" class="bgfill"/>
+	<rect x="-100" y="0" width="125" height="34" stroke-width="0" class="bgfill"/>
+	<rect x="-100" y="-1" width="200" height="2" stroke-width="0"/>
+	<line x1="-60" y1="-80" x2="0" y2="0" class="highstroke"/>
+	<g class="highstroke" transform="translate(0,0) rotate(35)">
+		<line x1="0" y1="0" x2="100" y2="0"/>
+		<line x1="100" y1="0" x2="90" y2="-6"/>
+		<line x1="100" y1="0" x2="90" y2="6"/>
+	</g>
+	<text x="-140" y="-20" transform="scale(2)">Outside</text>
+	<text x="-140" y="30" transform="scale(2)">Inside</text>
+	<text x="-32" y="-13" text-anchor="end">ang0</text>
+	<text x="34" y="17">ang1</text>
+	<text x="90" y="-8">idx0</text>
+	<text x="90" y="18">idx1</text>
+</g>
+</svg>
+<br>
+<p>They combine in Snell's equation as shown below. Here, the angle of refraction, <i>ang1</i>, is unknown and
+must be solved for.</p>
+<br>
+<div class="codeblock">sin(ang0)   idx0
+--------- = ----
+sin(ang1)   idx1
+</div>
+<br>
+The code for finding the new direction of refraction is:
+<br>
+<div class="codeblock langpython">cos0=face.normal*raydir
+ior=inside_index/outside_index
+disc=1.0-ior*ior*(1.0-cos0*cos0)
+if disc&gt;=0:
+	cos1=math.sqrt(disc)
+	refractdir=ior*raydir+(ior*cos0-cos1)*face.normal
+else:
+	#reflect
+</div>
+<br>
+<p>When the discriminant, <i>disc</i>, is less than 0, we have a phenomenon called total internal reflection.
+This is simply light bouncing off the inside of the object's faces instead of the outside. Diamonds
+are cut in a particular way to maximize total internal reflection. The diagram below shows a basic
+situation in which this can occur.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 280" class="diagram">
+<g transform="translate(500,200)">
+	<circle cx="0" cy="0" r="100" class="bgfill"/>
+	<rect x="-102" y="0" width="204" height="102" stroke-width="0" class="bgfill"/>
+	<line x1="-100" y1="0" x2="100" y2="0"/>
+	<line x1="-110" y1="-110" x2="0" y2="0" class="highstroke"/>
+	<g class="highstroke" transform="translate(0,0) rotate(-45)">
+		<line x1="0" y1="0" x2="155" y2="0"/>
+		<line x1="155" y1="0" x2="145" y2="-6"/>
+		<line x1="155" y1="0" x2="145" y2="6"/>
+	</g>
+</g>
+</svg>
+<br>
+<p>Note that in the ray tracer, for a ray passing through the object, we will be refracting twice. Once
+when the ray enters the object, and once when it leaves. When the ray leaves the object, the inside
+and outside indices will need to be switched, and the face normal will need to be reversed.</p>
+<br>
+<p>In addition the rays reflecting off the inside of the object, different wavelengths of light may be
+reflected or refracted. These two different wavelengths are known as S and P polarized light. The
+light that gets reflected here is what allows water surfaces to act like mirrors at the proper
+angle. The proportion of light that gets S or P polarized is given by Fresnel's equations.</p>
+<br>
+<div class="codeblock">     ( ind1*cos0-ind0*cos1 )
+Rs = ( ------------------- )^2
+     ( ind1*cos0+ind0*cos1 )
+
+     ( ind0*cos0-ind1*cos1 )
+Rp = ( ------------------- )^2
+     ( ind0*cos0+ind1*cos1 )
+</div>
+<br>
+<p>Because our ray tracer doesn't directly use wavelengths of light, we combine <i>Rs</i> and <i>Rp</i> to determine
+the average probability that the ray will be refracted.</p>
+<br>
+<div class="codeblock">refractprob=1-(rs+rp)/2</div>
+<br>
+<p>Combining all of these effects gives us the following code for refraction.</p>
+<br>
+<div class="codeblock langpython">cos0=raydir*face.normal
+ior=inside_index/outside_index
+if cos0>0.0:
+	#We're inside the face and pointing out.
+	norm=-norm
+else:
+	#We're outside the face and pointing in.
+	cos0=-cos0
+	ior=1.0/ior
+disc=1.0-ior*ior*(1.0-cos0*cos0)
+if disc&gt;0:
+	cos1=math.sqrt(disc)
+	refractdir=ior*raydir+(ior*cos0-cos1)*face.normal
+	#Fresnel reflectance equations.
+	a=ior*cos1;rs=(cos0-a)/(cos0+a)
+	a=ior*cos0;rp=(a-cos1)/(a+cos1)
+	refractprob=1.0-(rs*rs+rp*rp)*0.5
+else:
+	#Total internal reflection.
+	refractprob=0.0
+if random()&lt;refractprob:
+	raydir=refractdir
+else:
+	#reflect
+</div>
+<br>
+<p>Without invoking the wavelength of light, these are all the effects that we need to worry about for
+refraction. In the image at the top of the page, the sphere on the left has the refractive index of
+glass, which is 1.5.</p>
+<br>
+<h2>Subsurface Scattering</h2>
+<br>
+<p>When light penetrates the surface of an object, it doesn't have to be because of refraction. If the
+material is porus to light, the rays will get inside the object and bounce around randomly until
+finally exiting at some point on the object.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 280" class="diagram">
+<g transform="translate(500,160)">
+	<rect x="-100" y="-3" width="200" height="6" stroke-width="0"/>
+	<line x1="-80" y1="-100" x2="-40" y2="0" class="highstroke"/>
+	<line x1="0" y1="30" x2="-40" y2="0" class="highstroke"/>
+	<line x1="0" y1="30" x2="-30" y2="40" class="highstroke"/>
+	<line x1="-40" y1="20" x2="-30" y2="40" class="highstroke"/>
+	<line x1="-40" y1="20" x2="30" y2="40" class="highstroke"/>
+	<g class="highstroke" transform="translate(30,40) rotate(-95)">
+		<line x1="0" y1="0" x2="120" y2="0"/>
+		<line x1="120" y1="0" x2="110" y2="-6"/>
+		<line x1="120" y1="0" x2="110" y2="6"/>
+	</g>
+</g>
+</svg>
+<br>
+<p>We first assume that the ray tracer knows that it is inside an object, either by spatial tests or by
+tracking what surface it most recently went through. We now have a point inside an object, and wish
+to scatter it and/or determine if it should leave the object. What we'll do is find the length to
+the closest face in front of the ray, and also generate a random distance the ray should travel. If
+the face is closer than the random distance, then the ray leaves the object. Otherwise, travel the
+random distance and then decide a new, random direction for the ray to continue scattering.</p>
+<br>
+<p>To randomly generate the distance that a ray should travel before scattering, we'll use a random
+distribution based off of the Beer-Lambert law. The distribution is</p>
+<br>
+<div class="codeblock">dist=-ln(random(0,1))*scatterlength</div>
+<br>
+<p>The code for scattering is conceptually simple:</p>
+<br>
+<div class="codeblock langpython">face_dist=...
+dist=-math.log(random())*material.scatterlength
+if face_dist&lt;=dist:
+	raypos+=raydir*face_dist
+	#exit object
+else:
+	raypos+=raydir*dist
+	raydir=RandomVector()
+	#continue scattering
+</div>
+<br>
+<p>In the image at the top of the page, the box to the right demonstrates subsurface scattering.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ BVH ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_bvh"><h1>BVH</h1>
+<p>If shooting rays from the viewer is the most important optimization, then bounding volume
+hierarchies would be the second most important optimization. BVHs provide a way of quickly pruning
+faces that a ray will never hit, allowing hit detection to take amortized <i>O(log(F))</i> instead of <i>O(F)</i>
+operations for <i>F</i> faces.</p>
+<br>
+<p>BVHs work just as their name implies. Boundaries are arranged into a hierarchy with a single root
+boundary. If the ray hits a boundary, then we test the boundaries contained within it, and
+eventually test the objects at the bottom of the hierarchy. If a ray misses a boundary, then we can
+skip testing all the boundaries and objects below it.</p>
+<br>
+<p>Consider a BVH for the collection of objects below.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 320" class="diagram">
+<defs>
+	<g id="star" stroke="#000000">
+		<rect x="-24" y="-23" width="48" height="44" fill="none" stroke="#4444aa"/>
+		<line x1="19" y1="-6" x2="8" y2="2"/>
+		<line x1="8" y1="2" x2="12" y2="16"/>
+		<line x1="12" y1="16" x2="0" y2="8"/>
+		<line x1="0" y1="8" x2="-12" y2="16"/>
+		<line x1="-12" y1="16" x2="-8" y2="2"/>
+		<line x1="-8" y1="2" x2="-19" y2="-6"/>
+		<line x1="-19" y1="-6" x2="-5" y2="-6"/>
+		<line x1="-5" y1="-6" x2="-0" y2="-20"/>
+		<line x1="-0" y1="-20" x2="5" y2="-6"/>
+		<line x1="5" y1="-6" x2="19" y2="-6"/>
+	</g>
+</defs>
+<g transform="translate(500,-15)">
+	<rect x="-285" y="65" width="580" height="220" fill="none" stroke="#aa4444"/>
+	<rect x="-280" y="190" width="130" height="88" fill="none" stroke="#44aa44"/>
+	<use xlink:href="#star" transform="translate(-250,250)"/>
+	<use xlink:href="#star" transform="translate(-180,220)"/>
+	<rect x="120" y="70" width="170" height="60" fill="none" stroke="#44aa44"/>
+	<use xlink:href="#star" transform="translate(150,100)"/>
+	<use xlink:href="#star" transform="translate(260,100)"/>
+</g>
+</svg>
+<br>
+<p>If a ray hits the red box, then we test each of the green boxes. If it hits one of the green boxes,
+then we test the boxes it contains and so on until we test the objects of the scene.</p>
+<br>
+<p>In our ray tracer, the type of boundary used will be an axis aligned bounding box, or AABB. This is
+simply a box that is shrunk to fit the points inside of it. AABBs provide decent results across
+dimensions without taking too much space, computation, or complexity. Other common bounding types
+are spheres and oriented bounding boxes.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 320" class="diagram">
+<defs>
+	<g id="points">
+		<circle cx="48" cy="-9" r="3"/>
+		<circle cx="-38" cy="-33" r="3"/>
+		<circle cx="1" cy="30" r="3"/>
+		<circle cx="50" cy="-4" r="3"/>
+		<circle cx="49" cy="59" r="3"/>
+		<circle cx="-11" cy="-40" r="3"/>
+		<circle cx="15" cy="9" r="3"/>
+		<circle cx="-2" cy="17" r="3"/>
+		<circle cx="43" cy="26" r="3"/>
+		<circle cx="39" cy="58" r="3"/>
+		<circle cx="14" cy="-6" r="3"/>
+		<circle cx="33" cy="-39" r="3"/>
+		<circle cx="-2" cy="-56" r="3"/>
+		<circle cx="47" cy="53" r="3"/>
+		<circle cx="30" cy="-4" r="3"/>
+		<circle cx="42" cy="-10" r="3"/>
+		<circle cx="-42" cy="30" r="3"/>
+		<circle cx="-15" cy="-42" r="3"/>
+		<circle cx="2" cy="-16" r="3"/>
+		<circle cx="17" cy="45" r="3"/>
+		<circle cx="60" cy="43" r="3"/>
+		<circle cx="-15" cy="44" r="3"/>
+		<circle cx="-53" cy="-60" r="3"/>
+		<circle cx="-36" cy="-5" r="3"/>
+		<circle cx="-19" cy="-34" r="3"/>
+		<circle cx="-37" cy="-10" r="3"/>
+		<circle cx="-18" cy="35" r="3"/>
+		<circle cx="-18" cy="-40" r="3"/>
+	</g>
+</defs>
+<g transform="translate(150,120)">
+	<use xlink:href="#points" transform="translate(0,0)"/>
+	<rect x="-58" y="-65" width="122" height="129" fill="none" class="highstroke"/>
+	<text x="0" y="80" transform="scale(1.5)" text-anchor="middle">Axis Aligned</text>
+	<text x="0" y="80" dy="1.3em" transform="scale(1.5)" text-anchor="middle">Bounding Box</text>
+</g>
+<g transform="translate(500,120)">
+	<use xlink:href="#points" transform="translate(0,0)"/>
+	<circle cx="0" cy="0" r="85" fill="none" class="highstroke"/>
+	<text x="0" y="80" transform="scale(1.5)" text-anchor="middle">Bounding Sphere</text>
+</g>
+<g transform="translate(850,120)">
+	<use xlink:href="#points" transform="translate(0,0)"/>
+	<rect x="-75" y="-56" width="151" height="107" transform="rotate(20)" fill="none" class="highstroke"/>
+	<text x="0" y="80" transform="scale(1.5)" text-anchor="middle">Oriented</text>
+	<text x="0" y="80" dy="1.3em" transform="scale(1.5)" text-anchor="middle">Bounding Box</text>
+</g>
+</svg>
+<br>
+<p>The building block of the BVH is a node. A node will contain information such as child nodes, child
+objects, and the bounding volume of everything it contains. Every BVH will have a root node that
+physically contains everything in the scene, and it is where every collision traversal will start.
+These nodes, when looked at as a hierarchy, make up the BVH. Our current problem is deciding how to
+construct these nodes so that we can make collision tests as efficient as possible.</p>
+<br>
+<h2>Construction</h2>
+<br>
+<p>We'll construct the BVH by first creating a node that contains all objects in the scene. We'll then
+attempt to partition the node into two sets of objects, and then further partition those sets. The
+difficult part lies in deciding how to partition the objects, and when to stop. It is important to
+note at the start that different BVH nodes are allowed to overlap, although we want to minimize
+this.</p>
+<br>
+<p>For a given scene, there may be no universally optimal partitioning of the objects inside it.
+However, the surface area heuristic (SAH) is the most widely used method that is quick to calculate
+and produces good results. The SAH works by noting that the probability that a ray will hit a
+boundary is dependent on the surface area of that boundary. We want to partition the scene in two so
+that each partition balances its surface area with the number of objects it contains. In particular,
+we want to minimize the following function.</p>
+<br>
+<div class="codeblock">SAH = bvh_cost +  left_surface_area*left_objects
+               + right_surface_area*right_objects</div>
+<br>
+<p>Here, <i>bvh_cost</i> is a placeholder value to estimate the cost of testing collision with a node's
+boundary during traversal; 0.1 is a typical value. We can demonstrate calculating the SAH below. The
+scene to the left shows a partitioning that's not optimal, the scene to the right shows a
+partitioning with a much lower SAH that looks much better.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 390" class="diagram">
+<g transform="translate(50,50)">
+	<circle cx="14" cy="170" r="10" stroke="none"/>
+	<circle cx="54" cy="150" r="10" stroke="none"/>
+	<circle cx="34" cy="190" r="10" stroke="none"/>
+	<circle cx="64" cy="200" r="10" stroke="none"/>
+	<circle cx="350" cy="30" r="10" stroke="none"/>
+	<circle cx="380" cy="50" r="10" stroke="none"/>
+	<circle cx="320" cy="40" r="10" stroke="none"/>
+	<circle cx="340" cy="60" r="10" stroke="none"/>
+	<circle cx="320" cy="80" r="10" stroke="none"/>
+	<rect x="0" y="65" width="335" height="150" fill="none" class="highstroke"/>
+	<rect x="305" y="15" width="90" height="60" fill="none" class="highstroke"/>
+	<text x="0" y="250">SAH = 0.1 + (2*335+2*150)*5 + (2*90+2*60)*4</text>
+	<text x="0" y="250" dy="1.4em">SAH = 6050.1</text>
+</g>
+<line x1="500" y1="35" x2="500" y2="355"/>
+<g transform="translate(550,50)">
+	<circle cx="14" cy="170" r="10" stroke="none"/>
+	<circle cx="54" cy="150" r="10" stroke="none"/>
+	<circle cx="34" cy="190" r="10" stroke="none"/>
+	<circle cx="64" cy="200" r="10" stroke="none"/>
+	<circle cx="350" cy="30" r="10" stroke="none"/>
+	<circle cx="380" cy="50" r="10" stroke="none"/>
+	<circle cx="320" cy="40" r="10" stroke="none"/>
+	<circle cx="340" cy="60" r="10" stroke="none"/>
+	<circle cx="320" cy="80" r="10" stroke="none"/>
+	<rect x="0" y="135" width="80" height="80" fill="none" class="highstroke"/>
+	<rect x="305" y="15" width="90" height="80" fill="none" class="highstroke"/>
+	<text x="0" y="250">SAH = 0.1 + (2*80+2*80)*4 + (2*90+2*80)*5</text>
+	<text x="0" y="250" dy="1.4em">SAH = 2980.1</text>
+</g>
+</svg>
+<br>
+<p>To decide the optimal way to partition a group of objects, we first pick an axis and sort the nodes
+along the axis by the centers of their bounding boxes. We now want to find a way of splitting this
+sorted array into a left half and a right half with the most optimal SAH.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 320" class="diagram">
+<g transform="translate(130,-5)" stroke="none">
+	<circle cx="75" cy="215" r="10"/>
+	<text x="75" y="215" dy="25" text-anchor="middle">0</text>
+	<circle cx="200" cy="160" r="10"/>
+	<text x="200" y="160" dy="25" text-anchor="middle">1</text>
+	<circle cx="325" cy="235" r="10"/>
+	<text x="325" y="235" dy="25" text-anchor="middle">2</text>
+	<circle cx="495" cy="75" r="10"/>
+	<text x="495" y="75" dy="25" text-anchor="middle">3</text>
+	<circle cx="665" cy="155" r="10"/>
+	<text x="665" y="155" dy="25" text-anchor="middle">4</text>
+</g>
+</svg>
+<br>
+<p>Calculating the optimal partioning of these boundaries can be done in linear time using two passes.
+In the first pass, we start with an empty AABB and merge objects with it from the left to the right.
+Before we merge an object's AABB, we record the value <i>left_cost[i]=aabb.area*i</i> which represents the
+SAH cost of all objects before index <i>i</i>. We then perform the same operation going from right to
+left, except we merge the object's AABB before calculating the right hand SAH. The left and right
+SAHs for a given index can be added together and the minimal value recorded. We demonstrate the
+left-to-right pass below.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 350" class="diagram">
+<g transform="translate(130,-25)" stroke="none">
+	<circle cx="75" cy="215" r="10"/>
+	<text x="75" y="215" dy="25" text-anchor="middle">0</text>
+	<circle cx="200" cy="160" r="10"/>
+	<text x="200" y="160" dy="25" text-anchor="middle">1</text>
+	<circle cx="325" cy="235" r="10"/>
+	<text x="325" y="235" dy="25" text-anchor="middle">2</text>
+	<circle cx="495" cy="75" r="10"/>
+	<text x="495" y="75" dy="25" text-anchor="middle">3</text>
+	<circle cx="665" cy="155" r="10"/>
+	<text x="665" y="155" dy="25" text-anchor="middle">4</text>
+	<g transform="translate(-30,320)" text-anchor="middle">
+		<text x="0" y="0">i=0</text>
+		<text x="0" y="0" dy="1.3em">SAH=0</text>
+	</g>
+	<rect x="63" y="202" width="24" height="40" fill="none" class="highstroke"/>
+	<g transform="translate(75,320)" text-anchor="middle">
+		<text x="0" y="0">i=1</text>
+		<text x="0" y="0" dy="1.3em">SAH=128</text>
+	</g>
+	<rect x="63" y="148" width="149" height="94" fill="none" class="highstroke"/>
+	<g transform="translate(200,320)" text-anchor="middle">
+		<text x="0" y="0">i=2</text>
+		<text x="0" y="0" dy="1.3em">SAH=972</text>
+	</g>
+	<rect x="63" y="148" width="273" height="115" fill="none" class="highstroke"/>
+	<g transform="translate(325,320)" text-anchor="middle">
+		<text x="0" y="0">i=3</text>
+		<text x="0" y="0" dy="1.3em">SAH=2328</text>
+	</g>
+	<rect x="63" y="63" width="443" height="200" fill="none" class="highstroke"/>
+	<g transform="translate(495,320)" text-anchor="middle">
+		<text x="0" y="0">i=4</text>
+		<text x="0" y="0" dy="1.3em">SAH=5144</text>
+	</g>
+	<rect x="63" y="63" width="614" height="200" fill="none" class="highstroke"/>
+	<g transform="translate(665,320)" text-anchor="middle">
+		<text x="0" y="0">i=5</text>
+		<text x="0" y="0" dy="1.3em">SAH=8140</text>
+	</g>
+</g>
+</svg>
+<br>
+<p>The right-to-left pass:</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 350" class="diagram">
+<g transform="translate(130,-25)" stroke="none">
+	<circle cx="75" cy="215" r="10"/>
+	<text x="75" y="215" dy="25" text-anchor="middle">0</text>
+	<circle cx="200" cy="160" r="10"/>
+	<text x="200" y="160" dy="25" text-anchor="middle">1</text>
+	<circle cx="325" cy="235" r="10"/>
+	<text x="325" y="235" dy="25" text-anchor="middle">2</text>
+	<circle cx="495" cy="75" r="10"/>
+	<text x="495" y="75" dy="25" text-anchor="middle">3</text>
+	<circle cx="665" cy="155" r="10"/>
+	<text x="665" y="155" dy="25" text-anchor="middle">4</text>
+	<rect x="63" y="63" width="614" height="200" fill="none" class="highstroke"/>
+	<g transform="translate(75,320)" text-anchor="middle">
+		<text x="0" y="0">i=0</text>
+		<text x="0" y="0" dy="1.3em">SAH=8140</text>
+	</g>
+	<rect x="188" y="63" width="489" height="200" fill="none" class="highstroke"/>
+	<g transform="translate(200,320)" text-anchor="middle">
+		<text x="0" y="0">i=1</text>
+		<text x="0" y="0" dy="1.3em">SAH=5512</text>
+	</g>
+	<rect x="312" y="63" width="365" height="200" fill="none" class="highstroke"/>
+	<g transform="translate(325,320)" text-anchor="middle">
+		<text x="0" y="0">i=2</text>
+		<text x="0" y="0" dy="1.3em">SAH=3390</text>
+	</g>
+	<rect x="483" y="63" width="194" height="120" fill="none" class="highstroke"/>
+	<g transform="translate(495,320)" text-anchor="middle">
+		<text x="0" y="0">i=3</text>
+		<text x="0" y="0" dy="1.3em">SAH=1256</text>
+	</g>
+	<rect x="653" y="143" width="24" height="40" fill="none" class="highstroke"/>
+	<g transform="translate(665,320)" text-anchor="middle">
+		<text x="0" y="0">i=4</text>
+		<text x="0" y="0" dy="1.3em">SAH=128</text>
+	</g>
+</g>
+</svg>
+<br>
+<p>A simple linear scan shows <i>left_cost[3]+right_cost[3] = 2328+1256 = 3584</i> is the minimum SAH. Thus we
+split at <i>i=3</i>, which yields partitions <i>{0,1,2}</i> and <i>{3,4}</i>.</p>
+<br>
+<svg version="1.1" viewBox="0 0 1000 350" class="diagram">
+<g transform="translate(130,-25)" stroke="none">
+	<circle cx="75" cy="215" r="10"/>
+	<text x="75" y="215" dy="25" text-anchor="middle">0</text>
+	<circle cx="200" cy="160" r="10"/>
+	<text x="200" y="160" dy="25" text-anchor="middle">1</text>
+	<circle cx="325" cy="235" r="10"/>
+	<text x="325" y="235" dy="25" text-anchor="middle">2</text>
+	<circle cx="495" cy="75" r="10"/>
+	<text x="495" y="75" dy="25" text-anchor="middle">3</text>
+	<circle cx="665" cy="155" r="10"/>
+	<text x="665" y="155" dy="25" text-anchor="middle">4</text>
+	<rect x="63" y="148" width="273" height="115" fill="none" class="highstroke"/>
+	<g transform="translate(200,320)" text-anchor="middle">
+		<text x="0" y="0" dy="1.3em">SAH=2328</text>
+	</g>
+	<rect x="483" y="63" width="194" height="120" fill="none" class="highstroke"/>
+	<g transform="translate(580,320)" text-anchor="middle">
+		<text x="0" y="0" dy="1.3em">SAH=1256</text>
+	</g>
+</g>
+</svg>
+<br>
+<p>The following python code shows the algorithm taken from the ray tracer.</p>
+<br>
+<div class="codeblock langpython">def divideaxis(self,ltcost,left,right,lchild,rchild,axis):
+	#Sort nodes.
+	nodearr=self.nodearr
+	sarr=nodearr[left:right]
+	sarr.sort(key=lambda x: x.bbmin[axis]+x.bbmax[axis])
+	nodearr[left:right]=sarr
+	mincost,minhalf=float("inf"),left
+	#Find the total cost and area for nodes to the left of index i.
+	lchild.aabbinit()
+	for i in range(left,right):
+		ltcost[i]=lchild.area*lchild.cost
+		lchild.aabbmerge(nodearr[i])
+	#Find the total cost and area for the nodes to the right of i (including i). Then
+	#find the cost if we divided the nodes into [left,i) and [i,right).
+	rchild.aabbinit()
+	for i in range(right-1,left-1,-1):
+		rchild.aabbmerge(nodearr[i])
+		cost=ltcost[i]+rchild.area*rchild.cost
+		if mincost>cost: mincost,minhalf=cost,i
+	return (mincost,minhalf)
+</div>
+<br>
+<p>This partitioning will be performed for each axis to determine which one is best. If there is no
+division that works better than doing nothing, keep all the objects as the node's child and stop
+partitioning this subset of objects.</p>
+<br>
+<h2>Traversal</h2>
+<br>
+<p>Once the BVH is built, we can begin querying for the closest object that a ray hits. For a ray
+query, we first start at the root node. If the ray intersects the root node, then we continue
+testing its children until we hit an actual object. When we do hit an object, we record the distance
+to it, and then backtrack up the hierarchy and continue testing. If we find another object that the
+ray hits, we only record it if the distance is less than any previous hit.</p>
+<br>
+<p>It needs to be emphasized from the paragraph above that we don't stop querying at the first object
+we hit. We need to continue querying until we are sure we have the closest object to the ray.</p>
+<br>
+<p>One small optimization we can perform is when choosing whether to traverse down the left or right
+child node first. What we can do is record the axis used to partition the node during construction.
+If the ray direction is positive on that axis, test the left child first. Otherwise, test the right
+child first. This allows us to test the child that is more likely to have an object closer to the
+ray first.</p>
+<br>
+<p>Most traversal implementations use recursion in their source implementation. In practice, this adds
+function call overhead and also uses up the stack. Given the simplicity of our BVH traversal, it can
+be done without recursion by tracking the node that we're at and the one we just came from.</p>
+<br>
+<h2>Meshes</h2>
+<br>
+<p>In order to support mesh instancing, each mesh will be given its own BVH. This allows a ray to be
+reoriented into the mesh's space when the ray encounters a node containing a mesh instance. This
+saves the cost and complexity of storing a mesh's entire BVH in whatever scene we want to embed it
+in.</p>
+<br>
+<p>Because we use axis aligned boxes, however, we are forced to take a performance hit when creating a
+mesh instance. The performance comes in the form of the space the BVH node's bounding box will take
+if the mesh instance is rotated. Without performing the rotation on all points in the mesh, we
+instead have to approximate them by rotating the vertices of the mesh's root bounding box and using
+these vertices to construct the node's bounding box. This will end up inflating the size of the
+node's AABB.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Notes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_notes"><h1>Notes</h1>
+<p>We have covered the overall implementation of a hyperdimensional ray tracer. In general, most of the
+concepts are the same as a 3 dimensional ray tracer. The biggest difference manifests itself in the
+matrix algebra we have to use. For a traditional ray tracer, most of the calculations, such as cross
+products, can be explicitly written in a compact form. In arbitrary dimensioned space, we have to
+resort to the general matrix formulas. Creating high dimension primitives, such as cubes, is also
+unnecessarily complex.</p>
+<br>
+<p>I made this ray tracer hyperdimensional because I had trouble thinking about 3D geometry. So, I
+decided that writing a renderer that was dimension agnostic would allow me to rely on the math
+instead of mental visualization.</p>
+<br>
+<p>Spherical bounding volumes were not tested, but they may be competitive with AABBs in real world
+scenes. They have the important advantage of not needing to expand for rotated mesh instances.</p>
+<br>
+<p>The example scene at the beginning of the article was rendered in python using PyPy. Python
+multithreading is much less efficient than in C/C++. In particular, each separate process must have
+its own copy of the scene, each process is slow to start up, and sharing values between processes
+requires putting a synchronized value in the global scope.</p>
+<br>
+<p>GPU acceleration would be perfect for ray tracing, although the traversal logic may not play well
+with GPU cores. A GPU implementation would most likely be several orders of magnitude faster than
+the current implementation.</p>
+<br>
+<p>Although we call this a ray tracer, it is more accurately a
+<a href="https://en.wikipedia.org/wiki/Path_tracing">path tracer</a>. Traditional ray tracing
+will typically only have 1 sample per pixel and after the first bounce will check for occlusion with
+the nearest light source. Path tracing, on the other hand, makes the distinction that it properly
+approximates the rendering equation by using unbiased ray sampling and allowing the ray to terminate
+without hitting a light source. That being said, a path tracer is still in the general family of ray
+tracers and "path tracing" is a less clear name, so we call our renderer a ray tracer.</p>
+<br>
+<p>The RGB model of light we use is a carryover from traditional PC graphics. An improvement would be
+to switch to wavelength based light. Diffraction would be implemented per pixel, since it is an
+aggregate effect.</p>
+<br>
+<p>Random noise is an omnipresent part of ray tracing, given the fact that rays can randomly bounce
+around and may never meet a light source. Reducing random noise requires increasing the rays per
+pixel by an order of magnitude in order to be noticable. Denoising is a popular way to reduce the
+noisy appearance of the image in exchange for approximating pixel values at a much faster speed.
+Denoisers have the downside of sometimes making the wrong pixel approximation and making the image
+look worse.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 17 Mar 2019 - Modified on 4 Jul 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>
