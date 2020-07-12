@@ -1,5 +1,5 @@
 /*
-unileqtest.c - v1.00
+unileqtest.c - v1.01
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -160,6 +160,12 @@ unltest unltests[]={
 		"måin.len: måin.len-måin.data+1"
 		,"Hello, World!\n",UNL_COMPLETE,""
 	},
+	//Memory
+	//Write 0 to a high memory cell.
+	{"0-16 val 0-1 val:0","",UNL_COMPLETE,""},
+	//The memory allocation in unileq.c should safely fail if we write to a high
+	//address.
+	{"0-16 val 0-1 val:1","",UNL_ERROR_MEMORY,"Failed to allocate memory.\nIndex: 18446744073709551600\n"}
 };
 
 //--------------------------------------------------------------------------------
