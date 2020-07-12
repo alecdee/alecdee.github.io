@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.09
+unileq.c - v1.10
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -125,40 +125,36 @@ Windows: cl /O2 unileq.c
 
 typedef uint32_t u32;
 typedef uint64_t u64;
+typedef unsigned char uchar;
 
 //--------------------------------------------------------------------------------
 //Hash map for labels.
 
-typedef struct unllabel unllabel;
-struct unllabel {
-	unllabel *next,*scope;
-	const char* data;
+typedef struct unllabel {
+	struct unllabel *next,*scope;
+	const uchar* data;
 	u64 addr;
 	u32 hash,len,depth;
-};
+} unllabel;
 
 u32 unllabelcmp(unllabel* l,unllabel* r) {
 	//Compare two labels from their last character to their first along with any
 	//scope characters. Return 0 if they're equal.
 	unllabel *lv=0,*rv=0;
-	u32 llen=l->len,rlen=r->len;
-	if (llen!=rlen || l->hash!=r->hash) {return 1;}
-	for (u32 i=llen-1;i!=((u32)-1);i--) {
-		if (i<llen) {lv=l;l=l->scope;llen=l->len;}
-		if (i<rlen) {rv=r;r=r->scope;rlen=r->len;}
+	if (l->len!=r->len || l->hash!=r->hash) {return 1;}
+	for (u32 i=l->len-1;i+1;i--) {
+		if (i<l->len) {lv=l;l=l->scope;}
+		if (i<r->len) {rv=r;r=r->scope;}
 		if (lv==rv) {return 0;}
-		char lc=lv->data[i-llen];
-		char rc=rv->data[i-rlen];
-		if (lc!=rc) {return 1;}
+		if (lv->data[i]!=rv->data[i]) {return 1;}
 	}
 	return 0;
 }
 
-typedef struct unlhashmap unlhashmap;
-struct unlhashmap {
-	u32 mask;
+typedef struct unlhashmap {
 	unllabel** map;
-};
+	u32 mask;
+} unlhashmap;
 
 unlhashmap* unlhashcreate(void) {
 	unlhashmap* map=(unlhashmap*)malloc(sizeof(unlhashmap));
@@ -189,7 +185,7 @@ void unlhashfree(unlhashmap* map) {
 	}
 }
 
-unllabel* unllabelinit(unlhashmap* map,unllabel* lbl,unllabel* scope,const char* data,u32 len) {
+unllabel* unllabelinit(unlhashmap* map,unllabel* lbl,unllabel* scope,const uchar* data,u32 len) {
 	//Initialize a label and return a match if we find one.
 	//Count .'s to determine what scope we should be in.
 	u32 depth=0;
@@ -200,12 +196,12 @@ unllabel* unllabelinit(unlhashmap* map,unllabel* lbl,unllabel* scope,const char*
 	lbl->depth=depth+1;
 	//Offset the data address by the parent scope's depth.
 	depth-=depth>0;
-	lbl->data=data+depth;
+	lbl->data=data+depth-scope->len;
 	lbl->len=len+scope->len-depth;
 	//Compute the hash of the label. Use the scope's hash to speed up computation.
 	u32 hash=scope->hash;
-	for (u32 i=0;i<lbl->len-scope->len;i++) {
-		hash+=lbl->data[i]+1;
+	for (u32 i=scope->len;i<lbl->len;i++) {
+		hash+=lbl->data[i]+i;
 		hash=(hash>>9)|(hash<<23);
 		hash^=hash>>14;
 		hash*=0xe4d75b4b;
@@ -236,25 +232,25 @@ unllabel* unllabeladd(unlhashmap* map,unllabel* lbl) {
 }
 
 //--------------------------------------------------------------------------------
-//Unileq architecture emulator.
+//Unileq architecture interpreter.
 
-#define UNL_RUNNING      1
+#define UNL_RUNNING      0
+#define UNL_COMPLETE     1
 #define UNL_ERROR_PARSER 2
-#define UNL_ERROR_MEMORY 4
+#define UNL_ERROR_MEMORY 3
 #define UNL_MAX_PARSE    (1<<30)
 
-typedef struct unlstate unlstate;
-struct unlstate {
+typedef struct unlstate {
 	u64 *mem,alloc,ip;
 	u32 state;
 	char statestr[256];
-};
+} unlstate;
 
 void unlclear(unlstate* st);
 void unlsetmem(unlstate* st,u64 addr,u64 val);
 
 unlstate* unlcreate(void) {
-	//Allocate a unileq emulator.
+	//Allocate a unileq interpreter.
 	unlstate* st=(unlstate*)malloc(sizeof(unlstate));
 	if (st) {
 		st->mem=0;
@@ -272,22 +268,23 @@ void unlfree(unlstate* st) {
 
 void unlparsestr(unlstate* st,const char* str) {
 	//Convert unileq assembly language into a unileq program.
-	#define  CNUM(c) (c>='a'?c-'a'+10:(c>='A'?c-'A'+10:(c>='0' && c<='9'?c-'0':99)))
-	#define ISLBL(c) (CNUM(c)<36 || c=='_' || c=='.' || c<0)
+	#define  CNUM(c) ((uchar)(c>='a'?c-'a'+10:(c>='A'?c-'A'+10:(c>='0' && c<='9'?c-'0':99))))
+	#define ISLBL(c) (CNUM(c)<36 || c=='_' || c=='.' || c>127)
 	#define  ISOP(c) (c=='+' || c=='-')
-	#define     NEXT (c=++i<=len?str[i-1]:0)
+	#define     NEXT (c=++i<=len?ustr[i-1]:0)
 	unlclear(st);
 	u32 i=0,j=0,len=0;
-	char c,op;
+	const uchar* ustr=(const uchar*)str;
+	uchar c,op;
 	const char* err=0;
 	//Get the string length.
-	if (str) {
-		while (len<UNL_MAX_PARSE && str[len]) {len++;}
+	if (ustr) {
+		while (len<UNL_MAX_PARSE && ustr[len]) {len++;}
 	}
 	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
 	//Process the string in 2 passes. The first pass is needed to find label values.
-	unlhashmap* hash=unlhashcreate();
-	if (hash==0) {err="Unable to allocate hash map";}
+	unlhashmap* map=unlhashcreate();
+	if (map==0) {err="Unable to allocate hash map";}
 	unllabel scope0={0,0,0,0,0,0,0},lbl0;
 	for (u32 pass=0;pass<2 && err==0;pass++) {
 		unllabel *scope=&scope0,*lbl;
@@ -306,8 +303,8 @@ void unlparsestr(unlstate* st,const char* str) {
 			if (c=='#') {
 				//Comment. If next='|', use the multi-line format.
 				u32 mask=0,eoc='\n',i0=i;
-				if (NEXT=='|') {mask=255;eoc=('|'<<8)|'#';}
-				while (c && n!=eoc) {n=((n&mask)<<8)|c;NEXT;}
+				if (NEXT=='|') {mask=255;eoc=('|'<<8)+'#';}
+				while (c && n!=eoc) {n=((n&mask)<<8)+c;NEXT;}
 				if (mask && n!=eoc) {err="Unterminated block quote";j=i0;}
 				continue;
 			}
@@ -333,13 +330,13 @@ void unlparsestr(unlstate* st,const char* str) {
 			} else if (ISLBL(c)) {
 				//Label.
 				while (ISLBL(c)) {NEXT;}
-				lbl=unllabelinit(hash,&lbl0,scope,str+(j-1),i-j);
+				lbl=unllabelinit(map,&lbl0,scope,ustr+(j-1),i-j);
 				if (c==':') {
 					//Label declaration.
 					if (pass==0) {
 						if (lbl) {err="Duplicate label declaration";}
 						lbl0.addr=addr;
-						lbl=unllabeladd(hash,&lbl0);
+						lbl=unllabeladd(map,&lbl0);
 						if (lbl==0) {err="Unable to allocate label";}
 					}
 					scope=lbl;
@@ -374,33 +371,33 @@ void unlparsestr(unlstate* st,const char* str) {
 		st->state=UNL_ERROR_PARSER;
 		const char* fmt="Parser: %s\n";
 		u32 line=1;
-		char window[61],under[61];
+		uchar window[61],under[61];
 		if (i-- && j--)
 		{
 			fmt="Parser: %s\nline %u:\n\t'%s'\n\t'%s'\n";
 			//Find the boundaries of the line we're currently parsing.
 			u32 s0=0,s1=j,k;
 			for (k=0;k<j;k++) {
-				if (str[k]=='\n') {
+				if (ustr[k]=='\n') {
 					line++;
 					s0=k+1;
 				}
 			}
-			while (s1<len && str[s1]!='\n') {s1++;}
+			while (s1<len && ustr[s1]!='\n') {s1++;}
 			//Trim whitespace.
-			while (s0<s1 && ((u32)str[s0  ])<33) {s0++;}
-			while (s1>s0 && ((u32)str[s1-1])<33) {s1--;}
+			while (s0<s1 && ustr[s0  ]<=' ') {s0++;}
+			while (s1>s0 && ustr[s1-1]<=' ') {s1--;}
 			//Extract the line and underline the error.
 			s0=j>s0+30?j-30:s0;
 			for (k=0;k<61;k++,s0++) {
-				c=(s0<s1 && k<60)?str[s0]:0;
+				c=(s0<s1 && k<60)?ustr[s0]:0;
 				window[k]=c;
-				under[k]=((u32)c)<33?c:(s0>=j && s0<i?'^':' ');
+				under[k]=c<=' '?c:(s0>=j && s0<i?'^':' ');
 			}
 		}
 		snprintf(st->statestr,sizeof(st->statestr),fmt,err,line,window,under);
 	}
-	unlhashfree(hash);
+	unlhashfree(map);
 }
 
 void unlparsefile(unlstate* st,const char* path) {
@@ -415,9 +412,9 @@ void unlparsefile(unlstate* st,const char* path) {
 	}
 	//Check the file's size.
 	fseek(in,0,SEEK_END);
-	long int size=ftell(in);
+	size_t size=(size_t)ftell(in);
 	char* str=0;
-	if (size>=0 && size<UNL_MAX_PARSE) {
+	if (size<UNL_MAX_PARSE) {
 		str=(char*)malloc((size+1)*sizeof(char));
 	}
 	if (str==0) {
@@ -425,7 +422,7 @@ void unlparsefile(unlstate* st,const char* path) {
 		snprintf(st->statestr,sizeof(st->statestr),"File \"%s\" too large: %ld bytes\n",path,size);
 	} else {
 		fseek(in,0,SEEK_SET);
-		for (long int i=0;i<size;i++) {str[i]=(char)getc(in);}
+		for (size_t i=0;i<size;i++) {str[i]=(char)getc(in);}
 		str[size]=0;
 		unlparsestr(st,str);
 		free(str);
@@ -455,8 +452,9 @@ u64 unlgetip(unlstate* st) {
 void unlsetip(unlstate* st,u64 ip) {
 	//Jumping to -1 aborts the program.
 	st->ip=ip;
-	if (ip+1) {st->state|= UNL_RUNNING;}
-	else      {st->state&=~UNL_RUNNING;}
+	if (st->state==UNL_RUNNING || st->state==UNL_COMPLETE) {
+		st->state=ip+1?UNL_RUNNING:UNL_COMPLETE;
+	}
 }
 
 u64 unlgetmem(unlstate* st,u64 addr) {
@@ -473,7 +471,7 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 		//Safely find the maximum we can allocate.
 		u64 alloc=1,*mem=0;
 		while (alloc && alloc<=addr) {alloc+=alloc;}
-		if (alloc==0) {alloc=(u64)-1;}
+		if (alloc==0) {alloc--;}
 		size_t salloc=(size_t)alloc,smax=((size_t)-1)/sizeof(u64);
 		if (((u64)salloc)!=alloc || salloc>smax) {alloc=smax;}
 		//Attempt to allocate.
@@ -506,17 +504,15 @@ void unlrun(unlstate* st,u32 iters) {
 		if (b<io) {
 			b=unlgetmem(st,b);
 		} else {
-			b=getchar();
-			b&=255;
+			b=(uchar)getchar();
 		}
+		//If a=-1, print mem[b]. Otherwise, Write to mem[a] and jump if mem[a]<=mem[b].
 		if (a<io) {
-			//Write to mem[a] and jump if mem[a]<=mem[b].
 			av=unlgetmem(st,a);
 			unlsetmem(st,a,av-b);
 			if (av>b) {continue;}
 		} else {
-			//a=-1, so print mem[b].
-			putchar(b&255);
+			putchar((char)b);
 		}
 		ip=c;
 	}
@@ -548,11 +544,11 @@ int main(int argc,char** argv) {
 		unlparsefile(unl,argv[1]);
 	}
 	//Main loop.
-	unlrun(unl,-1);
+	unlrun(unl,(u32)-1);
 	//Exit and print status if there was an error.
 	u32 ret=unl->state;
-	if (ret) {unlprintstate(unl);}
+	if (ret!=UNL_COMPLETE) {unlprintstate(unl);}
 	unlfree(unl);
-	return ret;
+	return (int)ret;
 }
 
