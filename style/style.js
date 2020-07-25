@@ -1,5 +1,5 @@
 //Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 26 Apr 2020
+//Modified: 12 Jul 2020
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
@@ -131,8 +131,8 @@ function unileq_highlight(text)
 	var htmlreplace={"&":"&amp","<":"&lt;",">":"&gt;"};
 	var regex_match=
 	[
-		["[\\._a-zA-Z][_a-zA-Z0-9]*",style_labelref],
-		["[\\._a-zA-Z][_a-zA-Z0-9]*\\:",style_labeldec],
+		["[\\._a-zA-Z][\\._a-zA-Z0-9]*",style_labelref],
+		["[\\._a-zA-Z][\\._a-zA-Z0-9]*\\:",style_labeldec],
 		["\\?",style_labelref],
 		["0[xX][0-9a-fA-F]*",style_number],
 		["[0-9]+",style_number],

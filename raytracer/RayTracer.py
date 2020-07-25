@@ -1,5 +1,5 @@
 """
-RayTracer.py - v1.18
+RayTracer.py - v1.19
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -25,8 +25,8 @@ A hyper-dimensional ray tracer
 
 Notes:
 * The scene can have any number of spatial dimensions.
-* Most processing time is spent in bvh.raypick and node.intersect.
-* Epsilon double precision: 1e-8, single: 1e-4.
+* Most processing time is spent in BVH.raypick() and BVHNode.intersect().
+* Epsilon for double precision: 1e-8, single: 1e-4.
 * Mesh instancing is supported.
 * Wavefront OBJ mesh files are supported. Textures are not.
 * Special effects can be done by manipulating how light behaves. Ex: materials
@@ -48,11 +48,11 @@ Notes:
 --------------------------------------------------------------------------------
 TODO
 
+Add a quick, 1 pass rendering mode.
 Use fixed point instead of floating point.
-Add NaN check to render RGB calculation. Put gamma in bmp header?
+Add NaN check to render RGB calculation. Put gamma in bmp header.
 Add recalcnorm() and applytransform() to mesh.
-Simplify cube construction. Create 1 side and mirror across axis's.
-Try creating sphere by projecting cube.
+Simplify cube construction. Create 1 side and mirror across axis'.
 Add vert/face unique id tracking. Add delete/get.
 Add text primitives.
 Check if BVH AABB should change. If so, remake BVH.
@@ -1067,6 +1067,7 @@ class Scene(object):
 		#Shoot a ray into the scene, and follow it as it bounces around. Track what
 		#material we're inside of for ambient properties of the medium.
 		#Situations to consider:
+		#
 		#     Coplanar faces will be fairly common.
 		#     Rays may start inside a mesh.
 		#     Inside-out geometry will define an infinitely large space.

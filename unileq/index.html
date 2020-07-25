@@ -5,14 +5,6 @@
 	<title>Unileq - A One Instruction Set Computer</title>
 	<link rel="stylesheet" href="../style/style.css" type="text/css">
 	<script type="text/javascript" src="../style/style.js"></script>
-	<style>
-	.insttable td
-	{
-		padding-top:0.8rem;
-		padding-bottom:0.8rem;
-		background-color:transparent;
-	}
-	</style>
 </head>
 <body>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
@@ -39,8 +31,7 @@ was less than or equal to <i>mem[B]</i>, then we jump to <i>C</i>. Otherwise, we
 three memory addresses after <i>A</i>, <i>B</i>, and <i>C</i>.</p>
 <br>
 <p>We keep track of the memory we're executing with the instruction pointer, <i>IP</i>, which is set
-to <i>0</i> at the start of the program. Execution ends if <i>IP=-1</i>. The psuedocode below shows
-a unileq instruction:</p>
+to <i>0</i> at the start of the program. The psuedocode below shows a unileq instruction:</p>
 <br>
 <div class="codeblock">A=mem[IP+0]
 B=mem[IP+1]
@@ -52,6 +43,10 @@ else
 endif
 mem[A]=mem[A]-mem[B]
 </div>
+<br>
+<p>If <i>A=-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
+used to interact with the interpreter. For example: if <i>B=0</i> and <i>C=0</i>, then the
+interpreter will end execution of the current unileq program.</p>
 <br>
 <p>The instruction pointer and all memory values are 64 bit unsigned integers. Overflow and
 underflow are handled by wrapping values around to be between <i>0</i> and <i>2^64-1</i>
@@ -72,7 +67,7 @@ instruction will be executed on whatever values the instruction pointer is point
 <tr><td><i>#comment</i></td><td>Single line comment.</td></tr>
 <tr><td><i>#|
 	comment
-|#</i></td><td>Multi-line comment.</td></tr>
+|#</i></td><td>Multi line comment.</td></tr>
 <tr><td><i>?</i></td><td>Inserts the current memory address.</td></tr>
 <tr><td><i>Label:</i></td><td>Label declaration. Declarations mark the current memory address for
 later recall. Declarations can't appear within an expression, ex: <i>0 label: +1</i>. Duplicate
@@ -85,28 +80,32 @@ Trailing characters: <i>a-zA-Z_.0-9</i> and any character with a high bit</td></
 whitespace or an operator between any two label recalls or numbers.</td></tr>
 <tr><td><i>.Sublabel</i></td><td>Shorthand for placing a label under another label's scope. Ex:
 <i>lbl:0 .sub:1</i> will be treated as <i>lbl:0 lbl.sub:1</i> internally.</td></tr>
-<tr><td>Number</td><td>Inserts the number's value. A number must be in decimal or hexadecimal form,
-such as <i>123</i> or <i>0xff</i>.</td></tr>
-<tr><td>Operator <i>+-</i></td><td>Adds or subtracts the number or label to the previous memory
-value. Parentheses are not supported. To express a negative number, use its unsigned form or the
-identity <i>0-x=-x</i>.<br>
+<tr><td>Number</td><td>Inserts the number's value. A number must be in decimal or hexadecimal
+form, such as <i>123</i> or <i>0xff</i>.</td></tr>
+<tr><td>Operator <i>+-</i></td><td>Adds or subtracts the number or label from the previous value.
+Parentheses are not supported. To express a negative number, use its unsigned form or the identity
+<i>0-x=-x</i>.
 <br>
-There cannot be two consecutive operators, ex: <i>0++1</i>. Also, the first and last character of
-the program cannot be an operator.</td></tr>
-<tr><td>Special memory addresses</td><td>Writing to <i>-1</i> will print to stdout.<br>
-Reading from <i>-1</i> will read from stdin.<br>
-Jumping to <i>-1</i> will end execution.</td></tr>
+There cannot be two consecutive operators, ex: <i>0++1</i>. Also, the program cannot begin or end
+with an operator.</td></tr>
+<tr><td>Interpreter Calls</td><td>If <i>A=-1</i>, a call will be sent to the interpreter and no jump
+will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
+<br>
+<i>B=0</i>: execution will end. <i>C</i> can be any value.<br>
+<i>B=1</i>: <i>mem[C]</i> will be written to stdout.<br>
+<i>B=2</i>: stdin will be written to <i>mem[C]</i>.</td></tr>
 </table>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Hello, World! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Hello, World!</h1>
-<p>We can show how the unileq assembly language and architecture works with a simple program that
+<p>We can show how the unileq assembly language and architecture work with a simple program that
 prints "Hello, World" to the screen:</p>
 <br>
-<div class="codeblock langunileq">loop: len one  0-1   #Decrement [len]. If [len]=0, go to -1 and abort.
-      0-1 text ?+1   #Print a letter.
-      ?-2 neg  loop  #Increment the text pointer and restart the loop.
+<div class="codeblock langunileq">loop: len one  exit  #Decrement [len]. If [len]=0, exit.
+      0-1 1    text  #Print a letter.
+      ?-1 neg  loop  #Increment the text pointer and restart the loop.
+exit: 0-1 0    0
 
 text: 72 101 108 108 111 44 32  #Hello,
       87 111 114 108 100 33 10  #World!
@@ -116,43 +115,47 @@ neg:  0-1
 </div>
 <br>
 <p>The first 3 lines of the program define a loop, and at each iteration of the loop we print a new
-character. Everything below those instructions is data that contains the characters we want to
-print, the number of characters, and the constants <i>1</i> and <i>-1</i>.</p>
+character. Below the loop is a command to exit the program, followed by all of the data we need to
+make the program work.</p>
 <br>
 <p>For brevity, we will use <i>[x]</i> as shorthand for <i>mem[x]</i>, the value at address
-<i>x</i>. With that said, we can now describe what each line does:</p>
+<i>x</i>. With that said, we can now describe what each line does.</p>
 <br>
-<div class="codeblock langunileq">loop: len one  0-1</div>
+<div class="codeblock langunileq">loop: len one  exit</div>
 <br>
 <p>The first line declares the label <i>loop:</i> to mark the memory address of where our loop
-starts. It also contains the instruction <i>len one 0-1</i>. When this instruction is executed, it
+starts. It also contains the instruction <i>len one exit</i>. When this instruction is executed, it
 will take the values at memory addresses <i>len</i> and <i>one</i>, subtract them, and store the
 result back at <i>len</i>. That is, it will perform <i>[len]=[len]-[one]</i> which evaluates to
 <i>[len]=[len]-1</i>. Also, if <i>[len]</i> is less than or equal to <i>[one]</i> (before
-subtracting), then we will jump to <i>0-1</i> and end the program.</p>
+subtracting), then we will jump to <i>exit</i> and end the program.</p>
 <br>
 <p>Thus, when the program is running, we expect it to count from <i>len-text+1</i> down to <i>1</i>
 and then exit.</p>
 <br>
-<div class="codeblock langunileq">      0-1 text ?+1</div>
+<div class="codeblock langunileq">      0-1 1    text</div>
 <br>
-<p>The second instruction of our loop has the special address <i>-1</i> as the first parameter.
-Because of this special address, the value <i>[text]</i> will be printed to the screen instead of
-the normal subtraction we perform.</p>
+<p>The second instruction of our loop has <i>-1</i> as the first operand, which specifies an
+interpreter call. When the interpreter encounters an interpreter call, it won't execute a normal
+unileq instruction. Instead it will perform some special action depending on the second and third
+operands. Since the second operand is <i>1</i>, the interpreter will print <i>[text]</i> to the
+screen.</p>
 <br>
-<p>We also have <i>?+1</i> as the jump address. Remember that <i>?</i> is the notation for the
-current memory address, so <i>?+1</i> is the next address in memory. In this case, it also happens
-to be the address of the next instruction, so no matter if the unileq instruction jumps or not, the
-instruction pointer will advance to the next instruction.</p>
+<div class="codeblock langunileq">      ?-1 neg  loop</div>
 <br>
-<div class="codeblock langunileq">      ?-2 neg  loop</div>
-<br>
-<p>Just as we used <i>?+1</i> to refer to the next memory address, we use <i>?-2</i> to refer to
-<i>2</i> addresses back. In this case, it points to the previous instruction where <i>text</i> is.
-When this instruction executes, <i>-1</i> will be subtracted from <i>text</i>, which will have the
-effect of advancing to the next character in memory that we want to print. Since we are using
+<p>The third instruction is used to advance to the next character to print and restart the loop.
+Recall from the assembly specification that <i>?</i> refers to the current address, so <i>?-1</i>
+refers to the previous memory address. In this case, it points to the previous instruction where
+<i>text</i> is. When this instruction executes, <i>-1</i> will be subtracted from <i>text</i>, which
+will have the effect of advancing to the next character that we want to print. Since we are using
 unsigned arithmetic, <i>[neg]=-1=2^64-1</i> will be greater than or equal to any other value. Thus
 this instruction will always jump to <i>loop</i> and restart the loop.</p>
+<br><div class="codeblock langunileq">exit: 0-1 0    0</div>
+<br>
+<p>The last instruction of our program is another interpreter call, since <i>-1</i> is the first
+operand. In this case, having <i>0</i> as the second operand will tell the interpreter to end the
+program. Note, we do not specifically need to use <i>0-1</i> as the first operand. Any expression
+that evaluates to <i>-1</i>, such as <i>2-3</i>, will also work.</p>
 <br>
 <div class="codeblock langunileq">text: 72 101 108 108 111 44 32
       87 111 114 108 100 33 10</div>
@@ -192,10 +195,11 @@ shorthand for <i>mem[x]</i>, the value at address <i>x</i>.</p>
 <br>
 <div class="codeblock langunileq">0 0 dst</div>
 <br>
-<p>We can abort any unileq program by performing an unconditional jump to <i>-1</i>. Note that we
-need to calculate <i>-1</i> as <i>0-1</i> due to the syntax our assembly language.</p>
+<p>We can abort any unileq program by using an interpreter call with <i>0</i> as the second operand.
+A call is any instruction that has <i>-1</i> as the first operand. Note that we need to calculate
+<i>-1</i> as <i>0-1</i> due to the syntax our assembly language.</p>
 <br>
-<div class="codeblock langunileq">0 0 0-1</div>
+<div class="codeblock langunileq">0-1 0 0</div>
 <br>
 <p>Jump to <i>dst</i> if <i>[a]=[b]</i>. The series of <i>?+1</i> expressions points to the next
 memory address after the instruction. They simply serve to force the instruction pointer to go to
@@ -219,11 +223,11 @@ tmp b   ?+4  #skip next instruction if [a]&lt;=[b]
 0   0   dst  #[a]&gt;[b], jump
 </div>
 <br>
-<p>We can print the character "A" to the screen by writing the ASCII code for "A" to <i>-1</i>. Note
-that we don't need to negate <i>[char]</i> here even though it would normally be subtracted from
-address <i>-1</i>.</p>
+<p>We can print the character "A" to the screen by using an interpreter call with <i>1</i> as the
+second operand, and the address of the character as the third operand. We define <i>char</i> to be
+the ASCII code for "A".</p>
 <br>
-<div class="codeblock langunileq">0-1 char ?+1
+<div class="codeblock langunileq">0-1 1 char
 char: 65
 </div>
 <br>
@@ -344,27 +348,29 @@ characters in a string.</p>
 <br>
 <p>We can use this self modifying property to generate some simple programs at run time, or make a
 self interpreter that counts the number of instructions used by another unileq function. However,
-more complicated self modification, like that seen in Lisp, would be difficult to perform in unileq.
-</p>
+more complicated self modification, like that seen in Lisp, would be difficult to perform in
+unileq.</p>
 <br>
-<h2>Special Memory Addresses</h2>
+<h2>Interpreter Calls</h2>
 <br>
-<p>It can be seen in the examples above that we write to address <i>-1</i> to print a character to
-the screen. Because of unileq's limitation on using 1 instruction, our interaction with the computer
-needs to come from writing to special memory addresses. Some of those addresses may be predefined to
-print characters, and others may display pixels to the screen. There's no real way around this
-ritual given our one instruction limit.</p>
+<p>As part of the unileq specification, using <i>-1</i> as the first operand executes an interpreter
+call instead of a normal instruction. Without this, a unileq progam would have no way to display its
+results or interact with its host computer. There's no real way around this given our one
+instruction limit.</p>
 <br>
-<p>The interpreter will always jump when writing to a special address, as if the address always
-points to a value of <i>0</i>. The alternative is to never jump. However, there is no value in
-unileq that can never cause a jump, and this would lead to an inconsistency.</p>
+<p>Most subleq implementations will end execution by jumping to <i>-1</i> as interact with stdin and
+stdout by reading and writing from <i>-1</i>. In other words, using <i>-1</i> in different operands
+for different effects. We choose to avoid this notation by using <i>-1</i> in the first operand for
+all abnormal effects. This also allows us to expand unileq to interact with the host in other ways,
+such as displaying pixels to the screen, without needing to define even more special memory
+addresses.</p>
 <br>
 <h2>Turing Complete</h2>
 <br>
 <p>I claimed at the beginning of the article that unileq can do anything that a more complicated
 architecture can do. I will prove this by showing that unileq can replicate the operations in
-Minsky's <a href="http://www.cba.mit.edu/events/03.11.ASE/docs/Minsky.pdf">Computation: Finite and Infinite Machines</a>,
-and by doing so, show that unileq is Turing complete.</p>
+Minsky's <a href="http://www.cba.mit.edu/events/03.11.ASE/docs/Minsky.pdf">Computation: Finite and
+Infinite Machines</a>, and by doing so, show that unileq is Turing complete.</p>
 <br>
 <p>Let <i>regn</i> denote some register and let the following assembly code initialize our
 program.</p>
@@ -443,7 +449,7 @@ labels.</td></tr>
 times speed increase on an integer math library.</td></tr>
 </table>
 <br>
-<p>The main downside with using a flat array to hold memory is that a lot of it will be dead space.
+<p>The main downside with using a flat array to hold memory is that a lot of it can be dead space.
 Although the array will grow if we try to access a memory address outside of its current allocation,
 for speed reasons the array will not check if it can be shrunk. Using a paged memory system may
 offer a decent balance between speed and wasted space. It would be used like so:</p>
@@ -451,8 +457,6 @@ offer a decent balance between speed and wasted space. It would be used like so:
 <div class="codeblock">val=mem[addr>>48][(addr>>32)&0xffff][(addr>>16)&0xffff][addr&0xffff]</div>
 <br>
 <p>However, testing on large applications will need to be done.</p>
-<br>
-<p>Find a better way to perform label scoping than the current dot notation.</p>
 <br>
 <p>Create an animated heat map showing memory activity. This would be useful in showing how the
 architecture works to casual observers.</p>
@@ -469,7 +473,7 @@ this block of memory, could we always direct it to some safe memory address?</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 12 Jul 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 25 Jul 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

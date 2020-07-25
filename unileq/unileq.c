@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.10
+unileq.c - v1.11
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -36,8 +36,8 @@ was less than or equal to mem[B], then we jump to C. Otherwise, we advance to
 the next three memory addresses after A, B, and C.
 
 We keep track of the memory we're executing with the instruction pointer, IP,
-which is set to 0 at the start of the program. Execution ends if IP=-1. The
-psuedocode below shows a unileq instruction:
+which is set to 0 at the start of the program. The psuedocode below shows a
+unileq instruction:
 
      A=mem[IP+0]
      B=mem[IP+1]
@@ -48,6 +48,10 @@ psuedocode below shows a unileq instruction:
           IP=IP+3
      endif
      mem[A]=mem[A]-mem[B]
+
+If A=-1, then instead of executing a normal instruction, B and C will be used to
+interact with the interpreter. For example: if B=0 and C=0, then the interpreter
+will end execution of the current unileq program.
 
 The instruction pointer and all memory values are 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
@@ -68,7 +72,7 @@ An outline of our language is given below:
 #Single line comment.
 
 #|
-     multi-line
+     multi line
      comment
 |#
 
@@ -97,22 +101,26 @@ Number
      form, such as "123" or "0xff".
 
 Operator +-
-     Adds or subtracts the number or label to the previous memory value.
-     Parentheses are not supported. To express a negative number, use its
-     unsigned form or the identity "0-x=-x".
+     Adds or subtracts the number or label from the previous value. Parentheses
+     are not supported. To express a negative number, use its unsigned form or
+     the identity "0-x=-x".
 
-     There cannot be two consecutive operators, ex: "0++1". Also, the first and
-     last character of the program cannot be an operator.
+     There cannot be two consecutive operators, ex: "0++1". Also, the program
+     cannot begin or end with an operator.
 
-Special memory addresses
-     Writing to -1 will print to stdout.
-     Reading from -1 will read from stdin.
-     Jumping to -1 will end execution.
+Interpreter Calls
+     If A=-1, a call will be sent to the interpreter and no jump will be taken.
+     The effect of a call depends on B and C.
+     B=0: execution will end. C can be any value.
+     B=1: mem[C] will be written to stdout.
+     B=2: stdin will be written to mem[C].
 
 --------------------------------------------------------------------------------
 TODO
 
 Keep source under 20,000 bytes.
+Simplify max memory calculation. Test using u8/u16.
+Simplify parser error highlighting.
 
 Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
@@ -142,7 +150,7 @@ u32 unllabelcmp(unllabel* l,unllabel* r) {
 	//scope characters. Return 0 if they're equal.
 	unllabel *lv=0,*rv=0;
 	if (l->len!=r->len || l->hash!=r->hash) {return 1;}
-	for (u32 i=l->len-1;i+1;i--) {
+	for (u32 i=l->len-1;i!=(u32)-1;i--) {
 		if (i<l->len) {lv=l;l=l->scope;}
 		if (i<r->len) {rv=r;r=r->scope;}
 		if (lv==rv) {return 0;}
@@ -173,9 +181,8 @@ unlhashmap* unlhashcreate(void) {
 void unlhashfree(unlhashmap* map) {
 	if (map) {
 		for (u32 i=0;i<=map->mask;i++) {
-			unllabel *next=map->map[i],*lbl;
-			while (next) {
-				lbl=next;
+			unllabel *lbl,*next=map->map[i];
+			while ((lbl=next)) {
 				next=lbl->next;
 				free(lbl);
 			}
@@ -268,10 +275,10 @@ void unlfree(unlstate* st) {
 
 void unlparsestr(unlstate* st,const char* str) {
 	//Convert unileq assembly language into a unileq program.
-	#define  CNUM(c) ((uchar)(c>='a'?c-'a'+10:(c>='A'?c-'A'+10:(c>='0' && c<='9'?c-'0':99))))
+	#define  CNUM(c) ((uchar)(c<='9'?c-'0':((c-'A')&~32)+10))
 	#define ISLBL(c) (CNUM(c)<36 || c=='_' || c=='.' || c>127)
 	#define  ISOP(c) (c=='+' || c=='-')
-	#define     NEXT (c=++i<=len?ustr[i-1]:0)
+	#define     NEXT (c=i++<len?ustr[i-1]:0)
 	unlclear(st);
 	u32 i=0,j=0,len=0;
 	const uchar* ustr=(const uchar*)str;
@@ -303,7 +310,7 @@ void unlparsestr(unlstate* st,const char* str) {
 			if (c=='#') {
 				//Comment. If next='|', use the multi-line format.
 				u32 mask=0,eoc='\n',i0=i;
-				if (NEXT=='|') {mask=255;eoc=('|'<<8)+'#';}
+				if (NEXT=='|') {mask=255;eoc=('|'<<8)+'#';NEXT;}
 				while (c && n!=eoc) {n=((n&mask)<<8)+c;NEXT;}
 				if (mask && n!=eoc) {err="Unterminated block quote";j=i0;}
 				continue;
@@ -363,7 +370,7 @@ void unlparsestr(unlstate* st,const char* str) {
 				if (ISLBL(c) || c=='?') {err="Unseparated tokens";}
 			}
 		}
-		if (err==0 && ISOP(op)) {err="Trailing operator";i++;}
+		if (err==0 && ISOP(op)) {err="Trailing operator";}
 		if (pass) {unlsetmem(st,addr-1,acc);}
 	}
 	if (err) {
@@ -390,9 +397,9 @@ void unlparsestr(unlstate* st,const char* str) {
 			//Extract the line and underline the error.
 			s0=j>s0+30?j-30:s0;
 			for (k=0;k<61;k++,s0++) {
-				c=(s0<s1 && k<60)?ustr[s0]:0;
+				c=s0<s1 && k<60?ustr[s0]:0;
 				window[k]=c;
-				under[k]=c<=' '?c:(s0>=j && s0<i?'^':' ');
+				under[k]=c && s0>=j && s0<i?'^':(c<=' '?c:' ');
 			}
 		}
 		snprintf(st->statestr,sizeof(st->statestr),fmt,err,line,window,under);
@@ -403,10 +410,10 @@ void unlparsestr(unlstate* st,const char* str) {
 void unlparsefile(unlstate* st,const char* path) {
 	//Load and parse a source file.
 	unlclear(st);
+	st->state=UNL_ERROR_PARSER;
 	FILE* in=fopen(path,"rb");
 	//Check if the file exists.
 	if (in==0) {
-		st->state=UNL_ERROR_PARSER;
 		snprintf(st->statestr,sizeof(st->statestr),"Could not open file \"%s\"\n",path);
 		return;
 	}
@@ -418,7 +425,6 @@ void unlparsefile(unlstate* st,const char* path) {
 		str=(char*)malloc((size+1)*sizeof(char));
 	}
 	if (str==0) {
-		st->state=UNL_ERROR_PARSER;
 		snprintf(st->statestr,sizeof(st->statestr),"File \"%s\" too large: %ld bytes\n",path,size);
 	} else {
 		fseek(in,0,SEEK_SET);
@@ -430,12 +436,6 @@ void unlparsefile(unlstate* st,const char* path) {
 	fclose(in);
 }
 
-void unlprintstate(unlstate* st) {
-	const char* str=st->statestr;
-	if (str[0]==0 && st->state==UNL_RUNNING) {str="Running\n";}
-	printf("Unileq state: %08x\n%s",st->state,str);
-}
-
 void unlclear(unlstate* st) {
 	st->state=UNL_RUNNING;
 	st->statestr[0]=0;
@@ -445,16 +445,18 @@ void unlclear(unlstate* st) {
 	st->alloc=0;
 }
 
+void unlprintstate(unlstate* st) {
+	const char* str=st->statestr;
+	if (str[0]==0 && st->state==UNL_RUNNING) {str="Running\n";}
+	printf("Unileq state: %08x\n%s",st->state,str);
+}
+
 u64 unlgetip(unlstate* st) {
 	return st->ip;
 }
 
 void unlsetip(unlstate* st,u64 ip) {
-	//Jumping to -1 aborts the program.
 	st->ip=ip;
-	if (st->state==UNL_RUNNING || st->state==UNL_COMPLETE) {
-		st->state=ip+1?UNL_RUNNING:UNL_COMPLETE;
-	}
 }
 
 u64 unlgetmem(unlstate* st,u64 addr) {
@@ -493,30 +495,35 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 
 void unlrun(unlstate* st,u32 iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
-	u32 dec=iters+1!=0;
-	u64 a,b,c,av,ip=st->ip,io=(u64)-1;
-	for (;iters && ip!=io && st->state==UNL_RUNNING;iters-=dec) {
+	u32 dec=iters!=(u32)-1;
+	u64 a,b,c,ma,mb,mc,ip=st->ip;
+	for (;iters && st->state==UNL_RUNNING;iters-=dec) {
 		//Load a, b, and c.
 		a=unlgetmem(st,ip++);
 		b=unlgetmem(st,ip++);
 		c=unlgetmem(st,ip++);
-		//If b=-1, wait for input. Otherwise, load mem[b].
-		if (b<io) {
-			b=unlgetmem(st,b);
-		} else {
-			b=(uchar)getchar();
+		//Execute a normal unileq instruction.
+		if (a!=(u64)-1) {
+			ma=unlgetmem(st,a);
+			mb=unlgetmem(st,b);
+			unlsetmem(st,a,ma-mb);
+			ip=ma>mb?ip:c;
+			continue;
 		}
-		//If a=-1, print mem[b]. Otherwise, Write to mem[a] and jump if mem[a]<=mem[b].
-		if (a<io) {
-			av=unlgetmem(st,a);
-			unlsetmem(st,a,av-b);
-			if (av>b) {continue;}
-		} else {
-			putchar((char)b);
+		//Otherwise, call the interpreter.
+		mc=unlgetmem(st,c);
+		if (b==0) {
+			//Exit.
+			st->state=UNL_COMPLETE;
+		} else if (b==1) {
+			//Write mem[c] to stdout.
+			putchar((char)mc);
+		} else if (b==2) {
+			//Read stdin to mem[c].
+			unlsetmem(st,c,(uchar)getchar());
 		}
-		ip=c;
 	}
-	unlsetip(st,ip);
+	st->ip=ip;
 }
 
 //--------------------------------------------------------------------------------
@@ -525,19 +532,16 @@ void unlrun(unlstate* st,u32 iters) {
 int main(int argc,char** argv) {
 	unlstate* unl=unlcreate();
 	if (argc<=1) {
-		//Print a usage message. Use diverse syntax to test the interpreter.
+		//Print a usage message.
 		unlparsestr(
 			unl,
-			"neg m1 neg:main\n"
-			"one:1 m1:main+1\n"
-			"main:\n"
-			"       #if len=0, goto -1\n"
-			"       .len one main -?+ 01\n"
-			"       4+? neg ?+1 #increment pointer\n"
-			"       0-1 .data-1 main #|print a letter and loop|#"
-			".data: 85 115 97 103 101 58 0x20 117 110 105 108 101"
-			"       113 32 102 0x69 108 101 46 117 110 108 10 33 "
-			"main.len: main.len-main.data"
+			"loop: len ?+3 neg  #if --[len]=0, exit\n"
+			"      0-1 1   data #print a letter\n"
+			"      ?-1 neg loop #increment pointer and loop\n"
+			"data: 85 115 97 103 101 58 32 117 110 105 108 101"
+			"      113 32 102 105 108 101 46 117 110 108 10\n"
+			"neg:  0-1\n"
+			"len:  len-data"
 		);
 	} else {
 		//Load a file.
