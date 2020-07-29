@@ -355,15 +355,22 @@ unileq.</p>
 <br>
 <p>As part of the unileq specification, using <i>-1</i> as the first operand executes an interpreter
 call instead of a normal instruction. Without this, a unileq progam would have no way to display its
-results or interact with its host computer. There's no real way around this given our one
+results or interact with its host computer. There's no real way around this, given our one
 instruction limit.</p>
 <br>
-<p>Most subleq implementations will end execution by jumping to <i>-1</i> as interact with stdin and
-stdout by reading and writing from <i>-1</i>. In other words, using <i>-1</i> in different operands
-for different effects. We choose to avoid this notation by using <i>-1</i> in the first operand for
-all abnormal effects. This also allows us to expand unileq to interact with the host in other ways,
-such as displaying pixels to the screen, without needing to define even more special memory
-addresses.</p>
+<p>Some consideration was taken as to how to interact with the interpreter. One choice was to map
+specific memory addresses to specific actions, such as writing to address <i>0x1234...</i> to
+display a pixel on the screen. Others were to set <i>A</i>, <i>B</i>, or <i>C</i> to <i>-1</i> to
+trigger some special action. Setting <i>B</i> didn't make much sense, since it's in the middle of
+the instruction. Setting <i>C</i> could lead to problems, since we might want to use <i>C</i> to
+store data if we know that a branch won't be taken. This left setting <i>A</i> to <i>-1</i> to call
+to the interpreter.</p>
+<br>
+<p>By comparison, most subleq implementations will end execution by jumping to <i>-1</i> and
+interact with stdout by writing to <i>-1</i>. In other words, using <i>-1</i> in different operands
+for different effects. Our choice to use <i>-1</i> in the first operand for all abnormal effects
+allows us to expand unileq to interact with the host in other ways, such as displaying pixels to the
+screen, without needing to define even more special memory addresses.</p>
 <br>
 <h2>Turing Complete</h2>
 <br>
@@ -473,7 +480,7 @@ this block of memory, could we always direct it to some safe memory address?</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 25 Jul 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 28 Jul 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

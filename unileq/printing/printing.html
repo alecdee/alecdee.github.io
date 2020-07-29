@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Unileq - Printing Text and Numbers</title>
+	<title>Unileq - Functions and Printing Strings</title>
 	<link rel="stylesheet" href="../style/style.css" type="text/css">
 	<script type="text/javascript" src="../style/style.js"></script>
 </head>
@@ -15,11 +15,15 @@
 <p>In the introduction to unileq, we showed how to perform several higher level operations, like
 comparing values. Even though we can perform these useful operations, we may need to write out
 dozens of unileq instructions to do so. Rewriting these instructions every time we need them is both
-messy and error prone. To fix this, we will introduct a function calling convention that will allow
-us to make use of complex operations with very little writing on our part.</p>
+messy and prone to errors.</p>
 <br>
 <p>We would also like to know what the program is doing at any given time. In particular, we would
 like to be able to easily print out messages and variable values to the screen.</p>
+<br>
+<p>In this section, we will solve both of these problems by creating a calling convention for
+functions, and then creating a function that can print text and numbers. These functions will allow
+use to reuse other instructions with very little effort on out part, and they can be implemented
+within unileq. That is, we don't need to introduce any new assembly notation or macros.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unileq Architecture ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
@@ -78,7 +82,7 @@ print:
 	.tmp  .z+1   .numprep
 	#Print [char].
 .print:
-	0-1   .char  ?+1
+	0-1   1      .char
 	.tmp  .tmp   .loop
 .numprep:
 	#Prepare to print a number.
@@ -112,7 +116,7 @@ print:
 	.z    .z     ?+1
 	#If [show]&gt;0, then we can print digits.
 	.show .z     .noshow
-	0-1   .char  ?+1
+	0-1   1      .char
 .noshow:
 	.base .z-1   .numloop
 #Contants.
@@ -150,7 +154,7 @@ print.test:
 	0 ? print 0-1 .a 44 32 0-1 .b 44 32 0-1 .c 44 32 0-1 .d 0
 	#\n
 	0 ? print 10 0
-	0 0 0-1
+	0-1 0 0
 .a:0
 .b:10
 .c:1000

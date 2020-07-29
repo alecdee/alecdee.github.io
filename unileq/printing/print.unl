@@ -53,7 +53,7 @@ print:
 	.tmp  .z+1   .numprep
 	#Print [char].
 .print:
-	0-1   .char  ?+1
+	0-1   1      .char
 	.tmp  .tmp   .loop
 .numprep:
 	#Prepare to print a number.
@@ -87,7 +87,7 @@ print:
 	.z    .z     ?+1
 	#If [show]>0, then we can print digits.
 	.show .z     .noshow
-	0-1   .char  ?+1
+	0-1   1      .char
 .noshow:
 	.base .z-1   .numloop
 #Contants.
@@ -125,7 +125,7 @@ print.test:
 	0 ? print 0-1 .a 44 32 0-1 .b 44 32 0-1 .c 44 32 0-1 .d 0
 	#\n
 	0 ? print 10 0
-	0 0 0-1
+	0-1 0 0
 .a:0
 .b:10
 .c:1000

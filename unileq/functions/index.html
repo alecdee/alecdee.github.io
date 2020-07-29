@@ -1,0 +1,125 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Unileq - Functions</title>
+	<link rel="stylesheet" href="../../style/style.css" type="text/css">
+	<script type="text/javascript" src="../../style/style.js"></script>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Functions</h1>
+<p>In the introduction to unileq, we showed how to perform several higher level operations, like
+comparing values. Even though we can perform these useful operations, we may need to write out
+dozens of unileq instructions to do so. Rewriting these instructions every time we need them is both
+messy and prone to errors.</p>
+<br>
+<p>In this section, we will solve this problem by creating a calling convention for functions. These
+functions will allow us to reuse other instructions with very little effort on out part, and they
+can be implemented within unileq. That is, we don't need to introduce any new assembly notation or
+macros.</p>
+</div>
+
+<div class="content"><h1>Calling Convention</h1>
+</div>
+
+<div class="content"><h1>First Function: Printing Digits</h1>
+<h2>Dereferencing</h2>
+</div>
+
+<div class="content"><h1>Adding Numbers</h1>
+0 ? add a b c
+0 ? print_digit a
+0 ? print_digit b
+0 ? print_digit c
+0 ? print_digit a
+0-1 0 0
+add two single digit numbers and print
+</div>
+
+<div class="content"><h1>Notes</h1>
+We will add general string printing and number printing in the next section
+</div>
+
+<!--
+<p>It would be nice to use the code blocks above without needing to rewrite them every time we need
+them. In some assembly languages we could hide them in an assembler macro, and in high level
+languages we could create a function construct. However, using a special convention, we can create
+our own easy to use function calling mechanism from entirely within unileq.</p>
+<br>
+<p>We will continue to use the shorthand <i>[x]</i> to represent <i>mem[x]</i>, or the value at
+memory address <i>x</i>. Now, assume that the label <i>func</i> is the function we want to call, and
+address <i>0</i> always holds the value <i>0</i> when we begin. Then the function calling format we
+will use is:</p>
+<br>
+<div class="codeblock langunileq">0 ? func arg0 arg1 ...</div>
+<br>
+<p>When the unileq instruction <i>0 ? func</i> is executed, it will perform the operation
+<i>[0]=[0]-[?]</i>. Since <i>?</i> refers to the current address in memory, <i>[?]=?</i>. Also, by
+our assumptions, <i>[0]=0</i>. Thus, we have <i>[0]=0-?</i>. That is, we store the negation of the
+current address in memory address <i>0</i>. And since <i>0</i> will always be less than or equal to
+any other value, we will always jump to <i>func</i>.</p>
+<br>
+<p>Now that our instruction pointer has jumped to <i>func</i>, we will want to parse the arguments
+that we are passing: <i>arg0 arg1 ...</i> etc. Since we know that address <i>0</i> holds the
+negative of the address of the where the function was called from, and that the arguments are listed
+immediately after the calling address, we can retrieve <i>arg0</i> at <i>-[0]+2</i>, <i>arg1</i> at
+<i>-[0]+3</i>, and so on.</p>
+<br>
+<p>In other words, using this format, we can use the memory addresses after the calling unileq
+function to act as a stack and hold the arguments we want to pass to the function. Furthermore, we
+will know to return to the address immediately after the arguments in order to resume program
+flow.</p>
+<br>
+<p>The unileq program below creates a function called <i>print</i> which can be called to print a
+zero terminated ascii string. For instance, we could print "ABC" using <i>0 ? print 65 66 67 0</i>.
+</p>
+<br>
+<div class="codeblock langunileq">0 0 main  #Jump to main
+
+print:
+     #Print function. Prints a zero terminated ascii string.
+     #Arguments: 0 ? print char0 char1 char2 ... 0
+       .ptr   .ptr   ?+1  #Store the calling address+2 in ptr
+       .ptr  .neg2   ?+1
+       .ptr      0   ?+1
+.loop:    0      0   ?+2  #Loop through each character
+.ret:     0               #Return using "0 0 .ptr"
+          0 .ptr:0   ?+1
+       .ptr  .neg1   ?+1  #increment [ptr]
+          0  .char  .ret  #if [0]=0, return
+      .char      0   ?+1  #[char]=[[ptr]]
+        0-1  .char   ?+1
+      .char  .char .loop
+.char:    0
+.neg1:  0-1
+.neg2:  0-2
+
+main:
+     #print test\n
+     0 ? print 112 114 105 110 116 32 116 101 115 116 10 0
+
+     #Hello, World!\n
+     0 ? print 72 101 108 108 111 44 32 87 111 114 108 100 33 10 0
+
+     #exit
+     0 0 0-1
+</div>
+<br>
+<p>Note the use of sublabels, such as <i>.char</i>, under the <i>print</i> label. This defines the
+sublabel under the scope of the parent label and helps us avoid label name collisions in larger
+unileq programs.</p>
+<br>
+<p>The <i>print</i> function also uses a few tricks to remain small, but with some rearranging it
+might still be possible to remove an instruction from the function.</p>
+</div>
+-->
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 26 Jul 2020 - Modified on 26 Jul 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.11
+unileq.c - v1.12
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -535,7 +535,7 @@ int main(int argc,char** argv) {
 		//Print a usage message.
 		unlparsestr(
 			unl,
-			"loop: len ?+3 neg  #if --[len]=0, exit\n"
+			"loop: len ?+3 neg  #if [len]=0, exit\n"
 			"      0-1 1   data #print a letter\n"
 			"      ?-1 neg loop #increment pointer and loop\n"
 			"data: 85 115 97 103 101 58 32 117 110 105 108 101"
