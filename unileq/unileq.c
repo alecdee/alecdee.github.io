@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.12
+unileq.c - v1.13
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -381,7 +381,7 @@ void unlparsestr(unlstate* st,const char* str) {
 		uchar window[61],under[61];
 		if (i-- && j--)
 		{
-			fmt="Parser: %s\nline %u:\n\t'%s'\n\t'%s'\n";
+			fmt="Parser: %s\nline %u:\n\t\"%s\"\n\t\"%s\"\n";
 			//Find the boundaries of the line we're currently parsing.
 			u32 s0=0,s1=j,k;
 			for (k=0;k<j;k++) {

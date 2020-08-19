@@ -1,5 +1,5 @@
 /*
-unileqtest.c - v1.03
+unileqtest.c - v1.05
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -40,7 +40,7 @@ This needs to be compiled from the same directory as unileq.c.
 
 rm unileqtest; gcc -fsanitize=address -fsanitize=undefined unileqtest.c -o unileqtest; ./unileqtest
 
-Can also run "unileqtest file.unl".
+Can run "./unileqtest" or "./unileqtest file.unl".
 */
 
 #if defined(__GNUC__)
@@ -87,26 +87,26 @@ unltest unltests[]={
 	{"","",UNL_RUNNING,""},
 	{0,"",UNL_RUNNING,""},
 	//Invalid character ranges.
-	{"\x01","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t''\n\t''\n"},
-	{"\x08","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t''\n\t''\n"},
-	{"\x0b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t''\n\t''\n"},
-	{"\x0c","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t''\n\t''\n"},
-	{"\x0e","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t''\n\t''\n"},
-	{"\x1f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t''\n\t''\n"},
-	{"\x21","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'!'\n\t'^'\n"},
-	{"\x22","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'\"'\n\t'^'\n"},
-	{"\x24","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'$'\n\t'^'\n"},
-	{"\x2a","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'*'\n\t'^'\n"},
-	{"\x2c","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t','\n\t'^'\n"},
-	{"\x2f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'/'\n\t'^'\n"},
-	{"\x3b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t';'\n\t'^'\n"},
-	{"\x3e","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'>'\n\t'^'\n"},
-	{"\x40","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'@'\n\t'^'\n"},
-	{"\x5b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'['\n\t'^'\n"},
-	{"\x5e","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'^'\n\t'^'\n"},
-	{"\x60","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'`'\n\t'^'\n"},
-	{"\x7b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'{'\n\t'^'\n"},
-	{"\x7f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'\x7f'\n\t'^'\n"},
+	{"\x01","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\n\t\"\"\n"},
+	{"\x08","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\n\t\"\"\n"},
+	{"\x0b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\n\t\"\"\n"},
+	{"\x0c","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\n\t\"\"\n"},
+	{"\x0e","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\n\t\"\"\n"},
+	{"\x1f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\n\t\"\"\n"},
+	{"\x21","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"!\"\n\t\"^\"\n"},
+	{"\x22","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\"\"\n\t\"^\"\n"},
+	{"\x24","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"$\"\n\t\"^\"\n"},
+	{"\x2a","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"*\"\n\t\"^\"\n"},
+	{"\x2c","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\",\"\n\t\"^\"\n"},
+	{"\x2f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"/\"\n\t\"^\"\n"},
+	{"\x3b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\";\"\n\t\"^\"\n"},
+	{"\x3e","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\">\"\n\t\"^\"\n"},
+	{"\x40","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"@\"\n\t\"^\"\n"},
+	{"\x5b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"[\"\n\t\"^\"\n"},
+	{"\x5e","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"^\"\n\t\"^\"\n"},
+	{"\x60","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"`\"\n\t\"^\"\n"},
+	{"\x7b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"{\"\n\t\"^\"\n"},
+	{"\x7f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\x7f\"\n\t\"^\"\n"},
 	//Numbers
 	{"18446744073709551615 0 0x8000","",UNL_COMPLETE,""},
 	{"0xffffffffffffffff 0 8000","",UNL_COMPLETE,""},
@@ -128,35 +128,35 @@ unltest unltests[]={
 		"48 49 50 1",
 		"012",UNL_COMPLETE,""
 	},
-	{"0xefg","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t'0xefg'\n\t'^^^^ '\n"},
-	{"+","",UNL_ERROR_PARSER,"Parser: Leading operator\nline 1:\n\t'+'\n\t'^'\n"},
-	{"+1","",UNL_ERROR_PARSER,"Parser: Leading operator\nline 1:\n\t'+1'\n\t'^ '\n"},
-	{"1+","",UNL_ERROR_PARSER,"Parser: Trailing operator\nline 1:\n\t'1+'\n\t' ^'\n"},
-	{"1+ ","",UNL_ERROR_PARSER,"Parser: Trailing operator\nline 1:\n\t'1+'\n\t' ^'\n"},
-	{"1 + ","",UNL_ERROR_PARSER,"Parser: Trailing operator\nline 1:\n\t'1 +'\n\t'  ^'\n"},
+	{"0xefg","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t\"0xefg\"\n\t\"^^^^ \"\n"},
+	{"+","",UNL_ERROR_PARSER,"Parser: Leading operator\nline 1:\n\t\"+\"\n\t\"^\"\n"},
+	{"+1","",UNL_ERROR_PARSER,"Parser: Leading operator\nline 1:\n\t\"+1\"\n\t\"^ \"\n"},
+	{"1+","",UNL_ERROR_PARSER,"Parser: Trailing operator\nline 1:\n\t\"1+\"\n\t\" ^\"\n"},
+	{"1+ ","",UNL_ERROR_PARSER,"Parser: Trailing operator\nline 1:\n\t\"1+\"\n\t\" ^\"\n"},
+	{"1 + ","",UNL_ERROR_PARSER,"Parser: Trailing operator\nline 1:\n\t\"1 +\"\n\t\"  ^\"\n"},
 	//Labels
-	{"lbl","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t'lbl'\n\t'^^^'\n"},
+	{"lbl","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t\"lbl\"\n\t\"^^^\"\n"},
 	{"lbl: 0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl:lbl2: 0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl: lbl-1 0 lbl","",UNL_COMPLETE,""},
-	{":","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t':'\n\t'^'\n"},
-	{"0+lbl:0","",UNL_ERROR_PARSER,"Parser: Operating on declaration\nline 1:\n\t'0+lbl:0'\n\t'  ^^^^ '\n"},
-	{"0 lbl:+0","",UNL_ERROR_PARSER,"Parser: Operating on declaration\nline 1:\n\t'0 lbl:+0'\n\t'      ^ '\n"},
+	{":","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\":\"\n\t\"^\"\n"},
+	{"0+lbl:0","",UNL_ERROR_PARSER,"Parser: Operating on declaration\nline 1:\n\t\"0+lbl:0\"\n\t\"  ^^^^ \"\n"},
+	{"0 lbl:+0","",UNL_ERROR_PARSER,"Parser: Operating on declaration\nline 1:\n\t\"0 lbl:+0\"\n\t\"      ^ \"\n"},
 	{"?-1 ?-1 0","",UNL_COMPLETE,""},
 	{"0-1+? 0 ?-2","",UNL_COMPLETE,""},
-	{"0?","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t'0?'\n\t'^ '\n"},
-	{"?0","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t'?0'\n\t'^ '\n"},
-	{"lbl?","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t'lbl?'\n\t'^^^ '\n"},
-	{"?lbl","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t'?lbl'\n\t'^   '\n"},
-	{"?:","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'?:'\n\t' ^'\n"},
-	{"lbl: :","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t'lbl: :'\n\t'     ^'\n"},
+	{"0?","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t\"0?\"\n\t\"^ \"\n"},
+	{"?0","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t\"?0\"\n\t\"^ \"\n"},
+	{"lbl?","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t\"lbl?\"\n\t\"^^^ \"\n"},
+	{"?lbl","",UNL_ERROR_PARSER,"Parser: Unseparated tokens\nline 1:\n\t\"?lbl\"\n\t\"^   \"\n"},
+	{"?:","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"?:\"\n\t\" ^\"\n"},
+	{"lbl: :","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"lbl: :\"\n\t\"     ^\"\n"},
 	{"zero:zero-one one:one-one zero","",UNL_COMPLETE,""},
-	{"lbl: lbl: 0-1 0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t'lbl: lbl: 0-1 0 0'\n\t'     ^^^^        '\n"},
+	{"lbl: lbl: 0-1 0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t\"lbl: lbl: 0-1 0 0\"\n\t\"     ^^^^        \"\n"},
 	{"lbl: LBL: 0-1 0 0","",UNL_COMPLETE,""},
 	//Sublabels
-	{".x","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t'.x'\n\t'^^'\n"},
-	{".","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t'.'\n\t'^'\n"},
-	{"lbl: .","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t'lbl: .'\n\t'     ^'\n"},
+	{".x","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t\".x\"\n\t\"^^\"\n"},
+	{".","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t\".\"\n\t\"^\"\n"},
+	{"lbl: .","",UNL_ERROR_PARSER,"Parser: Unable to find label\nline 1:\n\t\"lbl: .\"\n\t\"     ^\"\n"},
 	{"lbl: .: 0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl: ..: 0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl:..x: 0-1 0 0","",UNL_COMPLETE,""},
@@ -166,8 +166,8 @@ unltest unltests[]={
 	{"lbl.x:0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl: .1:0-1 lbl.1 1","",UNL_COMPLETE,""},
 	{"lbl: .x-2 lbl.x:0 0","",UNL_COMPLETE,""},
-	{"lbl: .x:0-1 lbl.x:0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t'lbl: .x:0-1 lbl.x:0 0'\n\t'            ^^^^^^   '\n"},
-	{"lbl.x:0-1 lbl: .x:0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t'lbl.x:0-1 lbl: .x:0 0'\n\t'               ^^^   '\n"},
+	{"lbl: .x:0-1 lbl.x:0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t\"lbl: .x:0-1 lbl.x:0 0\"\n\t\"            ^^^^^^   \"\n"},
+	{"lbl.x:0-1 lbl: .x:0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t\"lbl.x:0-1 lbl: .x:0 0\"\n\t\"               ^^^   \"\n"},
 	{"lbl0: .x:0-1 lbl1: .y:0 0","",UNL_COMPLETE,""},
 	{"lbl: .x:.x.y-2 ..y:0 0 lbl.x.y","",UNL_COMPLETE,""},
 	//Comments
@@ -180,9 +180,9 @@ unltest unltests[]={
 	{"0-1 1 6 0-1 0 0 65\n#abc","A",UNL_COMPLETE,""},
 	{"#|\ncomment\n|#\n0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl1: 0-1 lbl2: lbl1#|comment|#lbl2 0","",UNL_COMPLETE,""},
-	{"#|","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t'#|'\n\t'^^'\n"},
+	{"#|","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t\"#|\"\n\t\"^^\"\n"},
 	{"# |#\n0-1 1 6 0-1 0 0 66","B",UNL_COMPLETE,""},
-	{"#|#0 0 0-1","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t'#|#0 0 0-1'\n\t'^^^^^^^^^^'\n"},
+	{"#|#0 0 0-1","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t\"#|#0 0 0-1\"\n\t\"^^^^^^^^^^\"\n"},
 	//Self modification test. Make sure that we can modify A, B, and C as expected.
 	//Tests if an instruction can modify its jump operand without affecting its jump.
 	{
@@ -272,7 +272,7 @@ int main(int argc,char** argv) {
 	printf("Testing unileq\n");
 	if (argc>1) {
 		//Load a file and run it.
-		printf("Loading '%s'\n",argv[1]);
+		printf("Loading '%s\"\n",argv[1]);
 		unlstate* unl=unlcreate();
 		unlparsefile(unl,argv[1]);
 		while (unl->state==UNL_RUNNING) {
@@ -292,7 +292,7 @@ int main(int argc,char** argv) {
 			unltest* test=unltests+i;
 			printf("Test %u\nsource  : '",i+1);
 			unlprint(test->code);
-			printf("'\n");
+			printf("\"\n");
 			//Run the test code.
 			unlstate* unl=unlcreate();
 			unlparsestr(unl,test->code);
@@ -302,7 +302,7 @@ int main(int argc,char** argv) {
 			unlprint(test->out);
 			printf("', %d, '",test->state);
 			unlprint(test->statestr);
-			printf("'\n");
+			printf("\"\n");
 			//Print what we actually got.
 			printf("returned: '");
 			unlbufstr[unlbufpos]=0;
@@ -310,7 +310,7 @@ int main(int argc,char** argv) {
 			unlbufpos=0;
 			printf("', %d, '",unl->state);
 			unlprint(unl->statestr);
-			printf("'\n\n");
+			printf("\"\n\n");
 			//Compare the two.
 			if (strcmp(test->out,unlbufstr) || test->state!=unl->state || strcmp(test->statestr,unl->statestr)) {
 				printf("Failed\n");

@@ -102,7 +102,7 @@ will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
 <p>We can show how the unileq assembly language and architecture work with a simple program that
 prints "Hello, World" to the screen:</p>
 <br>
-<div class="codeblock langunileq">loop: len one  exit  #Decrement [len]. If [len]=0, exit.
+<div class="codeblock langunileq">loop: len one  exit  #Decrement [len]. If [len]&lt;=1, exit.
       0-1 1    text  #Print a letter.
       ?-1 neg  loop  #Increment the text pointer and restart the loop.
 exit: 0-1 0    0
@@ -268,7 +268,8 @@ neg: 0-1
 one: 1
 </div>
 <br>
-<p>Dereference <i>[a]=[[b]]</i>.</p>
+<p>Dereference <i>[a]=[[b]]</i>. This is an extremely useful technique that allows us to perform the
+same actions on different memory addresses. It will form the backbone of functions in unileq.</p>
 <br>
 <div class="codeblock langunileq">0   b     ?+1  #[0]=-[b]
 ptr ptr   ?+1  #[ptr]=0
@@ -480,7 +481,7 @@ this block of memory, could we always direct it to some safe memory address?</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 28 Jul 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 12 Aug 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

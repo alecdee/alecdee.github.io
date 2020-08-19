@@ -10,115 +10,329 @@
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div id="header"><a href="../../index.html">Alec Dee's Homepage</a></div>
 
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Functions</h1>
-<p>In the introduction to unileq, we showed how to perform several higher level operations, like
+<p>In the introduction to unileq, we showed how to perform several higher level operations, such as
 comparing values. Even though we can perform these useful operations, we may need to write out
-dozens of unileq instructions to do so. Rewriting these instructions every time we need them is both
-messy and prone to errors.</p>
+dozens of unileq instructions to do so. Rewriting these instructions every time we need them is
+going to be both messy and prone to errors.</p>
 <br>
 <p>In this section, we will solve this problem by creating a calling convention for functions. These
-functions will allow us to reuse other instructions with very little effort on out part, and they
-can be implemented within unileq. That is, we don't need to introduce any new assembly notation or
-macros.</p>
+functions will allow us to reuse other instructions with very little effort on our part, and they
+can be implemented within unileq. That is, we won't need to introduce any new assembly notation.</p>
 </div>
 
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Calling Convention ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Calling Convention</h1>
-</div>
-
-<div class="content"><h1>First Function: Printing Digits</h1>
-<h2>Dereferencing</h2>
-</div>
-
-<div class="content"><h1>Adding Numbers</h1>
-0 ? add a b c
-0 ? print_digit a
-0 ? print_digit b
-0 ? print_digit c
-0 ? print_digit a
-0-1 0 0
-add two single digit numbers and print
-</div>
-
-<div class="content"><h1>Notes</h1>
-We will add general string printing and number printing in the next section
-</div>
-
-<!--
-<p>It would be nice to use the code blocks above without needing to rewrite them every time we need
-them. In some assembly languages we could hide them in an assembler macro, and in high level
-languages we could create a function construct. However, using a special convention, we can create
-our own easy to use function calling mechanism from entirely within unileq.</p>
-<br>
 <p>We will continue to use the shorthand <i>[x]</i> to represent <i>mem[x]</i>, or the value at
 memory address <i>x</i>. Now, assume that the label <i>func</i> is the function we want to call, and
-address <i>0</i> always holds the value <i>0</i> when we begin. Then the function calling format we
-will use is:</p>
+address <i>0</i> always holds the value <i>0</i> when we begin. Then the function calling convention
+we will use is:</p>
 <br>
 <div class="codeblock langunileq">0 ? func arg0 arg1 ...</div>
 <br>
 <p>When the unileq instruction <i>0 ? func</i> is executed, it will perform the operation
-<i>[0]=[0]-[?]</i>. Since <i>?</i> refers to the current address in memory, <i>[?]=?</i>. Also, by
-our assumptions, <i>[0]=0</i>. Thus, we have <i>[0]=0-?</i>. That is, we store the negation of the
-current address in memory address <i>0</i>. And since <i>0</i> will always be less than or equal to
-any other value, we will always jump to <i>func</i>.</p>
+<i>[0]=[0]-[?]</i>. Since <i>?</i> refers to the current address in memory, we have the equality
+<i>[?]=?</i>. Also, by our assumptions, <i>[0]=0</i>. Thus, we have <i>[0]=0-?</i>. That is, we
+store the negation of the current address in memory address <i>0</i>. And since the value <i>0</i>
+will always be less than or equal to any other value, we will always jump to <i>func</i>.</p>
 <br>
 <p>Now that our instruction pointer has jumped to <i>func</i>, we will want to parse the arguments
 that we are passing: <i>arg0 arg1 ...</i> etc. Since we know that address <i>0</i> holds the
-negative of the address of the where the function was called from, and that the arguments are listed
-immediately after the calling address, we can retrieve <i>arg0</i> at <i>-[0]+2</i>, <i>arg1</i> at
-<i>-[0]+3</i>, and so on.</p>
+negation of the calling address, and that the arguments are listed immediately after the calling
+address, we can retrieve <i>arg0</i> at <i>-[0]+2</i>, <i>arg1</i> at <i>-[0]+3</i>, and so on.</p>
 <br>
-<p>In other words, using this format, we can use the memory addresses after the calling unileq
-function to act as a stack and hold the arguments we want to pass to the function. Furthermore, we
-will know to return to the address immediately after the arguments in order to resume program
-flow.</p>
-<br>
-<p>The unileq program below creates a function called <i>print</i> which can be called to print a
-zero terminated ascii string. For instance, we could print "ABC" using <i>0 ? print 65 66 67 0</i>.
-</p>
-<br>
-<div class="codeblock langunileq">0 0 main  #Jump to main
+<div class="codeblock langunileq">0     ?     func     arg0     arg1    ...
 
-print:
-     #Print function. Prints a zero terminated ascii string.
-     #Arguments: 0 ? print char0 char1 char2 ... 0
-       .ptr   .ptr   ?+1  #Store the calling address+2 in ptr
-       .ptr  .neg2   ?+1
-       .ptr      0   ?+1
-.loop:    0      0   ?+2  #Loop through each character
-.ret:     0               #Return using "0 0 .ptr"
-          0 .ptr:0   ?+1
-       .ptr  .neg1   ?+1  #increment [ptr]
-          0  .char  .ret  #if [0]=0, return
-      .char      0   ?+1  #[char]=[[ptr]]
-        0-1  .char   ?+1
-      .char  .char .loop
-.char:    0
-.neg1:  0-1
-.neg2:  0-2
+    -[0]   -[0]+1   -[0]+2   -[0]+3   ...
+</div>
+<br>
+<p>When the function is done, it will need jump to the end of the original function call to resume
+program flow. So if the function has two arguments like in the example above, it will need to jump
+to <i>-[0]+4</i> when it's done. We'll also want to make sure that <i>[0]=0</i> upon returning so
+that any subsequent function calls can assume <i>[0]=0</i>.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ First Function: Adding Numbers ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>First Function: Adding Numbers</h1>
+<p>Unileq's single instruction nature means that it lacks even the common mathematical operations
+that most languages have by default. Large unileq programs will need functions like multiplication
+and division in order to be easy to read and write. So, for our first function, it will pay off
+immensely to show how to create a function that can add numbers.</p>
+<br>
+<p>Assume our function takes addresses <i>r</i>, <i>a</i>, and <i>b</i> as inputs and we want to
+compute <i>[r]=[a]+[b]</i>. To do this in plain unileq instructions, we would need to write 5
+instructions every time we wanted to perform this operation:</p>
+<br>
+<div class="codeblock langunileq">tmp tmp ?+1
+tmp a   ?+1
+tmp b   ?+1  #[tmp]=-[a]-[b]
+r   r   ?+1
+r   tmp ?+1  #[r]=[a]+[b]
+</div>
+<br>
+<p>After writing our function, called <i>addnum</i>, we will be able to shrink this down to a single
+line:</p>
+<br>
+<div class="codeblock langunileq">0 ? addnum r a b</div>
+<br>
+<p>Before we even write <i>addnum</i>, we can write a program to show how we intend to use it.</p>
+<br>
+<div class="codeblock langunileq">0 0 main
+
+addnum:
+	#...
 
 main:
-     #print test\n
-     0 ? print 112 114 105 110 116 32 116 101 115 116 10 0
-
-     #Hello, World!\n
-     0 ? print 72 101 108 108 111 44 32 87 111 114 108 100 33 10 0
-
-     #exit
-     0 0 0-1
+	#Set [c]=[a]+[b].
+	0 ? addnum .c .a .b
+	#Add 48 to convert the numbers to ASCII digits.
+	0 ? addnum .a .a .asc0
+	0 ? addnum .b .b .asc0
+	0 ? addnum .c .c .asc0
+	#Print "[a]+[b]=[c]".
+	0-1 1 .a
+	0-1 1 .plus
+	0-1 1 .b
+	0-1 1 .equal
+	0-1 1 .c
+	0-1 1 .eol
+	#End the program.
+	0-1 0 0
+	#Constants.
+	.a:5
+	.b:3
+	.c:0
+	.asc0:48
+	.plus:43
+	.equal:61
+	.eol:10
 </div>
 <br>
-<p>Note the use of sublabels, such as <i>.char</i>, under the <i>print</i> label. This defines the
-sublabel under the scope of the parent label and helps us avoid label name collisions in larger
-unileq programs.</p>
+<p>The program makes use of the sublabels <i>.a</i>, <i>.b</i>, etc under <i>main</i>. Whereas
+normal labels need to be unique across the entire unileq program, sublabels only need to be unique
+for the label they're defined under. This helps out with larger programs where we expect to reuse
+common label names.</p>
 <br>
-<p>The <i>print</i> function also uses a few tricks to remain small, but with some rearranging it
-might still be possible to remove an instruction from the function.</p>
+<p>The program so far is very simple. The very first line, <i>0 0 main</i>, mostly serves to set
+<i>[0]</i> to <i>0</i> and jump to the main entry point of our program. In <i>main</i>, we use
+<i>addnum</i> to set <i>[c]=[a]+[b]</i> and then add the value <i>48</i> to our digits. Since the
+ASCII range for the characters "0" to "9" is 48 to 57, we need to add <i>48</i> to our numbers to
+convert them to printable digits. After that shift, we can print our digits and end the program.</p>
+<br>
+<p>Here is the outline of what we want <i>addnum</i> to do. All that we need to do is fill it
+in.</p>
+<br>
+<div class="codeblock langunileq">addnum:
+	#Get r.
+	#Get a.
+	#Get b.
+	#Set the return address.
+	#Set [r]=[a]+[b].
+	#Return and set [0]=0.
+	#Constants.
 </div>
--->
+<br>
+<p>In our outline, we deliberately specify getting the addresses <i>r</i>, <i>a</i>, and <i>b</i>
+instead of their values. This is because we won't need their values until the
+<i>#Set [r]=[a]+[b].</i> step.</p>
+<br>
+<p>Before we cover the rest of the function, we'll first define the constants the function will use.
+There's only a few of them, but they're used throughout the function. Covering them first will help
+with understanding the other sections.</p>
+<br>
+<div class="codeblock langunileq">	#Constants.
+	.z:0 1 2
+	.tmp:0
+	.val:0
+</div>
+<br>
+<p><i>z</i> is used to intuitively access constant values around <i>0</i>. For example, we can
+access the value <i>0</i> with <i>z</i>, or the value <i>2</i> with <i>z+2</i>. <i>tmp</i> and
+<i>val</i> are temporary values we'll need to calculate <i>[r]=[a]+[b]</i> and store intermediate
+values.</p>
+<br>
+<p>To get the return address, <i>r</i>, we'll need to perform 3 dereferences.</p>
+<br>
+<div class="codeblock langunileq">	#Get r.
+	0     .z+2  ?+1
+	.r0   .r0   ?+1
+	.r0   0     ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .r0:0 ?+1  #[tmp]=-r
+	.r1   .r1   ?+1
+	.r1   .tmp  ?+1  #[r1]=r
+	.r2   .r2   ?+1
+	.r2   .tmp  ?+1  #[r2]=r</div>
+<br>
+<p>At this point, value <i>-[0]</i> is pointing to the calling instruction
+(<i>0 ? addnum r a b</i>), and the first argument is at <i>-([0]-2)</i>. So, our first dereference
+requires decrementing <i>[0]</i> by <i>2</i> and overwriting another instruction by setting
+<i>[r0]=-[0]</i>. This operation dynamically changes where we read our stack from, and allows us
+read <i>r</i>. Specifically, we set <i>[tmp]=-r</i>. <i>[tmp]</i> is then used to set <i>r1</i> and
+<i>r2</i>, which will later be used to read and overwrite <i>[r]</i> respectively. These are the
+second and third dereferences.</p>
+<br>
+<p>To get <i>a</i> we decrement <i>[0]</i> by <i>1</i> and perform another 2 dereferences. This time
+we only have 1 destination address to write to.</p>
+<br>
+<div class="codeblock langunileq">	#Get a.
+	0     .z+1  ?+1
+	.a0   .a0   ?+1
+	.a0   0     ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .a0:0 ?+1  #[tmp]=-a
+	.a1   .a1   ?+1
+	.a1   .tmp  ?+1  #[a1]=a
+</div>
+<br>
+<p>To get <i>b</i> we decrement <i>[0]</i> and perform another 2 dereferences.</p>
+<br>
+<div class="codeblock langunileq">	#Get b.
+	0     .z+1  ?+1
+	.b0   .b0   ?+1
+	.b0   0     ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .b0:0 ?+1  #[tmp]=-b
+	.b1   .b1   ?+1
+	.b1   .tmp  ?+1  #[b1]=b
+</div>
+<br>
+<p>Getting the return address is much simpler than getting the arguments.</p>
+<br>
+<div class="codeblock langunileq">	#Set the return address.
+	0     .z+1  ?+1
+	.ret  .ret  ?+1
+	.ret  0     ?+1
+</div>
+<br>
+<p>After we decrement <i>[0]</i>, it will be pointing to the address after the calling instruction.
+We then use it overwrite <i>[ret]</i>, the jump operand of the last instruction of our function.</p>
+<br>
+<p>At his point we are all set to perform what the function originally set out to do: add
+numbers.</p>
+<br>
+<div class="codeblock langunileq">	#Set [r]=[a]+[b].
+	.tmp  .tmp  ?+1
+	.tmp  .r1:0 ?+1  #[tmp]=-[r]
+	.val  .val  ?+1
+	.val  .tmp  ?+1  #[val]=[r]
+	.val  .a1:0 ?+1  #[val]=[r]-[a]
+	.val  .b1:0 ?+1  #[val]=[r]-[a]-[b]
+	.r2:0 .val  ?+1  #[r]=[a]+[b]</div>
+<br>
+<p>The block above looks a bit like the 5 instruction example we gave at the start of this section,
+and that's because it is effectively the same. The only difference is instead of zeroing out
+<i>r</i> with <i>r r ?+1</i>, we zero it out by a double negation starting at <i>r1</i>. This
+technique uses the same number of instructions as a regular zero-out, is more cache friendly, and
+allows us to write both negative and positive values to the return address.</p>
+<br>
+<p>After setting <i>[r]</i>, we have the last instruction:</p>
+<br>
+<div class="codeblock langunileq">	#Return and set [0]=0.
+	0     0     .ret:0</div>
+<br>
+<p>As the comment says, our last instruction simply sets <i>[0]</i> to <i>0</i> for future functions
+to use and returns to the end of the calling instruction.</p>
+<br>
+<p>The full program is given below.</p>
+<br>
+<div class="codeblock langunileq">0 0 main
+
+addnum:
+	#Call  : 0 ? addnum r a b
+	#Effect: Set [r]=[a]+[b].
+	#Get r.
+	0     .z+2  ?+1
+	.r0   .r0   ?+1
+	.r0   0     ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .r0:0 ?+1  #[tmp]=-r
+	.r1   .r1   ?+1
+	.r1   .tmp  ?+1  #[r1]=r
+	.r2   .r2   ?+1
+	.r2   .tmp  ?+1  #[r2]=r
+	#Get a.
+	0     .z+1  ?+1
+	.a0   .a0   ?+1
+	.a0   0     ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .a0:0 ?+1  #[tmp]=-a
+	.a1   .a1   ?+1
+	.a1   .tmp  ?+1  #[a1]=a
+	#Get b.
+	0     .z+1  ?+1
+	.b0   .b0   ?+1
+	.b0   0     ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .b0:0 ?+1  #[tmp]=-b
+	.b1   .b1   ?+1
+	.b1   .tmp  ?+1  #[b1]=b
+	#Set the return address.
+	0     .z+1  ?+1
+	.ret  .ret  ?+1
+	.ret  0     ?+1
+	#Set [r]=[a]+[b].
+	.tmp  .tmp  ?+1
+	.tmp  .r1:0 ?+1  #[tmp]=-[r]
+	.val  .val  ?+1
+	.val  .tmp  ?+1  #[val]=[r]
+	.val  .a1:0 ?+1  #[val]=[r]-[a]
+	.val  .b1:0 ?+1  #[val]=[r]-[a]-[b]
+	.r2:0 .val  ?+1  #[r]=[a]+[b]
+	#Return and set [0]=0.
+	0     0     .ret:0
+	#Constants.
+	.z:0 1 2
+	.tmp:0
+	.val:0
+
+main:
+	#Set [c]=[a]+[b].
+	0 ? addnum .c .a .b
+	#Add 48 to convert the numbers to ASCII digits.
+	0 ? addnum .a .a .asc0
+	0 ? addnum .b .b .asc0
+	0 ? addnum .c .c .asc0
+	#Print "[a]+[b]=[c]".
+	0-1 1 .a
+	0-1 1 .plus
+	0-1 1 .b
+	0-1 1 .equal
+	0-1 1 .c
+	0-1 1 .eol
+	#End the program.
+	0-1 0 0
+	#Constants.
+	.a:5
+	.b:3
+	.c:0
+	.asc0:48
+	.plus:43
+	.equal:61
+	.eol:10
+</div>
+<br>
+<p>When executed, it will print</p>
+<br>
+<div class="consoleblock">3+5=8</div>
+<br>
+<p>You can see in the comments that we specify what the full function call looks like,
+<i>0 ? addnum r a b</i>, even though we could probably omit the <i>0 ?</i> portion. This is needed
+because some special case functions may need a different calling convention. Especially if they
+avoid the use of address <i>0</i>.</p>
+</div>
+
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Notes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Notes</h1>
+<p>Because mathematical functions are used so often, it pays to optimize them as much as possible.
+The definition of <i>addnum</i> given above takes 35 instructions to execute, but it can be trimmed
+down to 31 instructions. I plan to present optimized mathematical functions in a future article.</p>
+</div>
+
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 26 Jul 2020 - Modified on 26 Jul 2020<br>
+<div id="footer">Created on 18 Aug 2020 - Modified on 18 Aug 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>
