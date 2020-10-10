@@ -66,7 +66,7 @@ increase in performance.</p>
 <br>
 <h2>BVH</h2>
 <br>
-<p>This is explained in a later section, but for the scenes I was working with, the BVH
+<p>This is explained in the main raytracer article, but for the scenes I was working with, the BVH
 made ray-triangle queries logarithmic in time complexity on average. BVH performance can obviously
 degrade on scenes with lots of holes, like a Sierpinski cube, but the chances of it degrading to
 linear complexity are low.</p>
@@ -176,12 +176,12 @@ example of its use can be seen in RayTracer_C.py. It is effectively a copy of th
 translated to C with some low-level optimizations and multithreading.</p>
 <br>
 <p>Eventually I would like the pure python ray tracer to be capable of rendering the test scene in a
-few hours instead of a few days. PyPy, proper multithreading, and a more optimized ray tracer look
-the best bet for that.</p>
+few hours instead of a few days. PyPy, proper multithreading, and a more optimized BVH look like the
+best bet for that.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 22 Dec 2019 - Modified on 4 Jul 2020<br>
+<div id="footer">Created on 22 Dec 2019 - Modified on 5 Sep 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

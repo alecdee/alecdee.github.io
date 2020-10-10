@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.13
+unileq.c - v1.14
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -50,8 +50,8 @@ unileq instruction:
      mem[A]=mem[A]-mem[B]
 
 If A=-1, then instead of executing a normal instruction, B and C will be used to
-interact with the interpreter. For example: if B=0 and C=0, then the interpreter
-will end execution of the current unileq program.
+interact with the interpreter. For example, if C=0, then the interpreter will
+end execution of the current unileq program.
 
 The instruction pointer and all memory values are 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
@@ -111,9 +111,10 @@ Operator +-
 Interpreter Calls
      If A=-1, a call will be sent to the interpreter and no jump will be taken.
      The effect of a call depends on B and C.
-     B=0: execution will end. C can be any value.
-     B=1: mem[C] will be written to stdout.
-     B=2: stdin will be written to mem[C].
+
+     C=0: End execution. B can be any value.
+     C=1: mem[B] will be written to stdout.
+     C=2: stdin will be written to mem[B].
 
 --------------------------------------------------------------------------------
 TODO
@@ -496,31 +497,30 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 void unlrun(unlstate* st,u32 iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
 	u32 dec=iters!=(u32)-1;
-	u64 a,b,c,ma,mb,mc,ip=st->ip;
+	u64 a,b,c,ma,mb,ip=st->ip;
 	for (;iters && st->state==UNL_RUNNING;iters-=dec) {
 		//Load a, b, and c.
 		a=unlgetmem(st,ip++);
 		b=unlgetmem(st,ip++);
 		c=unlgetmem(st,ip++);
 		//Execute a normal unileq instruction.
+		mb=unlgetmem(st,b);
 		if (a!=(u64)-1) {
 			ma=unlgetmem(st,a);
-			mb=unlgetmem(st,b);
 			unlsetmem(st,a,ma-mb);
 			ip=ma>mb?ip:c;
 			continue;
 		}
 		//Otherwise, call the interpreter.
-		mc=unlgetmem(st,c);
-		if (b==0) {
+		if (c==0) {
 			//Exit.
 			st->state=UNL_COMPLETE;
-		} else if (b==1) {
-			//Write mem[c] to stdout.
-			putchar((char)mc);
-		} else if (b==2) {
-			//Read stdin to mem[c].
-			unlsetmem(st,c,(uchar)getchar());
+		} else if (c==1) {
+			//Write mem[b] to stdout.
+			putchar((char)mb);
+		} else if (c==2) {
+			//Read stdin to mem[b].
+			unlsetmem(st,b,(uchar)getchar());
 		}
 	}
 	st->ip=ip;
@@ -535,9 +535,9 @@ int main(int argc,char** argv) {
 		//Print a usage message.
 		unlparsestr(
 			unl,
-			"loop: len ?+3 neg  #if [len]=0, exit\n"
-			"      0-1 1   data #print a letter\n"
-			"      ?-1 neg loop #increment pointer and loop\n"
+			"loop: len ?+4  neg  #if [len]=0, exit\n"
+			"      0-1 data 1    #print a letter\n"
+			"      ?-2 neg  loop #increment pointer and loop\n"
 			"data: 85 115 97 103 101 58 32 117 110 105 108 101"
 			"      113 32 102 105 108 101 46 117 110 108 10\n"
 			"neg:  0-1\n"

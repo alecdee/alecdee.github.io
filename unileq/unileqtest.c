@@ -1,5 +1,5 @@
 /*
-unileqtest.c - v1.05
+unileqtest.c - v1.07
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -76,7 +76,7 @@ int  unlgetchar(void);
 //Test Cases
 
 typedef struct unltest {
-	const char *code;
+	const char* code;
 	const char* out;
 	u32 state;
 	const char* statestr;
@@ -108,21 +108,21 @@ unltest unltests[]={
 	{"\x7b","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"{\"\n\t\"^\"\n"},
 	{"\x7f","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"\x7f\"\n\t\"^\"\n"},
 	//Numbers
-	{"18446744073709551615 0 0x8000","",UNL_COMPLETE,""},
-	{"0xffffffffffffffff 0 8000","",UNL_COMPLETE,""},
+	{"18446744073709551615 0x8000 0","",UNL_COMPLETE,""},
+	{"0xffffffffffffffff 8000 0","",UNL_COMPLETE,""},
 	//Arithmetic
-	{"0-1 0 1-2+0x21","",UNL_COMPLETE,""},
-	{"0-1 0 1+2","",UNL_COMPLETE,""},
+	{"0-1 1-2+0x21 0","",UNL_COMPLETE,""},
+	{"0-1 1+2 0","",UNL_COMPLETE,""},
 	//"0x"="0x0"
 	{"6 7 0\n0-1 0 0\n1 0x","",UNL_COMPLETE,""},
 	{"7 6 0\n0-1 0 0\n0x 1","",UNL_COMPLETE,""},
 	//Test if writing to 1 will print to stdout.
-	{"0-1 1 15 0-1 1 16 0-1 1 17 0-1 1 15 0-1 0 0 65 66 67","ABCA",UNL_COMPLETE,""},
+	{"0-1 15 1 0-1 16 1 0-1 17 1 0-1 15 1 0-1 0 0 65 66 67","ABCA",UNL_COMPLETE,""},
 	//Test hex lower and upper case.
 	{
-		"30 31  3 37 30 27 0-1 1 34\n"
-		"31 32 12 37 31 27 0-1 1 35\n"
-		"32 33 21 37 32 27 0-1 1 36\n"
+		"30 31  3 37 30 27 0-1 34 1\n"
+		"31 32 12 37 31 27 0-1 35 1\n"
+		"32 33 21 37 32 27 0-1 36 1\n"
 		"0-1 0 0\n"
 		"0xabcdef 0xAbCdEf 0Xabcdef 0XAbCdEf\n"
 		"48 49 50 1",
@@ -164,7 +164,7 @@ unltest unltests[]={
 	{".: 0-1 0 0","",UNL_COMPLETE,""},
 	{"..: 0-1 0 0","",UNL_COMPLETE,""},
 	{"lbl.x:0-1 0 0","",UNL_COMPLETE,""},
-	{"lbl: .1:0-1 lbl.1 1","",UNL_COMPLETE,""},
+	{"lbl: .1:0-1 1 lbl.1","",UNL_COMPLETE,""},
 	{"lbl: .x-2 lbl.x:0 0","",UNL_COMPLETE,""},
 	{"lbl: .x:0-1 lbl.x:0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t\"lbl: .x:0-1 lbl.x:0 0\"\n\t\"            ^^^^^^   \"\n"},
 	{"lbl.x:0-1 lbl: .x:0 0","",UNL_ERROR_PARSER,"Parser: Duplicate label declaration\nline 1:\n\t\"lbl.x:0-1 lbl: .x:0 0\"\n\t\"               ^^^   \"\n"},
@@ -172,28 +172,29 @@ unltest unltests[]={
 	{"lbl: .x:.x.y-2 ..y:0 0 lbl.x.y","",UNL_COMPLETE,""},
 	//Comments
 	{"#","",UNL_RUNNING,""},
-	{"#\n0-1 1 5 0-1 0 65","A",UNL_COMPLETE,""},
+	{"#\n0-1 4 1 0-1 65 0","A",UNL_COMPLETE,""},
 	{"#Hello\n0-1 0 0","",UNL_COMPLETE,""},
 	{"#||#0-1 0 0","",UNL_COMPLETE,""},
 	{"##|\n0-1 0 0","",UNL_COMPLETE,""},
-	{"0-1 1 6 0-1 0 0 65\n#","A",UNL_COMPLETE,""},
-	{"0-1 1 6 0-1 0 0 65\n#abc","A",UNL_COMPLETE,""},
+	{"|#0-1 0 0","",UNL_ERROR_PARSER,"Parser: Unexpected token\nline 1:\n\t\"|#0-1 0 0\"\n\t\"^        \"\n"},
+	{"0-1 6 1 0-1 0 0 65\n#","A",UNL_COMPLETE,""},
+	{"0-1 6 1 0-1 0 0 65\n#abc","A",UNL_COMPLETE,""},
 	{"#|\ncomment\n|#\n0-1 0 0","",UNL_COMPLETE,""},
-	{"lbl1: 0-1 lbl2: lbl1#|comment|#lbl2 0","",UNL_COMPLETE,""},
+	{"lbl1: 0-1 lbl2: lbl1#|comment|#lbl1 0","",UNL_COMPLETE,""},
 	{"#|","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t\"#|\"\n\t\"^^\"\n"},
-	{"# |#\n0-1 1 6 0-1 0 0 66","B",UNL_COMPLETE,""},
-	{"#|#0 0 0-1","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t\"#|#0 0 0-1\"\n\t\"^^^^^^^^^^\"\n"},
+	{"# |#\n0-1 6 1 0-1 0 0 66","B",UNL_COMPLETE,""},
+	{"#|#0-1 0 0","",UNL_ERROR_PARSER,"Parser: Unterminated block quote\nline 1:\n\t\"#|#0-1 0 0\"\n\t\"^^^^^^^^^^\"\n"},
 	//Self modification test. Make sure that we can modify A, B, and C as expected.
 	//Tests if an instruction can modify its jump operand without affecting its jump.
 	{
-		"?+2 neg+0 ?+1\n"
-		"0-1 1     char+0\n"
-		"?+2 neg+1 ?+1\n"
-		"0-1 1     char+1\n"
-		"?+2 neg+2 ?+1\n"
-		"0-1 1     char+2\n"
-		"?+2 neg+3 ?+1\n"
-		"0-1 1     char+3\n"
+		"?+2 neg+0  ?+1\n"
+		"0-1 char+0 1\n"
+		"?+2 neg+1  ?+1\n"
+		"0-1 char+1 1\n"
+		"?+2 neg+2  ?+1\n"
+		"0-1 char+2 1\n"
+		"?+2 neg+3  ?+1\n"
+		"0-1 char+3 1\n"
 		"0-1 0 0\n"
 		" neg:4 10 16 22\n"
 		"char:65 66 67 10",
@@ -202,13 +203,13 @@ unltest unltests[]={
 	//Prints "Hello, World!". Also tests UTF-8 support.
 	{
 		"m\xc3\xa5in:\n"
-		"       .len  one neg    #if len=0, goto -1\n"
-		"       0-1   1   .data  #print a letter \xc2\xaf\\_(\xe3\x83\x84)_/\xc2\xaf\n"
-		"       0-1+? neg m\xc3\xa5in   #increment pointer and loop\n"
+		"       .len  one neg #if len=0, abort\n"
+		"       0-1   .data 1 #print a letter \xc2\xaf\\_(\xe3\x83\x84)_/\xc2\xaf\n"
+		"       0-2+? neg m\xc3\xa5in   #increment pointer and loop\n"
 		".data: 72 101 108 108 111 44 0x20  #Hello,\n"
 		"       87 111 114 108 100 33 10    #World!\n"
 		"m\xc3\xa5in.len: m\xc3\xa5in.len-m\xc3\xa5in.data+1\n"
-		"neg:0-1 0 one:1",
+		"neg:0-1 one:1 0",
 		"Hello, World!\n",UNL_COMPLETE,""
 	},
 	//Memory
@@ -246,9 +247,13 @@ void unlprint(const char* src) {
 	esc['\r']='r';
 	esc['\t']='t';
 	esc['\b']='b';
+	esc['\"']='"';
+	esc['\\']='\\';
 	while (*src) {
-		int c=*src++;
-		if (c>=0 && c<32 && esc[c]) {
+		unsigned char c=(unsigned char)*src++;
+		if (c>127) {
+			printf("\\x%x%x",c>>4,c&15);
+		} else if (esc[c]) {
 			printf("\\%c",esc[c]);
 		} else {
 			printf("%c",c);
@@ -257,22 +262,27 @@ void unlprint(const char* src) {
 }
 
 u64 unlrand(void) {
-	//Generate a random, uniformly distributed 64 bit integer. Use Knuth's constants.
-	static u64 state=0,init=0;
-	if (init==0) {
-		state=(u32)time(0);
-		init=1;
-		printf("PRNG seed: 0x%016llx\n",(unsigned long long)state);
+	//Generate a random, uniformly distributed 64 bit integer.
+	static u64 state=0,inc=0;
+	if (inc==0) {
+		inc=((u64)&inc)^((u64)clock());
+		inc=unlrand()|1;
+		state=((u64)&state)^((u64)clock());
+		printf("PRNG seed: 0x%016llx, 0x%016llx\n",(unsigned long long)state,(unsigned long long)inc);
 	}
-	state=state*6364136223846793005ULL+1442695040888963407ULL;
-	return state;
+	u64 hash=state+=inc;
+	hash++;hash+=hash<<10;hash^=hash>>51;
+	hash++;hash+=hash<<32;hash^=hash>>14;
+	hash++;hash+=hash<< 4;hash^=hash>>12;
+	hash++;hash+=hash<<24;hash^=hash>>28;
+	return hash;
 }
 
 int main(int argc,char** argv) {
 	printf("Testing unileq\n");
 	if (argc>1) {
 		//Load a file and run it.
-		printf("Loading '%s\"\n",argv[1]);
+		printf("Loading \"%s\"\n",argv[1]);
 		unlstate* unl=unlcreate();
 		unlparsefile(unl,argv[1]);
 		while (unl->state==UNL_RUNNING) {
@@ -290,7 +300,7 @@ int main(int argc,char** argv) {
 		for (u32 i=0;i<tests;i++) {
 			//Load our next test.
 			unltest* test=unltests+i;
-			printf("Test %u\nsource  : '",i+1);
+			printf("Test %u\nsource  : \"",i+1);
 			unlprint(test->code);
 			printf("\"\n");
 			//Run the test code.
@@ -298,17 +308,17 @@ int main(int argc,char** argv) {
 			unlparsestr(unl,test->code);
 			unlrun(unl,1024);
 			//Print what we expect.
-			printf("expected: '");
+			printf("expected: \"");
 			unlprint(test->out);
-			printf("', %d, '",test->state);
+			printf("\", %d, \"",test->state);
 			unlprint(test->statestr);
 			printf("\"\n");
 			//Print what we actually got.
-			printf("returned: '");
+			printf("returned: \"");
 			unlbufstr[unlbufpos]=0;
 			unlprint(unlbufstr);
 			unlbufpos=0;
-			printf("', %d, '",unl->state);
+			printf("\", %d, \"",unl->state);
 			unlprint(unl->statestr);
 			printf("\"\n\n");
 			//Compare the two.

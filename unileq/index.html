@@ -45,8 +45,8 @@ mem[A]=mem[A]-mem[B]
 </div>
 <br>
 <p>If <i>A=-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
-used to interact with the interpreter. For example: if <i>B=0</i> and <i>C=0</i>, then the
-interpreter will end execution of the current unileq program.</p>
+used to interact with the interpreter. For example, if <i>C=0</i>, then the interpreter will end
+execution of the current unileq program.</p>
 <br>
 <p>The instruction pointer and all memory values are 64 bit unsigned integers. Overflow and
 underflow are handled by wrapping values around to be between <i>0</i> and <i>2^64-1</i>
@@ -91,9 +91,9 @@ with an operator.</td></tr>
 <tr><td>Interpreter Calls</td><td>If <i>A=-1</i>, a call will be sent to the interpreter and no jump
 will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
 <br>
-<i>B=0</i>: execution will end. <i>C</i> can be any value.<br>
-<i>B=1</i>: <i>mem[C]</i> will be written to stdout.<br>
-<i>B=2</i>: stdin will be written to <i>mem[C]</i>.</td></tr>
+<i>C=0</i>: End execution. <i>B</i> can be any value.<br>
+<i>C=1</i>: <i>mem[B]</i> will be written to stdout.<br>
+<i>C=2</i>: stdin will be written to <i>mem[B]</i>.</td></tr>
 </table>
 </div>
 
@@ -103,8 +103,8 @@ will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
 prints "Hello, World" to the screen:</p>
 <br>
 <div class="codeblock langunileq">loop: len one  exit  #Decrement [len]. If [len]&lt;=1, exit.
-      0-1 1    text  #Print a letter.
-      ?-1 neg  loop  #Increment the text pointer and restart the loop.
+      0-1 text 1     #Print a letter.
+      ?-2 neg  loop  #Increment the text pointer and restart the loop.
 exit: 0-1 0    0
 
 text: 72 101 108 108 111 44 32  #Hello,
@@ -133,19 +133,19 @@ subtracting), then we will jump to <i>exit</i> and end the program.</p>
 <p>Thus, when the program is running, we expect it to count from <i>len-text+1</i> down to <i>1</i>
 and then exit.</p>
 <br>
-<div class="codeblock langunileq">      0-1 1    text</div>
+<div class="codeblock langunileq">      0-1 text 1</div>
 <br>
 <p>The second instruction of our loop has <i>-1</i> as the first operand, which specifies an
 interpreter call. When the interpreter encounters an interpreter call, it won't execute a normal
 unileq instruction. Instead it will perform some special action depending on the second and third
-operands. Since the second operand is <i>1</i>, the interpreter will print <i>[text]</i> to the
+operands. Since the third operand is <i>1</i>, the interpreter will print <i>[text]</i> to the
 screen.</p>
 <br>
-<div class="codeblock langunileq">      ?-1 neg  loop</div>
+<div class="codeblock langunileq">      ?-2 neg  loop</div>
 <br>
 <p>The third instruction is used to advance to the next character to print and restart the loop.
-Recall from the assembly specification that <i>?</i> refers to the current address, so <i>?-1</i>
-refers to the previous memory address. In this case, it points to the previous instruction where
+Recall from the assembly specification that <i>?</i> refers to the current address, so <i>?-2</i>
+refers to two memory addresses back. In this case, it points to the previous instruction where
 <i>text</i> is. When this instruction executes, <i>-1</i> will be subtracted from <i>text</i>, which
 will have the effect of advancing to the next character that we want to print. Since we are using
 unsigned arithmetic, <i>[neg]=-1=2^64-1</i> will be greater than or equal to any other value. Thus
@@ -224,10 +224,10 @@ tmp b   ?+4  #skip next instruction if [a]&lt;=[b]
 </div>
 <br>
 <p>We can print the character "A" to the screen by using an interpreter call with <i>1</i> as the
-second operand, and the address of the character as the third operand. We define <i>char</i> to be
+third operand, and the address of the character as the third operand. We define <i>char</i> to be
 the ASCII code for "A".</p>
 <br>
-<div class="codeblock langunileq">0-1 1 char
+<div class="codeblock langunileq">0-1 char 1
 char: 65
 </div>
 <br>
@@ -341,10 +341,10 @@ operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 unileq programs require some amount of self modification to do anything useful at all. This can most
 easily be seen in the "Hello, World!" program in the section above. Specifically, the lines</p>
 <br>
-<div class="codeblock langunileq">0-1 data ?+1
-?-2 neg  loop</div>
+<div class="codeblock langunileq">0-1 text 1     #Print a letter.
+?-2 neg  loop  #Increment the text pointer and restart the loop.</div>
 <br>
-<p>Here we must modify part of an instruction where <i>data</i> is in order to print successive
+<p>Here we must modify part of an instruction where <i>text</i> is in order to print successive
 characters in a string.</p>
 <br>
 <p>We can use this self modifying property to generate some simple programs at run time, or make a
@@ -453,8 +453,8 @@ triggered architectures.</p>
 <tr><td>&bull;</td><td>The parser checks for non-terminated block quotes.</td></tr>
 <tr><td>&bull;</td><td>The parser uses a hash map instead of an AVL tree for matching
 labels.</td></tr>
-<tr><td>&bull;</td><td>Memory is held in a flat array instead of an AVL tree. This results in a 100
-times speed increase on an integer math library.</td></tr>
+<tr><td>&bull;</td><td>Memory is held in a flat array instead of an AVL tree. When profiling a
+unileq math library, the flat array was almost 100 times faster.</td></tr>
 </table>
 <br>
 <p>The main downside with using a flat array to hold memory is that a lot of it can be dead space.
@@ -469,8 +469,8 @@ offer a decent balance between speed and wasted space. It would be used like so:
 <p>Create an animated heat map showing memory activity. This would be useful in showing how the
 architecture works to casual observers.</p>
 <br>
-<p>To support multithreading, make each instruction atomic. The interpreter would spawn threads if
-a particular memory address is written to with an <i>IP</i> start address.</p>
+<p>To support multithreading, make each instruction atomic. The interpreter can spawn threads with
+a specific interpreter call. The new thread would start at <i>[B]</i>.</p>
 <br>
 <p>Within the language, make a bitwise and integer arithmetic library. Also see if there is a self
 synchronizing sequence of instructions. That is, if the <i>IP</i> were to randomly land anywhere in
@@ -481,7 +481,7 @@ this block of memory, could we always direct it to some safe memory address?</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 12 Aug 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 10 Oct 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
