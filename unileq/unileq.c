@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.14
+unileq.c - v1.15
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -426,7 +426,7 @@ void unlparsefile(unlstate* st,const char* path) {
 		str=(char*)malloc((size+1)*sizeof(char));
 	}
 	if (str==0) {
-		snprintf(st->statestr,sizeof(st->statestr),"File \"%s\" too large: %ld bytes\n",path,size);
+		snprintf(st->statestr,sizeof(st->statestr),"File \"%s\" too large: %zu bytes\n",path,size);
 	} else {
 		fseek(in,0,SEEK_SET);
 		for (size_t i=0;i<size;i++) {str[i]=(char)getc(in);}
