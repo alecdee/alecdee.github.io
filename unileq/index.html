@@ -11,18 +11,14 @@
 <div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unileq Architecture ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content"><h1>Unileq Architecture</h1>
+<div class="content"><h1>The Unileq Architecture</h1>
 <p>Download the interpreter here: <a href="./unileq.c">unileq.c</a></p>
 <br>
-<p>Before software runs on a computer, it needs to be compiled down to instructions that a processor
-can understand. Some of these instructions move data, others add numbers, and in the end there can
-be hundreds of different kinds of instructions that an architecture uses to make a program work.</p>
-<br>
-<p>Unileq, on the other hand, is a simple one instruction architecture inspired by
-<a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>. It's name comes from its one instruction,
-which stands for UNsigned Integer subtract and branch if Less than or EQual. Using this instruction,
-and some ingenuity, we can construct a unileq program that can do anything that a more complicated
-architecture can do.</p>
+<p>Whereas most computer architectures have hundreds or thousands of different instructions that can
+be used to build a program, unileq has only one instruction. Unileq's one instruction is simple: it
+performs a subtraction and then jumps. Despite its simplicity, we can use this instruction to create
+any program we want. Unileq is based off of
+<a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>.</p>
 <br>
 <p>To execute a unileq instruction, let <i>A</i>, <i>B</i>, and <i>C</i> be the values held in three
 consecutive memory addresses, and let <i>mem[X]</i> denote the memory value at address <i>X</i>. We
@@ -356,8 +352,8 @@ unileq.</p>
 <br>
 <p>As part of the unileq specification, using <i>-1</i> as the first operand executes an interpreter
 call instead of a normal instruction. Without this, a unileq progam would have no way to display its
-results or interact with its host computer. There's no real way around this, given our one
-instruction limit.</p>
+results or interact with its host computer. It would effectively be a brain in a vat. There's no
+real way around this, given our one instruction limit.</p>
 <br>
 <p>Some consideration was taken as to how to interact with the interpreter. One choice was to map
 specific memory addresses to specific actions, such as writing to address <i>0x1234...</i> to
@@ -409,23 +405,18 @@ regn pos1 ?+1</div>
 <br>
 <h2>One Instruction</h2>
 <br>
-<p>This is also a good place to mention a common criticism I came across in forum postings while
-doing my research. That is, how can you say that a unileq (or subleq) instruction is a "single"
-instruction when it does so many things? After all, it loads memory values, subtracts, stores
-values, and jumps to a new address in memory. There are two counter arguments I've come across
-which support calling unileq a single instruction.</p>
+<p>This is also a good place to mention a common criticism I have come across in forum postings
+while doing my research. That is: how can you say that a unileq (or subleq) instruction is "one"
+instruction when it does so many things? After all, it performs a subtraction and then jumps, so it
+should at least count as two instructions.</p>
 <br>
-<p>The first counter argument is the most common: using a reductionist view, nothing could be said
-to be a single instruction. For instance, lets consider an instruction that loads a value from
-memory. It sounds like a single instruction, but we can break it down further. The load instruction
-itself has to be decoded, the memory address needs to be decoded, we need to add a page offset if
-we're using one, the actual memory value needs to be fetched from the cache or RAM, there's going to
-be CPU wait cycles, and then the value needs to be stored in a register or other memory address.
-Saying that unileq isn't a single instruction because of contrived subatomic parts doesn't lead to
-any enlightenment about the subject.</p>
+<p>The most important thing to consider is the spirit of the architecture. Most architectures have
+a variety of instructions to perform a variety of actions. A unileq program is meant to be composed
+of one simple instruction, and the goal is to do something a normal architecture would do. If we get
+tied up by the definition of the architecture, then we'll lose the spirit of it.</p>
 <br>
-<p>The second counter argument is actually a formal definition of what "single instruction"
-actually means. The definition uses a simplified version of
+<p>That being said, we can create a formal definition of what "one instruction" actually means. The
+definition uses a simplified version of
 <a href="https://sites.google.com/site/comparchampsite/Home">Laplante and Gilreath's</a> complexity
 calculation: Given a set of memory addresses, is it possible to execute more than 1 instruction on
 those memory addresses. For instance, consider addresses <i>A</i> and <i>B</i>. In a complex
@@ -476,12 +467,14 @@ a specific interpreter call. The new thread would start at <i>[B]</i>.</p>
 synchronizing sequence of instructions. That is, if the <i>IP</i> were to randomly land anywhere in
 this block of memory, could we always direct it to some safe memory address?</p>
 <br>
+<p>Unileq's name comes from "UNsigned Integer subtract and branch if Less than or EQual to".</p>
+<br>
 <p><a href="./unileqtest.c">unileqtest.c</a> contains test cases for the
 <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 10 Oct 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 28 Oct 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

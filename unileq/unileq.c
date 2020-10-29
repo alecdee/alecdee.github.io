@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.15
+unileq.c - v1.16
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -21,13 +21,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
-Architecture Specification
+The Unileq Architecture
 
-Unileq is a one instruction architecture inspired by subleq. It's name comes
-from its one instruction, which stands for UNsigned Integer subtract and branch
-if Less than or EQual. Using this instruction, and some ingenuity, we can
-construct a unileq program that can do anything that a more complicated
-architecture can do.
+Whereas most computer architectures have hundreds or thousands of different
+instructions that can be used to build a program, unileq has only one
+instruction. Unileq's one instruction is simple: it performs a subtraction and
+then jumps. Despite its simplicity, we can use this instruction to create any
+program we want. Unileq is based off of subleq.
 
 To execute a unileq instruction, let A, B, and C be the values held in three
 consecutive memory addresses, and let mem[X] denote the memory value at address
@@ -127,6 +127,7 @@ Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
 */
 
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

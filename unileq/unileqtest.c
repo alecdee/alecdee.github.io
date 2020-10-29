@@ -1,5 +1,5 @@
 /*
-unileqtest.c - v1.07
+unileqtest.c - v1.08
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -54,12 +54,11 @@ Can run "./unileqtest" or "./unileqtest file.unl".
 	#pragma GCC diagnostic error "-Winit-self"
 #elif defined(_MSC_VER)
 	#pragma warning(push,4)
-	//MSVC considers fopen to be unsafe.
-	#pragma warning(disable:4996)
 #endif
 
 //Replace putchar() with unlputchar() to capture stdout.
 //Replace main() with unlmain() to avoid having two main's.
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <time.h>
 void unlputchar(char c);
