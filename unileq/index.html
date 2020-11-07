@@ -14,10 +14,11 @@
 <div class="content"><h1>The Unileq Architecture</h1>
 <p>Download the interpreter here: <a href="./unileq.c">unileq.c</a></p>
 <br>
-<p>Whereas most computer architectures have hundreds or thousands of different instructions that can
-be used to build a program, unileq has only one instruction. Unileq's one instruction is simple: it
-performs a subtraction and then jumps. Despite its simplicity, we can use this instruction to create
-any program we want. Unileq is based off of
+<p>Unileq is an architecture that is meant to show how minimal a computer can be and still work.
+Whereas most computer architectures have hundreds or thousands of different instructions that can be
+used to build a program, unileq has only one. It's one instruction is simple: it performs a
+subtraction and then jumps. Despite its simplicity, we can use this instruction to create any
+program we want. Unileq is based off of the similarly named architecture
 <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>.</p>
 <br>
 <p>To execute a unileq instruction, let <i>A</i>, <i>B</i>, and <i>C</i> be the values held in three
@@ -351,8 +352,8 @@ unileq.</p>
 <h2>Interpreter Calls</h2>
 <br>
 <p>As part of the unileq specification, using <i>-1</i> as the first operand executes an interpreter
-call instead of a normal instruction. Without this, a unileq progam would have no way to display its
-results or interact with its host computer. It would effectively be a brain in a vat. There's no
+call instead of a normal instruction. Without this, a unileq program would have no way to display
+its results or interact with its host computer. It would effectively be a brain in a vat. There's no
 real way around this, given our one instruction limit.</p>
 <br>
 <p>Some consideration was taken as to how to interact with the interpreter. One choice was to map
@@ -467,14 +468,15 @@ a specific interpreter call. The new thread would start at <i>[B]</i>.</p>
 synchronizing sequence of instructions. That is, if the <i>IP</i> were to randomly land anywhere in
 this block of memory, could we always direct it to some safe memory address?</p>
 <br>
-<p>Unileq's name comes from "UNsigned Integer subtract and branch if Less than or EQual to".</p>
+<p>Unileq's name comes from "UNsigned Integer subtract and branch if Less than or EQual to".
+Although "uni" implying "one" is a nice coincidence.</p>
 <br>
 <p><a href="./unileqtest.c">unileqtest.c</a> contains test cases for the
 <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 28 Oct 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 7 Nov 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
