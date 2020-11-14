@@ -119,16 +119,13 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-u64create new Uint32Array(2)
-function u64hi(n) {return n[1];}
-function u64lo(n) {return n[0];}
-count different ways u64create is called
+Optimize unlrun_fast()
+use memh[], meml[].
+Uint32Array
 
-         slow fast arr
+         slow fast uint
 laptop
-PC FF
-PC Chrome
-PC IE
+desktop
 phone
 VM
 */
@@ -189,15 +186,6 @@ function u64tostr(n) {
 	return str===""?"0":str;
 }
 
-function u64cmp(a,b) {
-	//if a<b, return -1
-	//if a=b, return  0
-	//if a>b, return  1
-	if (a.hi!==b.hi) {return a.hi<b.hi?-1:1;}
-	if (a.lo!==b.lo) {return a.lo<b.lo?-1:1;}
-	return 0;
-}
-
 function u64set(a,b) {
 	//a=b
 	a.lo=b.lo;
@@ -246,22 +234,6 @@ function u64add(r,a,b) {
 		r.hi-=0x100000000;
 	}
 }
-
-/*function u64mul0(r,a,b) {
-	//r=a*b
-	var a0=a.lo&0xffff,a1=a.lo>>>16;
-	var a2=a.hi&0xffff,a3=a.hi>>>16;
-	var b0=b.lo&0xffff,b1=b.lo>>>16;
-	var b2=b.hi&0xffff,b3=b.hi>>>16;
-	var m0=a0*b1,m1=a1*b0;
-	var hi=a0*b2+a1*b1+a2*b0+(m0>>>16)+(m1>>>16);
-	var lo=a0*b0+((m0<<16)>>>0)+((m1<<16)>>>0);
-	if (lo>=0x200000000) {hi++;}
-	if (lo>=0x100000000) {hi++;}
-	hi+=(a0*b3+a1*b2+a2*b1+a3*b0)<<16;
-	r.lo=lo>>>0;
-	r.hi=hi>>>0;
-}*/
 
 function u64mul(r,a,b) {
 	//r=a*b
@@ -406,7 +378,8 @@ function unlcreate(output) {
 	var st={
 		output:output,
 		running:0,
-		mem:null,
+		memh:[0],
+		meml:[0],
 		alloc:0,
 		ip:u64create(),
 		state:0,
@@ -420,7 +393,8 @@ function unlclear(st) {
 	st.state=UNL_COMPLETE;
 	st.statestr="";
 	u64zero(st.ip);
-	st.mem=null;
+	st.memh=[0];
+	st.meml=[0];
 	st.alloc=0;
 	if (st.output!==null) {
 		st.output.value="";
@@ -569,8 +543,9 @@ function unlparsestr(st,str) {
 
 function unlgetmem(st,addr) {
 	//Return the memory value at addr.
-	if (addr.hi===0 && addr.lo<st.alloc) {
-		return u64create(st.mem[addr.lo]);
+	var i=addr.lo;
+	if (addr.hi===0 && i<st.alloc) {
+		return u64create(st.memh[i],st.meml[i]);
 	} else {
 		return u64create();
 	}
@@ -584,22 +559,30 @@ function unlsetmem(st,addr,val) {
 		//error out.
 		if (u64iszero(val)) {return;}
 		//Find the maximum we can allocate.
-		var alloc=1,mem=null;
+		var alloc=1,memh=null,meml=null;
 		while (alloc<=pos) {alloc+=alloc;}
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				mem=new Array(alloc);
+				memh=new Array(alloc+1);
+				meml=new Array(alloc+1);
 			} catch {
-				mem=null;
+				memh=null;
+				meml=null;
 			}
 		}
-		if (mem!==null) {
-			var omem=st.mem,oalloc=st.alloc;
-			for (var i=0;i<alloc;i++) {
-				mem[i]=i<oalloc?omem[i]:u64create();
+		if (memh!==null && meml!==null) {
+			var omemh=st.memh,omeml=st.meml,oalloc=st.alloc;
+			for (var i=0;i<oalloc;i++) {
+				memh[i]=omemh[i];
+				meml[i]=omeml[i];
 			}
-			st.mem=mem;
+			for (;i<=alloc;i++) {
+				memh[i]=0;
+				meml[i]=0;
+			}
+			st.memh=memh;
+			st.meml=meml;
 			st.alloc=alloc;
 		} else {
 			st.state=UNL_ERROR_MEMORY;
@@ -607,7 +590,8 @@ function unlsetmem(st,addr,val) {
 			return;
 		}
 	}
-	u64set(st.mem[pos],val);
+	st.memh[pos]=val.hi;
+	st.meml[pos]=val.lo;
 }
 
 function unlrun(st,iters) {
@@ -645,48 +629,52 @@ function unlrun(st,iters) {
 function unlrun_fast(st,iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
 	var a,b,c,ma,mb;
-	var zero=u64create(),tmp=st.ip;
+	var tmp=st.ip;
 	var lo,hi,iplo=tmp.lo,iphi=tmp.hi;
-	var mem=st.mem,alloc=st.alloc;
+	var memh=st.memh,meml=st.meml,alloc=st.alloc;
 	iters=iters<0?Infinity:iters;
 	for (;iters>0;iters--) {
 		//Load a, b, and c.
 		if (iphi===0 && iplo<0xfffffffd) {
-			a=iplo  <alloc?mem[iplo  ]:zero;
-			b=iplo+1<alloc?mem[iplo+1]:zero;
-			c=iplo+2<alloc?mem[iplo+2]:zero;
+			a=iplo  <alloc?iplo  :alloc;
+			b=iplo+1<alloc?iplo+1:alloc;
+			c=iplo+2<alloc?iplo+2:alloc;
 			iplo+=3;
 		} else {
-			tmp.lo=iplo;tmp.hi=iphi;
+			console.log("carry");
+			st.state=UNL_ERROR_MEMORY;
+			break;
+			/*tmp.lo=iplo;tmp.hi=iphi;
 			a=unlgetmem(st,tmp);u64inc(tmp);
 			b=unlgetmem(st,tmp);u64inc(tmp);
 			c=unlgetmem(st,tmp);u64inc(tmp);
-			iplo=tmp.lo;iphi=tmp.hi;
+			iplo=tmp.lo;iphi=tmp.hi;*/
 		}
 		//Execute a normal unileq instruction.
-		mb=(b.hi===0 && b.lo<alloc)?mem[b.lo]:zero;
-		if (a.hi===0 && a.lo<alloc) {
-			ma=mem[a.lo];
-			lo=ma.lo-mb.lo;
-			hi=ma.hi-mb.hi;
+		mb=meml[b];
+		mb=(memh[b]===0 && mb<alloc)?mb:alloc;
+		ma=meml[a];
+		if (memh[a]===0 && ma<alloc) {
+			lo=meml[ma]-meml[mb];
+			hi=memh[ma]-memh[mb];
 			if (lo<0) {
 				lo+=0x100000000;
 				hi--;
 			}
 			if (hi<0) {
 				hi+=0x100000000;
-				iplo=c.lo;
-				iphi=c.hi;
+				iplo=meml[c];
+				iphi=memh[c];
 			} else if (hi===0 && lo===0) {
-				iplo=c.lo;
-				iphi=c.hi;
+				iplo=meml[c];
+				iphi=memh[c];
 			}
-			ma.lo=lo;
-			ma.hi=hi;
-		} else if (a.hi!==0xffffffff || a.lo!==0xffffffff) {
+			meml[ma]=lo;
+			memh[ma]=hi;
+		} else if (memh[a]!==0xffffffff || ma!==0xffffffff) {
 			//mem[a]=0
-			lo=-mb.lo;
-			hi=-mb.hi;
+			lo=-meml[mb];
+			hi=-memh[mb];
 			if (lo<0) {
 				lo+=0x100000000;
 				hi--;
@@ -694,24 +682,27 @@ function unlrun_fast(st,iters) {
 			if (hi<0) {
 				hi+=0x100000000;
 			}
-			iphi=c.hi;
-			iplo=c.lo;
-			tmp.hi=hi;
-			tmp.lo=lo;
-			unlsetmem(st,a,tmp);
+			iphi=memh[c];
+			iplo=meml[c];
+			tmp.hi=memh[a];
+			tmp.lo=ma;
+			unlsetmem(st,tmp,tmp);
 			if (st.state!==UNL_RUNNING) {break;}
-			mem=st.mem;
+			memh=st.memh;
+			meml=st.meml;
 			alloc=st.alloc;
-		} else if (c.hi===0) {
+			meml[ma]=lo;
+			memh[ma]=hi;
+		} else if (memh[c]===0) {
 			//Otherwise, call the interpreter.
-			if (c.lo===0) {
+			if (meml[c]===0) {
 				//Exit.
 				st.state=UNL_COMPLETE;
 				break;
-			} else if (c.lo===1) {
+			} else if (meml[c]===1) {
 				//Write mem[b] to stdout.
 				if (st.output!==null) {
-					st.output.value+=String.fromCharCode(mb.lo&255);
+					st.output.value+=String.fromCharCode(meml[mb]&255);
 				}
 			}
 		}
@@ -722,10 +713,6 @@ function unlrun_fast(st,iters) {
 
 //--------------------------------------------------------------------------------
 //Editor.
-
-function randu32() {
-	return Math.floor(Math.random()*0x100000000);
-}
 
 function unlsetup(source,runid,resetid,inputid,outputid) {
 	var runbutton=document.getElementById(runid);
