@@ -119,10 +119,9 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-test u64ops and parsing speed
+test webassmebly on phone
 use settimeout, see if seconds can be float
 timing not working on ff for windows
-fix unlrun_fast carrying and a>alloc.
 
               slow       fast       arr1     arr2 u32   arr2 gen
 Laptop    | 0.031968 | 0.013343 | 0.012191 | 0.010786 | 0.010606
@@ -570,15 +569,12 @@ function unlparsestr(st,str) {
 
 function unlgetmem(st,addr) {
 	//Return the memory value at addr.
-	/*var i=addr.lo;
+	var i=addr.lo;
 	if (addr.hi===0 && i<st.alloc) {
 		return u64create(st.memh[i],st.meml[i]);
 	} else {
 		return u64create();
-	}*/
-	var i=addr.lo;
-	i=(addr.hi===0 && i<st.alloc)?i:st.alloc;
-	return u64create(st.memh[i],st.meml[i]);
+	}
 }
 
 function unlsetmem(st,addr,val) {
@@ -659,35 +655,30 @@ function unlrun(st,iters) {
 function unlrun_fast(st,iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
 	var a,b,c,ma,mb;
-	var tmp=st.ip;
+	var tmp=st.ip,val=u64create();
 	var lo,hi,iplo=tmp.lo,iphi=tmp.hi;
 	var memh=st.memh,meml=st.meml,alloc=st.alloc;
 	iters=iters<0?Infinity:iters;
 	for (;iters>0;iters--) {
 		//Load a, b, and c.
 		if (iphi===0 && iplo<0xfffffffd) {
-			/*a=iplo  <alloc?iplo  :alloc;
-			b=iplo+1<alloc?iplo+1:alloc;
-			c=iplo+2<alloc?iplo+2:alloc;
-			iplo+=3;*/
 			a=iplo<alloc?iplo:alloc;iplo++;
 			b=iplo<alloc?iplo:alloc;iplo++;
 			c=iplo<alloc?iplo:alloc;iplo++;
 		} else {
-			console.log("carry");
-			st.state=UNL_ERROR_MEMORY;
-			break;
-			/*tmp.lo=iplo;tmp.hi=iphi;
-			a=unlgetmem(st,tmp);u64inc(tmp);
-			b=unlgetmem(st,tmp);u64inc(tmp);
-			c=unlgetmem(st,tmp);u64inc(tmp);
-			iplo=tmp.lo;iphi=tmp.hi;*/
+			a=(iphi===0 && iplo<alloc)?iplo:alloc;
+			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)|0;}
+			b=(iphi===0 && iplo<alloc)?iplo:alloc;
+			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)|0;}
+			c=(iphi===0 && iplo<alloc)?iplo:alloc;
+			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)|0;}
 		}
 		//Execute a normal unileq instruction.
 		mb=meml[b];
 		mb=(memh[b]===0 && mb<alloc)?mb:alloc;
 		ma=meml[a];
 		if (memh[a]===0 && ma<alloc) {
+			//In bounds.
 			lo=meml[ma]-meml[mb];
 			hi=memh[ma]-memh[mb];
 			if (lo<0) {
@@ -705,27 +696,20 @@ function unlrun_fast(st,iters) {
 			meml[ma]=lo;
 			memh[ma]=hi;
 		} else if (memh[a]!==0xffffffff || ma!==0xffffffff) {
-			//mem[a]=0
+			//Out of bounds. Need to expand memory. mem[a]=0
 			lo=-meml[mb];
-			hi=-memh[mb];
-			if (lo<0) {
-				lo+=0x100000000;
-				hi--;
-			}
-			if (hi<0) {
-				hi+=0x100000000;
-			}
+			hi=-memh[mb]-(lo<0);
+			val.hi=hi>>>0;
+			val.lo=lo>>>0;
 			iphi=memh[c];
 			iplo=meml[c];
 			tmp.hi=memh[a];
 			tmp.lo=ma;
-			unlsetmem(st,tmp,tmp);
+			unlsetmem(st,tmp,val);
 			if (st.state!==UNL_RUNNING) {break;}
 			memh=st.memh;
 			meml=st.meml;
 			alloc=st.alloc;
-			meml[ma]=lo;
-			memh[ma]=hi;
 		} else if (memh[c]===0) {
 			//Otherwise, call the interpreter.
 			if (meml[c]===0) {
