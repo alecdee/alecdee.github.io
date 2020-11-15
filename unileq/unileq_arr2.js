@@ -564,8 +564,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Array(alloc+1);
-				meml=new Array(alloc+1);
+				memh=new Uint32Array(alloc+1);
+				meml=new Uint32Array(alloc+1);
 			} catch {
 				memh=null;
 				meml=null;
@@ -636,10 +636,13 @@ function unlrun_fast(st,iters) {
 	for (;iters>0;iters--) {
 		//Load a, b, and c.
 		if (iphi===0 && iplo<0xfffffffd) {
-			a=iplo  <alloc?iplo  :alloc;
+			/*a=iplo  <alloc?iplo  :alloc;
 			b=iplo+1<alloc?iplo+1:alloc;
 			c=iplo+2<alloc?iplo+2:alloc;
-			iplo+=3;
+			iplo+=3;*/
+			a=iplo<alloc?iplo:alloc;iplo++;
+			b=iplo<alloc?iplo:alloc;iplo++;
+			c=iplo<alloc?iplo:alloc;iplo++;
 		} else {
 			console.log("carry");
 			st.state=UNL_ERROR_MEMORY;
@@ -746,6 +749,7 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 	var avg=0.0,avgden=0.0,avgprint=0;
 	var total=performance.now();
 	function update() {
+		var time=performance.now();
 		var text=st.running===0?"Resume":"Stop";
 		if (st.state!==UNL_RUNNING && st.running!==0) {
 			st.running=0;
@@ -766,14 +770,17 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
 				}
 			}
-			return;
+		} else {
+			unlrun_fast(st,500000);
 		}
-		var t0=performance.now();
-		unlrun_fast(st,500000);
-		avg+=performance.now()-t0;
+		time=performance.now()-time;
+		avg+=time;
 		avgden+=1000.0;
+		time=Math.floor(16.666666-time);
+		time=(time>1 && time<17)?time:1;
+		setTimeout(update,time);
 	}
-	setInterval(update,1000.0/60.0);
+	setTimeout(update,1);
 	return st;
 }
 

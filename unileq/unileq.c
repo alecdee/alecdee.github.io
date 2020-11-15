@@ -123,6 +123,8 @@ TODO
 Keep source under 20,000 bytes.
 Simplify max memory calculation. Test using u8/u16.
 Simplify parser error highlighting.
+Simplify 64 bit math in parser.
+What happens if memory error in unlsetmem() during parsing.
 
 Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
