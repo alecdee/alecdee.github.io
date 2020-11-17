@@ -119,8 +119,8 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-test webassmebly on phone
-use settimeout, see if seconds can be float
+fix resume button
+test parsing speed, u64mul, reduce u64create calls
 timing not working on ff for windows
 
               slow       fast       arr1     arr2 u32   arr2 gen
@@ -129,6 +129,29 @@ PC FF     | 0.016117 | 0.007208 | 0.005238 | 0.005233 | 0.007479
 PC Chrome | 0.023990 | 0.006959 | 0.007561 | 0.006069 | 0.007069
 Phone     | 0.119338 | 0.037660 | 0.033570 | 0.031009 | 0.029468
 VM        | 0.051755 | 0.014504 | 0.012980 | 0.011058 | 0.009602
+
+
+
+var an=BigInt(a),bn=BitInt(b);
+an=BigInt.AsIntN(64,a*b);
+r.hi=an>>32;
+a.lo=an&0xffffffff;
+
+function u64mul0(r,a,b) {
+	//r=a*b
+	var a0=a.lo&0xffff,a1=a.lo>>>16;
+	var a2=a.hi&0xffff,a3=a.hi>>>16;
+	var b0=b.lo&0xffff,b1=b.lo>>>16;
+	var b2=b.hi&0xffff,b3=b.hi>>>16;
+	var m0=a0*b1,m1=a1*b0;
+	var hi=a0*b2+a1*b1+a2*b0+(m0>>>16)+(m1>>>16);
+	var lo=a0*b0+((m0<<16)>>>0)+((m1<<16)>>>0);
+	if (lo>=0x200000000) {hi++;}
+	if (lo>=0x100000000) {hi++;}
+	hi+=(a0*b3+a1*b2+a2*b1+a3*b0)<<16;
+	r.lo=lo>>>0;
+	r.hi=hi>>>0;
+}
 */
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
@@ -245,23 +268,7 @@ function u64add(r,a,b) {
 	}
 }
 
-/*function u64mul0(r,a,b) {
-	//r=a*b
-	var a0=a.lo&0xffff,a1=a.lo>>>16;
-	var a2=a.hi&0xffff,a3=a.hi>>>16;
-	var b0=b.lo&0xffff,b1=b.lo>>>16;
-	var b2=b.hi&0xffff,b3=b.hi>>>16;
-	var m0=a0*b1,m1=a1*b0;
-	var hi=a0*b2+a1*b1+a2*b0+(m0>>>16)+(m1>>>16);
-	var lo=a0*b0+((m0<<16)>>>0)+((m1<<16)>>>0);
-	if (lo>=0x200000000) {hi++;}
-	if (lo>=0x100000000) {hi++;}
-	hi+=(a0*b3+a1*b2+a2*b1+a3*b0)<<16;
-	r.lo=lo>>>0;
-	r.hi=hi>>>0;
-}*/
-
-function u64mul(r,a,b) {
+/*function u64mul(r,a,b) {
 	//r=a*b
 	var t=u64create();
 	for (var i=31;i>=0;i--) {
@@ -277,6 +284,21 @@ function u64mul(r,a,b) {
 		}
 	}
 	u64set(r,t);
+}*/
+
+function u64mul(r,a,b) {
+	var a0=a.lo&0xffff,a1=a.lo>>>16;
+	var a2=a.hi&0xffff,a3=a.hi>>>16;
+	var b0=b.lo&0xffff,b1=b.lo>>>16;
+	var b2=b.hi&0xffff;
+	var m=a0*b1+a1*b0,lo,hi;
+	hi=a0*b.hi+a1*b1+a2*b.lo+(m>>>16);
+	lo=a0*b0+((m<<16)>>>0);
+	if ( m>=0x100000000) {hi+=0x10000;}
+	if (lo>=0x100000000) {hi++;}
+	hi+=(a1*b2+a3*b0)<<16;
+	r.lo=lo>>>0;
+	r.hi=hi>>>0;
 }
 
 function u64inc(n) {
@@ -428,6 +450,7 @@ function unlclear(st) {
 }
 
 function unlparsestr(st,str) {
+	var t0=performance.now();
 	//Convert unileq assembly language into a unileq program.
 	unlclear(st);
 	st.state=UNL_RUNNING;
@@ -445,6 +468,7 @@ function unlparsestr(st,str) {
 	for (var pass=0;pass<2 && err===null;pass++) {
 		var scope=scope0,lbl=null;
 		var addr=u64create(),val=u64create(),acc=u64create();
+		var tmp0=u64create(),tmp1=u64create();
 		op=0;
 		i=0;
 		NEXT();
@@ -478,9 +502,10 @@ function unlparsestr(st,str) {
 				token=10;
 				u64zero(val);
 				if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
-				while ((n=CNUM(c))<token) {
-					u64mul(val,val,u64create(token));
-					u64add(val,val,u64create(n));
+				tmp0.lo=token;
+				while ((tmp1.lo=CNUM(c))<token) {
+					u64mul(val,val,tmp0);
+					u64add(val,val,tmp1);
 					NEXT();
 				}
 			} else if (c===63) {
@@ -565,6 +590,7 @@ function unlparsestr(st,str) {
 			st.statestr="Parser: "+err+"\nline "+line+":\n\t\""+window+"\"\n\t\""+under+"\"\n";
 		}
 	}
+	st.output.value+="parsing: "+((performance.now()-t0)/1000.0).toFixed(6)+"\n";
 }
 
 function unlgetmem(st,addr) {
@@ -679,6 +705,7 @@ function unlrun_fast(st,iters) {
 		ma=meml[a];
 		if (memh[a]===0 && ma<alloc) {
 			//In bounds.
+			//if (ma!==mb) {
 			lo=meml[ma]-meml[mb];
 			hi=memh[ma]-memh[mb];
 			if (lo<0) {
@@ -695,14 +722,33 @@ function unlrun_fast(st,iters) {
 			}
 			meml[ma]=lo;
 			memh[ma]=hi;
+			/*	lo=meml[ma]-meml[mb];
+				hi=memh[ma]-memh[mb];
+				if (lo<0) {hi--;}
+				if (hi<0 || (hi===0 && lo===0)) {
+					iplo=meml[c];
+					iphi=memh[c];
+				}
+				meml[ma]=lo;
+				memh[ma]=hi;
+			} else {
+				iplo=meml[c];
+				iphi=memh[c];
+				meml[ma]=0;
+				memh[ma]=0;
+			}*/
 		} else if (memh[a]!==0xffffffff || ma!==0xffffffff) {
 			//Out of bounds. Need to expand memory. mem[a]=0
-			lo=-meml[mb];
-			hi=-memh[mb]-(lo<0);
-			val.hi=hi>>>0;
-			val.lo=lo>>>0;
 			iphi=memh[c];
 			iplo=meml[c];
+			lo=-meml[mb];
+			hi=-memh[mb];
+			if (lo<0) {
+				lo+=0x100000000;
+				hi--;
+			}
+			val.hi=hi<0?hi+0x100000000:hi;
+			val.lo=lo;
 			tmp.hi=memh[a];
 			tmp.lo=ma;
 			unlsetmem(st,tmp,val);
@@ -730,10 +776,6 @@ function unlrun_fast(st,iters) {
 
 //--------------------------------------------------------------------------------
 //Editor.
-
-function randu32() {
-	return Math.floor(Math.random()*0x100000000);
-}
 
 function unlsetup(source,runid,resetid,inputid,outputid) {
 	var runbutton=document.getElementById(runid);
@@ -790,7 +832,7 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 			}
 			return;
 		} else {
-			unlrun_fast(st,500000);
+			unlrun_fast(st,500000000);
 		}
 		time=performance.now()-time;
 		avg+=time;
