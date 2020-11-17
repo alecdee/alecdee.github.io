@@ -119,39 +119,29 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
+Check if Uint32Array[x]=-n will convert properly.
+test u64 main loop speed 1-6
+remove timing information from main loop
+reduce iter count to 500000
 fix resume button
-test parsing speed, u64mul, reduce u64create calls
 timing not working on ff for windows
 
-              slow       fast       arr1     arr2 u32   arr2 gen
-Laptop    | 0.031968 | 0.013343 | 0.012191 | 0.010786 | 0.010606
-PC FF     | 0.016117 | 0.007208 | 0.005238 | 0.005233 | 0.007479
-PC Chrome | 0.023990 | 0.006959 | 0.007561 | 0.006069 | 0.007069
-Phone     | 0.119338 | 0.037660 | 0.033570 | 0.031009 | 0.029468
-VM        | 0.051755 | 0.014504 | 0.012980 | 0.011058 | 0.009602
+                1          2          3          4          5          6
+Laptop    | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
+PC FF     | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
+PC Chrome | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
+Phone     | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
+VM        | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
 
+Array
+	1. regular add
+	2. regular add, ma==mb
+Uint32Array
+	3. regular add
+	4. regular add, ma==mb
+	5. short add
+	6. short add, ma==mb
 
-
-var an=BigInt(a),bn=BitInt(b);
-an=BigInt.AsIntN(64,a*b);
-r.hi=an>>32;
-a.lo=an&0xffffffff;
-
-function u64mul0(r,a,b) {
-	//r=a*b
-	var a0=a.lo&0xffff,a1=a.lo>>>16;
-	var a2=a.hi&0xffff,a3=a.hi>>>16;
-	var b0=b.lo&0xffff,b1=b.lo>>>16;
-	var b2=b.hi&0xffff,b3=b.hi>>>16;
-	var m0=a0*b1,m1=a1*b0;
-	var hi=a0*b2+a1*b1+a2*b0+(m0>>>16)+(m1>>>16);
-	var lo=a0*b0+((m0<<16)>>>0)+((m1<<16)>>>0);
-	if (lo>=0x200000000) {hi++;}
-	if (lo>=0x100000000) {hi++;}
-	hi+=(a0*b3+a1*b2+a2*b1+a3*b0)<<16;
-	r.lo=lo>>>0;
-	r.hi=hi>>>0;
-}
 */
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
@@ -270,23 +260,6 @@ function u64add(r,a,b) {
 
 function u64mul(r,a,b) {
 	//r=a*b
-	var t=u64create();
-	for (var i=31;i>=0;i--) {
-		u64add(t,t,t);
-		if ((b.hi&(1<<i))!==0) {
-			u64add(t,t,a);
-		}
-	}
-	for (i=31;i>=0;i--) {
-		u64add(t,t,t);
-		if ((b.lo&(1<<i))!==0) {
-			u64add(t,t,a);
-		}
-	}
-	u64set(r,t);
-}
-
-/*function u64mul(r,a,b) {
 	var a0=a.lo&0xffff,a1=a.lo>>>16;
 	var a2=a.hi&0xffff,a3=a.hi>>>16;
 	var b0=b.lo&0xffff,b1=b.lo>>>16;
@@ -299,7 +272,7 @@ function u64mul(r,a,b) {
 	hi+=(a1*b2+a3*b0)<<16;
 	r.lo=lo>>>0;
 	r.hi=hi>>>0;
-}*/
+}
 
 function u64inc(n) {
 	//n++
@@ -616,8 +589,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Uint32Array(alloc+1);
-				meml=new Uint32Array(alloc+1);
+				memh=new Array(alloc+1);
+				meml=new Array(alloc+1);
 			} catch {
 				memh=null;
 				meml=null;
@@ -828,6 +801,7 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 					total=(performance.now()-total)/1000.0;
 					output.value+="time: "+total.toFixed(6)+"\n";
 					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
+					output.value+="test 1";
 				}
 			}
 			return;

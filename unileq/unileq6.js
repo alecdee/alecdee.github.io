@@ -589,8 +589,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Array(alloc+1);
-				meml=new Array(alloc+1);
+				memh=new Uint32Array(alloc+1);
+				meml=new Uint32Array(alloc+1);
 			} catch {
 				memh=null;
 				meml=null;
@@ -681,29 +681,13 @@ function unlrun_fast(st,iters) {
 			if (ma!==mb) {
 				lo=meml[ma]-meml[mb];
 				hi=memh[ma]-memh[mb];
-				if (lo<0) {
-					lo+=0x100000000;
-					hi--;
-				}
-				if (hi<0) {
-					hi+=0x100000000;
-					iplo=meml[c];
-					iphi=memh[c];
-				} else if (hi===0 && lo===0) {
-					iplo=meml[c];
-					iphi=memh[c];
-				}
-				meml[ma]=lo;
-				memh[ma]=hi;
-			/*	lo=meml[ma]-meml[mb];
-				hi=memh[ma]-memh[mb];
 				if (lo<0) {hi--;}
 				if (hi<0 || (hi===0 && lo===0)) {
 					iplo=meml[c];
 					iphi=memh[c];
 				}
 				meml[ma]=lo;
-				memh[ma]=hi;*/
+				memh[ma]=hi;
 			} else {
 				iplo=meml[c];
 				iphi=memh[c];
@@ -801,7 +785,7 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 					total=(performance.now()-total)/1000.0;
 					output.value+="time: "+total.toFixed(6)+"\n";
 					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
-					output.value+="test 2";
+					output.value+="test 6";
 				}
 			}
 			return;

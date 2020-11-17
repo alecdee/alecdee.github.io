@@ -589,8 +589,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Array(alloc+1);
-				meml=new Array(alloc+1);
+				memh=new Uint32Array(alloc+1);
+				meml=new Uint32Array(alloc+1);
 			} catch {
 				memh=null;
 				meml=null;
@@ -801,7 +801,7 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 					total=(performance.now()-total)/1000.0;
 					output.value+="time: "+total.toFixed(6)+"\n";
 					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
-					output.value+="test 2";
+					output.value+="test 4";
 				}
 			}
 			return;
