@@ -119,28 +119,10 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-Check if Uint32Array[x]=-n will convert properly.
-test u64 main loop speed 1-6
-remove timing information from main loop
-reduce iter count to 500000
-fix resume button
 timing not working on ff for windows
-
-                1          2          3          4          5          6
-Laptop    | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
-PC FF     | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
-PC Chrome | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
-Phone     | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
-VM        | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx | x.xxxxxx
-
-Array
-	1. regular add
-	2. regular add, ma==mb
-Uint32Array
-	3. regular add
-	4. regular add, ma==mb
-	5. short add
-	6. short add, ma==mb
+remove timing information from main loop
+fix resume button
+Add highlighting.
 
 */
 /*jshint bitwise: false*/
@@ -423,7 +405,6 @@ function unlclear(st) {
 }
 
 function unlparsestr(st,str) {
-	var t0=performance.now();
 	//Convert unileq assembly language into a unileq program.
 	unlclear(st);
 	st.state=UNL_RUNNING;
@@ -563,7 +544,6 @@ function unlparsestr(st,str) {
 			st.statestr="Parser: "+err+"\nline "+line+":\n\t\""+window+"\"\n\t\""+under+"\"\n";
 		}
 	}
-	st.output.value+="parsing: "+((performance.now()-t0)/1000.0).toFixed(6)+"\n";
 }
 
 function unlgetmem(st,addr) {
@@ -666,11 +646,11 @@ function unlrun_fast(st,iters) {
 			c=iplo<alloc?iplo:alloc;iplo++;
 		} else {
 			a=(iphi===0 && iplo<alloc)?iplo:alloc;
-			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)|0;}
+			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
 			b=(iphi===0 && iplo<alloc)?iplo:alloc;
-			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)|0;}
+			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
 			c=(iphi===0 && iplo<alloc)?iplo:alloc;
-			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)|0;}
+			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
 		}
 		//Execute a normal unileq instruction.
 		mb=meml[b];
@@ -678,40 +658,32 @@ function unlrun_fast(st,iters) {
 		ma=meml[a];
 		if (memh[a]===0 && ma<alloc) {
 			//In bounds.
-			//if (ma!==mb) {
-			lo=meml[ma]-meml[mb];
-			hi=memh[ma]-memh[mb];
-			if (lo<0) {
-				lo+=0x100000000;
-				hi--;
-			}
-			if (hi<0) {
-				hi+=0x100000000;
-				iplo=meml[c];
-				iphi=memh[c];
-			} else if (hi===0 && lo===0) {
-				iplo=meml[c];
-				iphi=memh[c];
-			}
-			meml[ma]=lo;
-			memh[ma]=hi;
-			/*	lo=meml[ma]-meml[mb];
+			if (ma!==mb) {
+				lo=meml[ma]-meml[mb];
 				hi=memh[ma]-memh[mb];
-				if (lo<0) {hi--;}
-				if (hi<0 || (hi===0 && lo===0)) {
+				if (lo<0) {
+					lo+=0x100000000;
+					hi--;
+				}
+				if (hi<0) {
+					hi+=0x100000000;
+					iplo=meml[c];
+					iphi=memh[c];
+				} else if (hi===0 && lo===0) {
 					iplo=meml[c];
 					iphi=memh[c];
 				}
 				meml[ma]=lo;
 				memh[ma]=hi;
 			} else {
+				//Zeroing out an address (ma==mb) occurs 30% of the time.
 				iplo=meml[c];
 				iphi=memh[c];
 				meml[ma]=0;
 				memh[ma]=0;
-			}*/
+			}
 		} else if (memh[a]!==0xffffffff || ma!==0xffffffff) {
-			//Out of bounds. Need to expand memory. mem[a]=0
+			//Out of bounds. Need to expand memory. Assume mem[a]=0.
 			iphi=memh[c];
 			iplo=meml[c];
 			lo=-meml[mb];
@@ -750,7 +722,7 @@ function unlrun_fast(st,iters) {
 //--------------------------------------------------------------------------------
 //Editor.
 
-function unlsetup(source,runid,resetid,inputid,outputid) {
+function unlsetup0(source,runid,resetid,inputid,outputid) {
 	var runbutton=document.getElementById(runid);
 	var resetbutton=document.getElementById(resetid);
 	var input=document.getElementById(inputid);
@@ -801,21 +773,92 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 					total=(performance.now()-total)/1000.0;
 					output.value+="time: "+total.toFixed(6)+"\n";
 					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
-					output.value+="regular";
+					output.value+="frames: "+(total*1000.0/avgden).toFixed(6)+"\n";
 				}
 			}
-			return;
 		} else {
-			unlrun_fast(st,500000000);
+			unlrun_fast(st,500000);
 		}
 		time=performance.now()-time;
 		avg+=time;
 		avgden+=1000.0;
 		time=Math.floor(16.666666-time);
-		time=(time>1 && time<17)?time:1;
+		time=(time>2 && time<17)?time-1:1;
 		setTimeout(update,time);
 	}
-	setTimeout(update,1);
+	window.setTimeout(update,1);
+	return st;
+}
+
+function unlsetup(source,runid,resetid,inputid,outputid) {
+	var runbutton=document.getElementById(runid);
+	var resetbutton=document.getElementById(resetid);
+	var input=document.getElementById(inputid);
+	var output=document.getElementById(outputid);
+	var st=unlcreate(output);
+	if (source!==null) {
+		st.running=1;
+		unlparsestr(st,source);
+	}
+	if (runbutton!==null) {
+		runbutton.onclick=function() {
+			if (st.state===UNL_RUNNING) {
+				st.running=1-st.running;
+			} else {
+				unlparsestr(st,input.value);
+				st.running=1;
+			}
+			runbutton.innerText=["Resume","Stop"][st.running];
+		};
+	}
+	if (resetbutton!==null) {
+		resetbutton.onclick=function() {
+			unlclear(st);
+			st.running=0;
+			if (runbutton!==null) {runbutton.innerText="Run";}
+			if (source!==null) {unlparsestr(st,source);}
+		};
+	}
+	var avg=0.0,avgden=0.0,avgprint=0;
+	var total=performance.now();
+	var frametime=performance.now()-17;
+	function update() {
+		var time=performance.now();
+		var rem=1.0/60.0-(time-frametime);
+		if (rem>1.0) {setTimeout(update,1);return;}
+		rem=rem< 1.0?rem: 1.0;
+		rem=rem>-1.0?rem:-1.0;
+		frametime=time+rem;
+		var text=st.running===0?"Resume":"Stop";
+		if (st.state!==UNL_RUNNING && st.running!==0) {
+			st.running=0;
+			text="Run";
+			if (st.state!==UNL_COMPLETE && output!==null) {
+				output.value+=st.statestr;
+			}
+		}
+		if (runbutton!==null && runbutton.innertext!==text) {
+			runbutton.innerText=text;
+		}
+		if (st.running===0) {
+			if (avgprint===0) {
+				avgprint=1;
+				if (output!==null) {
+					total=(performance.now()-total)/1000.0;
+					output.value+="time: "+total.toFixed(6)+"\n";
+					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
+					output.value+="frames: "+(total*1000.0/avgden).toFixed(6)+"\n";
+				}
+			}
+		} else {
+			unlrun_fast(st,500000);
+		}
+		time=performance.now()-time;
+		avg+=time;
+		avgden+=1000.0;
+		setTimeout(update,1);
+	}
+	setTimeout(update,0);
 	return st;
 }
 
