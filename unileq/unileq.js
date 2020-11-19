@@ -121,8 +121,13 @@ TODO
 
 timing not working on ff for windows
 remove timing information from main loop
-fix resume button
-Add highlighting.
+Add syntax highlighting whenever text has changed. Improve speed of
+unileq_highlight(). see if innerHTML affects value. highlight onload onchange
+red highlight for bad character/error
+test highlighting on uinttest
+Audio
+Canvas
+Mouse+Keyboard
 
 */
 /*jshint bitwise: false*/
@@ -380,7 +385,6 @@ var UNL_MAX_PARSE   =(1<<30);
 function unlcreate(output) {
 	var st={
 		output:output,
-		running:0,
 		memh:[0],
 		meml:[0],
 		alloc:0,
@@ -633,9 +637,10 @@ function unlrun(st,iters) {
 
 function unlrun_fast(st,iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
+	if (st.state!==UNL_RUNNING) {return;}
 	var a,b,c,ma,mb;
-	var tmp=st.ip,val=u64create();
-	var lo,hi,iplo=tmp.lo,iphi=tmp.hi;
+	var pos=st.ip,tmp=u64create();
+	var lo,hi,iplo=pos.lo,iphi=pos.hi;
 	var memh=st.memh,meml=st.meml,alloc=st.alloc;
 	iters=iters<0?Infinity:iters;
 	for (;iters>0;iters--) {
@@ -692,22 +697,23 @@ function unlrun_fast(st,iters) {
 				lo+=0x100000000;
 				hi--;
 			}
-			val.hi=hi<0?hi+0x100000000:hi;
-			val.lo=lo;
-			tmp.hi=memh[a];
-			tmp.lo=ma;
-			unlsetmem(st,tmp,val);
+			tmp.hi=hi<0?hi+0x100000000:hi;
+			tmp.lo=lo;
+			pos.hi=memh[a];
+			pos.lo=ma;
+			unlsetmem(st,pos,tmp);
 			if (st.state!==UNL_RUNNING) {break;}
 			memh=st.memh;
 			meml=st.meml;
 			alloc=st.alloc;
 		} else if (memh[c]===0) {
 			//Otherwise, call the interpreter.
-			if (meml[c]===0) {
+			c=meml[c];
+			if (c===0) {
 				//Exit.
 				st.state=UNL_COMPLETE;
 				break;
-			} else if (meml[c]===1) {
+			} else if (c===1) {
 				//Write mem[b] to stdout.
 				if (st.output!==null) {
 					st.output.value+=String.fromCharCode(meml[mb]&255);
@@ -715,80 +721,12 @@ function unlrun_fast(st,iters) {
 			}
 		}
 	}
-	tmp.hi=iphi;
-	tmp.lo=iplo;
+	pos.hi=iphi;
+	pos.lo=iplo;
 }
 
 //--------------------------------------------------------------------------------
 //Editor.
-
-function unlsetup0(source,runid,resetid,inputid,outputid) {
-	var runbutton=document.getElementById(runid);
-	var resetbutton=document.getElementById(resetid);
-	var input=document.getElementById(inputid);
-	var output=document.getElementById(outputid);
-	var st=unlcreate(output);
-	if (source!==null) {
-		st.running=1;
-		unlparsestr(st,source);
-	}
-	if (runbutton!==null) {
-		runbutton.onclick=function() {
-			if (st.state===UNL_RUNNING) {
-				st.running=1-st.running;
-			} else {
-				unlparsestr(st,input.value);
-				st.running=1;
-			}
-			runbutton.innerText=["Resume","Stop"][st.running];
-		};
-	}
-	if (resetbutton!==null) {
-		resetbutton.onclick=function() {
-			unlclear(st);
-			st.running=0;
-			if (runbutton!==null) {runbutton.innerText="Run";}
-			if (source!==null) {unlparsestr(st,source);}
-		};
-	}
-	var avg=0.0,avgden=0.0,avgprint=0;
-	var total=performance.now();
-	function update() {
-		var time=performance.now();
-		var text=st.running===0?"Resume":"Stop";
-		if (st.state!==UNL_RUNNING && st.running!==0) {
-			st.running=0;
-			text="Run";
-			if (st.state!==UNL_COMPLETE && output!==null) {
-				output.value+=st.statestr;
-			}
-		}
-		if (runbutton!==null && runbutton.innertext!==text) {
-			runbutton.innerText=text;
-		}
-		if (st.running===0) {
-			if (avgprint===0) {
-				avgprint=1;
-				if (output!==null) {
-					total=(performance.now()-total)/1000.0;
-					output.value+="time: "+total.toFixed(6)+"\n";
-					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
-					output.value+="frames: "+(total*1000.0/avgden).toFixed(6)+"\n";
-				}
-			}
-		} else {
-			unlrun_fast(st,500000);
-		}
-		time=performance.now()-time;
-		avg+=time;
-		avgden+=1000.0;
-		time=Math.floor(16.666666-time);
-		time=(time>2 && time<17)?time-1:1;
-		setTimeout(update,time);
-	}
-	window.setTimeout(update,1);
-	return st;
-}
 
 function unlsetup(source,runid,resetid,inputid,outputid) {
 	var runbutton=document.getElementById(runid);
@@ -796,69 +734,68 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 	var input=document.getElementById(inputid);
 	var output=document.getElementById(outputid);
 	var st=unlcreate(output);
-	if (source!==null) {
-		st.running=1;
-		unlparsestr(st,source);
+	var running=0;
+	var frametime=0;
+	var total=0;
+	var avgden=0;
+	function update() {
+		var time=performance.now();
+		var rem=frametime-time+16.666667;
+		//console.log(rem);
+		if (rem>2.0) {setTimeout(update,1);return;}
+		//rem=rem>0.0?rem:rem*0.5;
+		rem=rem>-4.0?rem:-4.0;
+		frametime=time+rem;
+		var text="Stop";
+		if (st.state!==UNL_RUNNING) {
+			running=0;
+			text="Run";
+			if (st.state!==UNL_COMPLETE && output!==null) {
+				output.value+=st.statestr;
+			}
+		} else if (running===0) {
+			text="Resume";
+		}
+		if (runbutton!==null && runbutton.innertext!==text) {
+			runbutton.innerText=text;
+		}
+		if (running===0) {
+			if (output!==null) {
+				total=(performance.now()-total)/1000.0;
+				output.value+="time: "+total.toFixed(6)+"\n";
+				output.value+="frames: "+(total/avgden).toFixed(6)+"\n";
+			}
+			return;
+		}
+		unlrun_fast(st,250000);
+		avgden+=1.0;
+		setTimeout(update,0);
 	}
 	if (runbutton!==null) {
 		runbutton.onclick=function() {
 			if (st.state===UNL_RUNNING) {
-				st.running=1-st.running;
+				running=1-running;
 			} else {
-				unlparsestr(st,input.value);
-				st.running=1;
+				if (source!==null) {
+					unlparsestr(st,source);
+				} else {
+					unlparsestr(st,input.value);
+				}
+				running=1;
 			}
-			runbutton.innerText=["Resume","Stop"][st.running];
+			if (running===1) {
+				total=performance.now();
+				frametime=performance.now()-17;
+				setTimeout(update,0);
+			}
 		};
 	}
 	if (resetbutton!==null) {
 		resetbutton.onclick=function() {
 			unlclear(st);
-			st.running=0;
-			if (runbutton!==null) {runbutton.innerText="Run";}
-			if (source!==null) {unlparsestr(st,source);}
+			running=0;
 		};
 	}
-	var avg=0.0,avgden=0.0,avgprint=0;
-	var total=performance.now();
-	var frametime=performance.now()-17;
-	function update() {
-		var time=performance.now();
-		var rem=1.0/60.0-(time-frametime);
-		if (rem>1.0) {setTimeout(update,1);return;}
-		rem=rem< 1.0?rem: 1.0;
-		rem=rem>-1.0?rem:-1.0;
-		frametime=time+rem;
-		var text=st.running===0?"Resume":"Stop";
-		if (st.state!==UNL_RUNNING && st.running!==0) {
-			st.running=0;
-			text="Run";
-			if (st.state!==UNL_COMPLETE && output!==null) {
-				output.value+=st.statestr;
-			}
-		}
-		if (runbutton!==null && runbutton.innertext!==text) {
-			runbutton.innerText=text;
-		}
-		if (st.running===0) {
-			if (avgprint===0) {
-				avgprint=1;
-				if (output!==null) {
-					total=(performance.now()-total)/1000.0;
-					output.value+="time: "+total.toFixed(6)+"\n";
-					output.value+="avg : "+(avg/avgden).toFixed(6)+"\n";
-					output.value+="frames: "+(total*1000.0/avgden).toFixed(6)+"\n";
-				}
-			}
-		} else {
-			unlrun_fast(st,500000);
-		}
-		time=performance.now()-time;
-		avg+=time;
-		avgden+=1000.0;
-		setTimeout(update,1);
-	}
-	setTimeout(update,0);
 	return st;
 }
 
