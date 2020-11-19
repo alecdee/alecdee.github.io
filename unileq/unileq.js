@@ -741,10 +741,8 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 	function update() {
 		var time=performance.now();
 		var rem=frametime-time+16.666667;
-		//console.log(rem);
-		if (rem>2.0) {setTimeout(update,1);return;}
-		//rem=rem>0.0?rem:rem*0.5;
-		rem=rem>-4.0?rem:-4.0;
+		if (rem>1.0) {setTimeout(update,1);return;}
+		rem=rem>-16.0?rem:-16.0;
 		frametime=time+rem;
 		var text="Stop";
 		if (st.state!==UNL_RUNNING) {
@@ -759,17 +757,16 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 		if (runbutton!==null && runbutton.innertext!==text) {
 			runbutton.innerText=text;
 		}
-		if (running===0) {
-			if (output!==null) {
-				total=(performance.now()-total)/1000.0;
-				output.value+="time: "+total.toFixed(6)+"\n";
-				output.value+="frames: "+(total/avgden).toFixed(6)+"\n";
-			}
-			return;
-		}
-		unlrun_fast(st,250000);
-		avgden+=1.0;
-		setTimeout(update,0);
+		if (running===1) {
+			unlrun_fast(st,250000);
+			avgden+=1.0;
+			setTimeout(update,0);
+		} else {
+		if (output!==null) {
+			total=(performance.now()-total)/1000.0;
+			output.value+="time: "+total.toFixed(6)+"\n";
+			output.value+="frames: "+(total/avgden).toFixed(6)+"\n";
+		}}
 	}
 	if (runbutton!==null) {
 		runbutton.onclick=function() {
