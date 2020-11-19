@@ -119,14 +119,10 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-timing not working on ff for windows
-remove timing information from main loop
-Add syntax highlighting whenever text has changed. Improve speed of
-unileq_highlight(). see if innerHTML affects value. highlight onload onchange
-red highlight for bad character/error
-test highlighting on uinttest
+Webassembly. Wait until better integration with javascript.
+Textarea highlighting. Not currently possible because text isn't in DOM.
 Audio
-Canvas
+Graphics
 Mouse+Keyboard
 
 */
@@ -627,7 +623,7 @@ function unlrun(st,iters) {
 				st.state=UNL_COMPLETE;
 			} else if (c.lo===1) {
 				//Write mem[b] to stdout.
-				if (st.output!==null) {
+				if (st.output!==null && st.output.value.length<10000) {
 					st.output.value+=String.fromCharCode(mb.lo&255);
 				}
 			}
@@ -715,7 +711,7 @@ function unlrun_fast(st,iters) {
 				break;
 			} else if (c===1) {
 				//Write mem[b] to stdout.
-				if (st.output!==null) {
+				if (st.output!==null && st.output.value.length<10000) {
 					st.output.value+=String.fromCharCode(meml[mb]&255);
 				}
 			}
@@ -728,7 +724,7 @@ function unlrun_fast(st,iters) {
 //--------------------------------------------------------------------------------
 //Editor.
 
-function unlsetup(source,runid,resetid,inputid,outputid) {
+function unleditor(source,runid,resetid,inputid,outputid) {
 	var runbutton=document.getElementById(runid);
 	var resetbutton=document.getElementById(resetid);
 	var input=document.getElementById(inputid);
@@ -736,8 +732,6 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 	var st=unlcreate(output);
 	var running=0;
 	var frametime=0;
-	var total=0;
-	var avgden=0;
 	function update() {
 		var time=performance.now();
 		var rem=frametime-time+16.666667;
@@ -759,14 +753,8 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 		}
 		if (running===1) {
 			unlrun_fast(st,250000);
-			avgden+=1.0;
 			setTimeout(update,0);
-		} else {
-		if (output!==null) {
-			total=(performance.now()-total)/1000.0;
-			output.value+="time: "+total.toFixed(6)+"\n";
-			output.value+="frames: "+(total/avgden).toFixed(6)+"\n";
-		}}
+		}
 	}
 	if (runbutton!==null) {
 		runbutton.onclick=function() {
@@ -781,7 +769,6 @@ function unlsetup(source,runid,resetid,inputid,outputid) {
 				running=1;
 			}
 			if (running===1) {
-				total=performance.now();
 				frametime=performance.now()-17;
 				setTimeout(update,0);
 			}
