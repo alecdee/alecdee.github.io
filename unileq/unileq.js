@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.00
+unileq.js - v1.01
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -23,11 +23,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 --------------------------------------------------------------------------------
 The Unileq Architecture
 
-Whereas most computer architectures have hundreds or thousands of different
-instructions that can be used to build a program, unileq has only one
-instruction. Unileq's one instruction is simple: it performs a subtraction and
-then jumps. Despite its simplicity, we can use this instruction to create any
-program we want. Unileq is based off of subleq.
+Unileq is an architecture that is meant to show how minimal a computer can be
+and still work. Whereas most computer architectures have hundreds or thousands
+of different instructions that can be used to build a program, unileq has only
+one. Its one instruction is simple: it performs a subtraction and then jumps.
+Despite its simplicity, we can use this instruction to create any program we
+want. Unileq is based off of the similarly named architecture "subleq".
 
 To execute a unileq instruction, let A, B, and C be the values held in three
 consecutive memory addresses, and let mem[X] denote the memory value at address
