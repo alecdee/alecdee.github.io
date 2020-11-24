@@ -38,7 +38,8 @@ body
 	-ms-text-size-adjust:none;
 	text-size-adjust:none;
 }
-a {text-decoration:underline;color:#ffa500;}
+a, a:hover {color:#ffa500;}
+a:hover {text-decoration:underline;}
 sup {vertical-align:super;font-size:80%;}
 sub {vertical-align:sub;font-size:80%;}
 
