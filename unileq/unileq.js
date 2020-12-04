@@ -37,7 +37,7 @@ was less than or equal to mem[B], then we jump to C. Otherwise, we jump to the
 next three memory addresses after A, B, and C.
 
 We keep track of the memory we're executing with the instruction pointer, IP,
-which is set to 0 at the start of the program. The psuedocode below shows a
+which is set to 0 at the start of the program. The pseudocode below shows a
 unileq instruction:
 
      A=mem[IP+0]
