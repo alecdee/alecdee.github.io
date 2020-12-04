@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.18
+unileq.c - v1.19
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -28,13 +28,13 @@ and still work. Whereas most computer architectures have hundreds or thousands
 of different instructions that can be used to build a program, unileq has only
 one. Its one instruction is simple: it performs a subtraction and then jumps.
 Despite its simplicity, we can use this instruction to create any program we
-want. Unileq is based off of the similarly named architecture "subleq".
+want. Unileq is based off of the subleq architecture.
 
 To execute a unileq instruction, let A, B, and C be the values held in three
 consecutive memory addresses, and let mem[X] denote the memory value at address
 X. We then subtract mem[B] from mem[A] and store it back in mem[A]. If mem[A]
-was less than or equal to mem[B], then we jump to C. Otherwise, we advance to
-the next three memory addresses after A, B, and C.
+was less than or equal to mem[B], then we jump to C. Otherwise, we jump to the
+next three memory addresses after A, B, and C.
 
 We keep track of the memory we're executing with the instruction pointer, IP,
 which is set to 0 at the start of the program. The psuedocode below shows a
@@ -50,13 +50,13 @@ unileq instruction:
      endif
      mem[A]=mem[A]-mem[B]
 
-If A=-1, then instead of executing a normal instruction, B and C will be used to
-interact with the interpreter. For example, if C=0, then the interpreter will
-end execution of the current unileq program.
-
 The instruction pointer and all memory values are 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
 2^64-1 inclusive.
+
+If A=2^64-1, then instead of executing a normal instruction, B and C will be
+used to interact with the interpreter. For example, if C=0, then the interpreter
+will end execution of the current unileq program.
 
 --------------------------------------------------------------------------------
 Unileq Assembly Language

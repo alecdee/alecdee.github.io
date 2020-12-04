@@ -18,8 +18,8 @@
 Whereas most computer architectures have hundreds or thousands of different instructions that can be
 used to build a program, unileq has only one. Its one instruction is simple: it performs a
 subtraction and then jumps. Despite its simplicity, we can use this instruction to create any
-program we want. Unileq is based off of the similarly named architecture
-<a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>.</p>
+program we want. Unileq is based off of the
+<a href="https://en.wikipedia.org/wiki/Subleq">subleq</a> architecture.</p>
 <br>
 <p>To execute a unileq instruction, let <i>A</i>, <i>B</i>, and <i>C</i> be the values held in three
 consecutive memory addresses, and let <i>mem[X]</i> denote the memory value at address <i>X</i>. We
@@ -41,13 +41,13 @@ endif
 mem[A]=mem[A]-mem[B]
 </div>
 <br>
-<p>If <i>A=-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
-used to interact with the interpreter. For example, if <i>C=0</i>, then the interpreter will end
-execution of the current unileq program.</p>
-<br>
 <p>The instruction pointer and all memory values are 64 bit unsigned integers. Overflow and
 underflow are handled by wrapping values around to be between <i>0</i> and <i>2^64-1</i>
 inclusive.</p>
+<br>
+<p>If <i>A=2^64-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
+used to interact with the interpreter. For example, if <i>C=0</i>, then the interpreter will end
+execution of the current unileq program.</p>
 <br>
 <h2>Unileq Assembly Language</h2>
 <br>
@@ -476,7 +476,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 19 Nov 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 3 Dec 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
