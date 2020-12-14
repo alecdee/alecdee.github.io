@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.19
+unileq.c - v1.20
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -30,25 +30,26 @@ one. Its one instruction is simple: it performs a subtraction and then jumps.
 Despite its simplicity, we can use this instruction to create any program we
 want. Unileq is based off of the subleq architecture.
 
-To execute a unileq instruction, let A, B, and C be the values held in three
-consecutive memory addresses, and let mem[X] denote the memory value at address
-X. We then subtract mem[B] from mem[A] and store it back in mem[A]. If mem[A]
-was less than or equal to mem[B], then we jump to C. Otherwise, we jump to the
-next three memory addresses after A, B, and C.
+To execute a unileq instruction, we first load 3 operands: A, B, and C. We then
+subtract the value at address B from the value at address A. If the value at A
+was less than or equal to the value at B, then we jump to C. Otherwise, we load
+the next 3 operands after A, B, and C.
 
-We keep track of the memory we're executing with the instruction pointer, IP,
-which is set to 0 at the start of the program. The pseudocode below shows a
-unileq instruction:
+We keep track of the memory (mem) we're executing with the instruction pointer
+(IP) which is set to 0 at the start of the program. The pseudocode below shows
+the main unileq loop:
 
-     A=mem[IP+0]
-     B=mem[IP+1]
-     C=mem[IP+2]
-     if mem[A]<=mem[B]
-          IP=C
-     else
-          IP=IP+3
-     endif
-     mem[A]=mem[A]-mem[B]
+	while true
+          A=mem[IP+0]
+          B=mem[IP+1]
+          C=mem[IP+2]
+          if mem[A]<=mem[B]
+               IP=C
+          else
+               IP=IP+3
+          endif
+          mem[A]=mem[A]-mem[B]
+	endwhile
 
 The instruction pointer and all memory values are 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
@@ -63,10 +64,10 @@ Unileq Assembly Language
 
 We can write a unileq program by setting the memory values directly, but it will
 be easier to both read and write a unileq program by using an assembly language.
-Note that because there's only one instruction, we can omit any notation
-specifying what instruction to execute on some given memory values. We only need
-to specify what values will make up the program, and the unileq instruction will
-be executed on whatever values the instruction pointer is pointed to.
+Because there's only one instruction, we can omit any notation specifying what
+instruction to execute on some given memory values. We only need to specify what
+values will make up the program, and the unileq instruction will be executed on
+whatever values the instruction pointer is pointed to.
 
 An outline of our language is given below:
 

@@ -21,24 +21,26 @@ subtraction and then jumps. Despite its simplicity, we can use this instruction 
 program we want. Unileq is based off of the
 <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a> architecture.</p>
 <br>
-<p>To execute a unileq instruction, let <i>A</i>, <i>B</i>, and <i>C</i> be the values held in three
-consecutive memory addresses, and let <i>mem[X]</i> denote the memory value at address <i>X</i>. We
-then subtract <i>mem[B]</i> from <i>mem[A]</i> and store it back in <i>mem[A]</i>. If <i>mem[A]</i>
-was less than or equal to <i>mem[B]</i>, then we jump to <i>C</i>. Otherwise, we advance to the next
-three memory addresses after <i>A</i>, <i>B</i>, and <i>C</i>.</p>
+<p>To execute a unileq instruction, we first load 3 operands: <i>A</i>, <i>B</i>, and <i>C</i>. We
+then subtract the value at address <i>B</i> from the value at address <i>A</i>. If the value at
+<i>A</i> was less than or equal to the value at <i>B</i>, then we jump to <i>C</i>. Otherwise, we
+load the next 3 operands after <i>A</i>, <i>B</i>, and <i>C</i>.</p>
 <br>
-<p>We keep track of the memory we're executing with the instruction pointer, <i>IP</i>, which is set
-to <i>0</i> at the start of the program. The pseudocode below shows a unileq instruction:</p>
+<p>We keep track of the memory (<i>mem</i>) we're executing with the instruction pointer (<i>IP</i>)
+which is set to <i>0</i> at the start of the program. The pseudocode below shows the main unileq
+loop:</p>
 <br>
-<div class="codeblock">A=mem[IP+0]
-B=mem[IP+1]
-C=mem[IP+2]
-if mem[A]&lt;=mem[B]
-	IP=C
-else
-	IP=IP+3
-endif
-mem[A]=mem[A]-mem[B]
+<div class="codeblock">while true
+	A=mem[IP+0]
+	B=mem[IP+1]
+	C=mem[IP+2]
+	if mem[A]&lt;=mem[B]
+		IP=C
+	else
+		IP=IP+3
+	endif
+	mem[A]=mem[A]-mem[B]
+endwhile
 </div>
 <br>
 <p>The instruction pointer and all memory values are 64 bit unsigned integers. Overflow and
@@ -476,7 +478,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 3 Dec 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 13 Dec 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
