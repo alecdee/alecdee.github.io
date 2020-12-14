@@ -26,9 +26,8 @@ then subtract the value at address <i>B</i> from the value at address <i>A</i>. 
 <i>A</i> was less than or equal to the value at <i>B</i>, then we jump to <i>C</i>. Otherwise, we
 load the next 3 operands after <i>A</i>, <i>B</i>, and <i>C</i>.</p>
 <br>
-<p>We keep track of the memory (<i>mem</i>) we're executing with the instruction pointer (<i>IP</i>)
-which is set to <i>0</i> at the start of the program. The pseudocode below shows the main unileq
-loop:</p>
+<p>We keep track of the memory we're executing with the instruction pointer, <i>IP</i>, which is
+set to <i>0</i> at the start of the program. The pseudocode below shows the main unileq loop:</p>
 <br>
 <div class="codeblock">while true
 	A=mem[IP+0]

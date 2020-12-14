@@ -35,9 +35,9 @@ subtract the value at address B from the value at address A. If the value at A
 was less than or equal to the value at B, then we jump to C. Otherwise, we load
 the next 3 operands after A, B, and C.
 
-We keep track of the memory (mem) we're executing with the instruction pointer
-(IP) which is set to 0 at the start of the program. The pseudocode below shows
-the main unileq loop:
+We keep track of the memory we're executing with the instruction pointer, IP,
+which is set to 0 at the start of the program. The pseudocode below shows the
+main unileq loop:
 
 	while true
           A=mem[IP+0]
