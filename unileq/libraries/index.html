@@ -1,0 +1,80 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Unileq - Libraries</title>
+	<link rel="stylesheet" href="../../style/style.css" type="text/css">
+	<script type="text/javascript" src="../../style/style.js"></script>
+</head>
+<body>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="header"><a href="../../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Libraries ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Libraries</h1>
+<p>This page lists the libraries I've worked on to build <a href="../index.html">unileq</a> up from
+one instruction into an easy to use architecture.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ String Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>String Printing</h1>
+<p><a href="./print.unl">print.unl</a> is fundamental to working on other libraries. It defines the
+function <i>print</i> which allows us to print ASCII strings as well as numerical values. This
+allows to print diagnostic messages and see what other libraries are actually doing. It can be
+called like this:</p>
+<br>
+<div class="codeblock langunileq">0 ? print 120 32 61 32 0-1 x 10 0</div>
+<br>
+<p>The values after <i>print</i> are the ASCII values for "x = ", followed by <i>0-1 x</i> which
+prints out the value of <i>[x]</i>. So if <i>[x]=20</i>, then this will get output to the console:
+</p>
+<br>
+<div class="consoleblock">x = 20</div>
+<br>
+<p>In order to convert a plaintext string into ASCII numerical values, we can use
+<a href="./toascii.unl">toascii.unl</a>. It takes a string from the console and outputs its ASCII
+values.</p>
+<br>
+<div class="consoleblock">&gt; ./unileq toascii.unl
+enter text: Hello
+ascii     : 72 101 108 108 111
+</div>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unsigned Integers ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Unsigned Integers</h1>
+<p><a href="./uint.unl">uint.unl</a> defines all of the usual functions for handling unsigned
+integer arithmetic and bitwise operations. For example, to compute the bitwise AND of <i>[B]</i> and
+<i>[C]</i> and store it <i>[A]</i>, we would call</p>
+<br>
+<div class="codeblock langunileq">0 ? uint.and A B C</div>
+<br>
+<p>All of the functions are fairly well optimized. The table below gives the average number of
+unileq instructions required per function call.</p>
+<br>
+<table class="datatable insttable headerrow">
+<tr><td>Function</td><td>Instructions</td></tr>
+<tr><td>cmp</td><td>28</td></tr>
+<tr><td>set</td><td>25</td></tr>
+<tr><td>neg</td><td>25</td></tr>
+<tr><td>add</td><td>31</td></tr>
+<tr><td>sub</td><td>31</td></tr>
+<tr><td>mul</td><td>933</td></tr>
+<tr><td>div</td><td>978</td></tr>
+<tr><td>shl</td><td>81</td></tr>
+<tr><td>shr</td><td>130</td></tr>
+<tr><td>not</td><td>26</td></tr>
+<tr><td>and</td><td>676</td></tr>
+<tr><td>or</td><td>676</td></tr>
+<tr><td>xor</td><td>676</td></tr>
+</table>
+<br>
+<p>Testing is carried out by <a href="./uint_test_compiled.unl">uint_test_compiled.unl</a>.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div id="footer">Created on 18 Dec 2020 - Modified on 19 Dec 2020<br>
+Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
+<a href="../../index.html">Alec Dee's Homepage</a></div>
+</body>
+</html>

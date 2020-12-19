@@ -1,0 +1,138 @@
+#|==============================================================================
+
+String Printing - v1.00
+
+Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+
+--------------------------------------------------------------------------------
+ASCII Table
+
+  0  00  NUL |  26  1a      |  52  34   4  |  78  4e   N  | 104  68   h
+  1  01      |  27  1b  ESC |  53  35   5  |  79  4f   O  | 105  69   i
+  2  02      |  28  1c      |  54  36   6  |  80  50   P  | 106  6a   j
+  3  03      |  29  1d      |  55  37   7  |  81  51   Q  | 107  6b   k
+  4  04      |  30  1e      |  56  38   8  |  82  52   R  | 108  6c   l
+  5  05      |  31  1f      |  57  39   9  |  83  53   S  | 109  6d   m
+  6  06      |  32  20  SPC |  58  3a   :  |  84  54   T  | 110  6e   n
+  7  07  BEL |  33  21   !  |  59  3b   ;  |  85  55   U  | 111  6f   o
+  8  08  BCK |  34  22   "  |  60  3c   <  |  86  56   V  | 112  70   p
+  9  09  TAB |  35  23   #  |  61  3d   =  |  87  57   W  | 113  71   q
+ 10  0a  LF  |  36  24   $  |  62  3e   >  |  88  58   X  | 114  72   r
+ 11  0b  VTB |  37  25   %  |  63  3f   ?  |  89  59   Y  | 115  73   s
+ 12  0c      |  38  26   &  |  64  40   @  |  90  5a   Z  | 116  74   t
+ 13  0d  CR  |  39  27   '  |  65  41   A  |  91  5b   [  | 117  75   u
+ 14  0e      |  40  28   (  |  66  42   B  |  92  5c   \  | 118  76   v
+ 15  0f      |  41  29   )  |  67  43   C  |  93  5d   ]  | 119  77   w
+ 16  10      |  42  2a   *  |  68  44   D  |  94  5e   ^  | 120  78   x
+ 17  11      |  43  2b   +  |  69  45   E  |  95  5f   _  | 121  79   y
+ 18  12      |  44  2c   ,  |  70  46   F  |  96  60   `  | 122  7a   z
+ 19  13      |  45  2d   -  |  71  47   G  |  97  61   a  | 123  7b   {
+ 20  14      |  46  2e   .  |  72  48   H  |  98  62   b  | 124  7c   |
+ 21  15      |  47  2f   /  |  73  49   I  |  99  63   c  | 125  7d   }
+ 22  16      |  48  30   0  |  74  4a   J  | 100  64   d  | 126  7e   ~
+ 23  17      |  49  31   1  |  75  4b   K  | 101  65   e  | 127  7f  DEL
+ 24  18  CAN |  50  32   2  |  76  4c   L  | 102  66   f  |
+ 25  19      |  51  33   3  |  77  4d   M  | 103  67   g  |
+|#
+
+0 0 print.test
+
+print:
+	#Call: 0 ? print char0 char1 char2 ... 0
+	#Print function. Prints a zero terminated ascii string. If -1 is used as a
+	#character value, then treat the next character as a pointer to a number.
+	.ptr  .ptr   ?+1
+	.ptr  0      ?+1
+	.ptr  .z-2   ?+1
+	0     0      ?+2
+	.ret: .tmp
+.loop:
+	#Get the next character.
+	.tmp  .ptr:0 ?+1
+	.ptr  .z-1   ?+1
+	.char .char  ?+1
+	.char .tmp   .p0:?+1
+	#If [char]=0, we've reached the end of the string.
+	.char .z     .ret
+	#If [char]>0, and [tmp]<=1, then [char]=-1.
+	.tmp  .z+1   .numprep
+	#Print [char].
+.print:
+	0-1   .char  1
+	.tmp  .tmp   .loop
+.numprep:
+	#Prepare to print a number.
+	#First entry. Jump back to beginning of loop to get the number's pointer.
+	.p0   .pset  .loop
+	#Second entry. Get the number from [char].
+	.p0   .prem  ?+1
+	.tmp  .tmp   ?+1
+	.tmp  .char:0 ?+1
+	.num  .tmp   ?+1
+	.show .show  ?+1
+	.base .base0 ?+1
+.numloop:
+	#Store a power of 10 in [tmp].
+	.tmp  .tmp   ?+1
+	.tmp  .base:.base10+19 ?+1
+	.char .char  ?+1
+	.char .char0 ?+1
+	#Subtract [tmp] from [num] to get the next digit.
+.digitloop:
+	.num  .tmp   .digitdone
+	.num  .z+1   ?+1
+	.show .z-1   ?+1
+	.char .z-1   .digitloop
+.digitdone:
+	#If [tmp]=0 then return to the main loop and print the last digit.
+	.tmp  .z     .print
+	#Add [num]+=[tmp] to correct for the last [num]-[tmp] operation.
+	.z    .tmp   ?+1
+	.num  .z     ?+1
+	.z    .z     ?+1
+	#If [show]>0, then we can print digits.
+	.show .z     .noshow
+	0-1   .char  1
+.noshow:
+	.base .z-1   .numloop
+#Contants.
+0-2 0-1 .z:0 1
+.num:0
+.tmp:0
+.show:0
+.char0:0-48
+.base0:19
+.pset:.p0-.numprep-2
+.prem:.numprep-.p0+2
+#1-10^n
+.base10:
+	0-9999999999999999999 0-999999999999999999 0-99999999999999999
+	   0-9999999999999999    0-999999999999999    0-99999999999999
+	      0-9999999999999       0-999999999999       0-99999999999
+	         0-9999999999          0-999999999          0-99999999
+	            0-9999999             0-999999             0-99999
+	               0-9999                0-999                0-99
+	                  0-9                    0
+
+print.test:
+	#Testing string printing\n
+	0 ? print 84 101 115 116 105 110 103 32 115 116 114 105 110
+		     103 32 112 114 105 110 116 105 110 103 10 0
+	#a = [a]\n
+	0 ? print  97 32 61 32 0-1 .a 10 0
+	#b = [b]\n
+	0 ? print  98 32 61 32 0-1 .b 10 0
+	#c = [c]\n
+	0 ? print  99 32 61 32 0-1 .c 10 0
+	#d = [d]\n
+	0 ? print 100 32 61 32 0-1 .d 10 0
+	#[a], [b], [c], [d]
+	0 ? print 0-1 .a 44 32 0-1 .b 44 32 0-1 .c 44 32 0-1 .d 0
+	#\n
+	0 ? print 10 0
+	0-1 0 0
+.a:0
+.b:10
+.c:1000
+.d:0-1
+

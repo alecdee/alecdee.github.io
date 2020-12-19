@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.03
+unileq.js - v1.04
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -545,6 +545,19 @@ function unlparsestr(st,str) {
 			}
 			st.statestr="Parser: "+err+"\nline "+line+":\n\t\""+window+"\"\n\t\""+under+"\"\n";
 		}
+	}
+}
+
+function unlparsefile(st,path) {
+	//Load and parse a source file.
+	unlclear(st);
+	st.state=UNL_ERROR_PARSER;
+	try {
+		var res=fetch(path);
+		var str=res.text();
+		unlparsestr(st,str);
+	} catch (err) {
+		st.statestr=err;
 	}
 }
 
