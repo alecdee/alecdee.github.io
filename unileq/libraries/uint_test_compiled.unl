@@ -13,9 +13,9 @@ cat uinttest.unl uint.unl print.unl > uint_test_compiled.unl
 
 Average instructions per function
 cmp: 28
-set: 25
+set: 24
 neg: 25
-add: 31
+add: 30
 sub: 31
 mul: 933
 div: 978
@@ -694,9 +694,9 @@ This library does not depend on any other libraries.
 
 Average instructions per function:
 cmp: 28
-set: 25
+set: 24
 neg: 25
-add: 31
+add: 30
 sub: 31
 mul: 933
 div: 978
@@ -714,27 +714,26 @@ Comparisons
 uint.cmp a b lt eq gt
 
 Integer Arithmetic
-uint.set r a
-uint.neg r a
-uint.add r a b
-uint.sub r a b
+uint.set ret a
+uint.neg ret a
+uint.add ret a b
+uint.sub ret a b
 uint.mul high low a b
 uint.div quot rem num den
 
 Bitwise Arithmetic
-uint.shl r a s
-uint.shr r a s
-uint.not r a
-uint.and r a b
-uint.or  r a b
-uint.xor r a b
+uint.shl ret a shift
+uint.shr ret a shift
+uint.not ret a
+uint.and ret a b
+uint.or  ret a b
+uint.xor ret a b
 
 --------------------------------------------------------------------------------
 TODO
 
-Rename "r" to "ret".
 Optimize mul if high=0, and div if quot=0.
-Add comparisons for jeq, jne, jle, jl, jge, and jg.
+Add comparisons for jeq, jne, jle, and jl.
 Use fibonacci for multiplication and division. Reverse fibonacci works with
 unileq. Ex: 55 34 21 13 8 5 3 2 1 1 0
 |#
@@ -748,124 +747,127 @@ uint.cmp:
 	#     if [a]<[b]: goto lt
 	#     if [a]=[b]: goto eq
 	#     if [a]>[b]: goto gt
-	.p0 .p0   ?+1
-	.p0 0     ?+1
-	.p0 .z-2  ?+1
-	.p2 .p2   ?+1
-	.p2 0     ?+1
-	.p2 .z-3  ?+1
+	.z  .a2   ?+1
+	0   .z    ?+1
+	0   .z+2  ?+1
+	.a2 0     ?+1
+	.a3 0     ?+1
+	.a4 0     ?+1
+	.a5 0     ?+1
+	.a6 0     ?+1
 	0   0     ?+1
-	.r0 .z-1  ?+1
 	#get [a]
-.ret:
-	.z  .p0:0 ?+1
-	.p1 .p1   ?+1
-	.p1 .z    ?+1
-	#r0 used when on return pass.
-	.z  .z    .r0:?+1
-	.b
-	.b  .p1:0 ?+1
-	.a  .a    ?+1
-	.a  .b    ?+1
-	.b  .b    ?+1
-	#get [b]
-	.z  .p2:0 ?+1
-	.b  .z    ?+1
 	.z  .z    ?+1
+	.z  .a2:2 ?+1
+	.p0 .p0   ?+1
+	.p0 .z    ?+1
+	.z  .z    ?+1
+	.z  .p0:0 ?+1
+	.a  .a    ?+1
+	.a  .z    ?+1
+	#get [b]
+	.z  .z    ?+1
+	.z  .a3:3 ?+1
+	.b  .b    ?+1
+	.b  .z    ?+1
 	#[a]-[b]
-	.r0 .z+1  ?+1
+	.z  .z    ?+1
 	.a  .b:0  .le
 	#[a]>[b]
-	.p0 .z-4  .ret
+	.z  .a6:6 .ret
 .le:
 	.a  .z    .eq
 	#[a]<[b]
-	.p0 .z-2  .ret
+	.z  .a4:4 .ret
 .eq:
 	#[a]=[b]
-	.p0 .z-3  .ret
+	.z  .a5:5 .ret
+.ret:
+	.r  .r    ?+1
+	.r  .z    ?+1
+	.z  .z    .r:0
+#Variables
 .a:0
-0-4 0-3 0-2 0-1 .z:0 1
+.z:0 1 2
 
 #--------------------------------------------------------------------------------
 #Integer Arithmetic
 
 uint.set:
-	#Call  : 0 ? uint.set r a
-	#Effect: [r]=[a]
-	#Setup new stack.
+	#Call  : 0 ? uint.set ret a
+	#Effect: [ret]=[a]
+	#Setup the stack.
 	.tmp  .tmp  ?+1
-	.tmp  .p0   ?+1
-	0     .off  ?+1
+	.tmp  .a2   ?+1
 	0     .tmp  ?+1
-	.p0   0     ?+1
-	.p2   0     ?+1
-	.ret  0     ?+1
-	.val  .val  ?+1
-	#Get [r]
+	0     .off  ?+1
+	.a2   0     ?+1
+	.a3   0     ?+1
+	.a4   0     ?+1
+	#Get [ret]
+	.p0   .a2:2 ?+1
+	.p1   .p0   ?+1
+	.p2   .p0   ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .p0:0 ?+1
-	.p1   .p1   ?+1
-	.p1   .tmp  ?+1
-	.p4   .p4   ?+1
-	.p4   .tmp  ?+1
-	.val  .p1:0 ?+1 #[val]=-[r]
+	.tmp  .p1   ?+1
+	.p0   .p0   ?+1
+	.p0   .tmp  ?+1
 	#Get [a]
 	.tmp  .tmp  ?+1
-	.tmp  .p2:1 ?+1
+	.tmp  .a3:3 ?+1
 	.p3   .p3   ?+1
 	.p3   .tmp  ?+1
-	.tmp  .tmp  ?+1
-	.tmp  .p3:0 ?+1 #[tmp]=-[a]
-	#ret
-	.tmp  .val  ?+1 #[tmp]=[r]-[a]
-	.p4:0 .tmp  ?+1 #[r]=[r]-([r]-[a])=[a]
-	0     0     .ret:2
+	#Set [ret]
+	.ret  .ret  ?+1
+	.ret  .p3:0 ?+1  #[ret]=-[a]
+	.p0:0 .p1:0 ?+1
+	.p2:0 .ret  ?+1  #[ret]=[a]
+	0     0     .a4:4
+#Variables
 .off:2
-.val:0
+.ret:0
 .tmp:0
 
 uint.neg:
-	#Call  : 0 ? uint.neg r a
-	#Effect: [r]=-[a]
-	#Setup new stack.
+	#Call  : 0 ? uint.neg ret a
+	#Effect: [ret]=-[a]
+	#Setup the stack.
 	.tmp  .tmp  ?+1
-	.tmp  .p0   ?+1
-	0     .off  ?+1
+	.tmp  .a2   ?+1
 	0     .tmp  ?+1
-	.p0   0     ?+1
-	.p2   0     ?+1
-	.ret  0     ?+1
-	.val  .val  ?+1
-	#Get [r]
+	0     .off  ?+1
+	.a2   0     ?+1
+	.a3   0     ?+1
+	.a4   0     ?+1
+	#Get [ret]
 	.tmp  .tmp  ?+1
-	.tmp  .p0:0 ?+1
+	.tmp  .a2:2 ?+1
+	.p0   .p0   ?+1
+	.p0   .tmp  ?+1
 	.p1   .p1   ?+1
 	.p1   .tmp  ?+1
-	.p6   .p6   ?+1
-	.p6   .tmp  ?+1
-	.val  .p1:0 ?+1 #[pos]=-[r]
 	#Get [a]
 	.tmp  .tmp  ?+1
-	.tmp  .p2:1 ?+1
-	.p3   .p3   ?+1
-	.p3   .tmp  ?+1
-	.val  .p3:0 ?+1 #[neg]=-[a]
-	#ret
+	.tmp  .a3:3 ?+1
+	.p2   .p2   ?+1
+	.p2   .tmp  ?+1
+	#Set [ret]
 	.tmp  .tmp  ?+1
-	.tmp  .val  ?+1
-	.p6:0 .tmp  ?+1 #[r]=[r]-([r]-[a]-[b])=[a]+[b]
-	0     0     .ret:2
+	.tmp  .p0:0 ?+1  #[tmp]=-[ret]
+	.tmp  .p2:0 ?+1  #[tmp]=-[ret]-[a]
+	.ret  .ret  ?+1
+	.ret  .tmp  ?+1  #[ret]=[ret]+[a]
+	.p1:0 .ret  ?+1  #[ret]=[ret]-([ret]+[a])=-[a]
+	0     0     .a4:4
+#Variables
 .off:2
-.val:0
+.ret:0
 .tmp:0
 
 uint.add:
-	#Call  : 0 ? uint.add r a b
-	#Effect: [r]=[a]+[b]
-	.pos  .pos  ?+1
-	.neg  .neg  ?+1
-	#Setup stack pointer.
+	#Call  : 0 ? uint.add ret a b
+	#Effect: [ret]=[a]+[b]
+	#Setup the stack.
 	.tmp  .tmp  ?+1
 	.tmp  .a0   ?+1
 	0     .tmp  ?+1
@@ -874,42 +876,41 @@ uint.add:
 	.a3   0     ?+1
 	.a4   0     ?+1
 	.a5   0     ?+1
-	#Get [r]
+	#Get [ret]
+	.p0   .a2:2 ?+1
+	.p1   .p0   ?+1
+	.p2   .p0   ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .a2:2 ?+1
+	.tmp  .p1   ?+1
 	.p0   .p0   ?+1
 	.p0   .tmp  ?+1
-	.p1   .p1   ?+1
-	.p1   .tmp  ?+1
-	.pos  .p0:0 ?+1  #[pos]=-[r]
 	#Get [a]
 	.tmp  .tmp  ?+1
 	.tmp  .a3:3 ?+1
-	.p2   .p2   ?+1
-	.p2   .tmp  ?+1
-	.neg  .p2:0 ?+1  #[neg]=-[a]
+	.p3   .p3   ?+1
+	.p3   .tmp  ?+1
 	#Get [b]
 	.tmp  .tmp  ?+1
 	.tmp  .a4:4 ?+1
-	.p3   .p3   ?+1
-	.p3   .tmp  ?+1
-	.neg  .p3:0 ?+1  #[neg]=-[a]-[b]
-	#Set [r]
-	.neg  .pos  ?+1  #[neg]=[r]-[a]-[b]
-	.p1:0 .neg  ?+1  #[r]=[a]+[b]
+	.p4   .p4   ?+1
+	.p4   .tmp  ?+1
+	#Set [ret]
+	.tmp  .tmp  ?+1
+	.tmp  .p3:0 ?+1  #[tmp]=-[a]
+	.tmp  .p4:0 ?+1  #[tmp]=-[a]-[b]
+	.p0:0 .p1:0 ?+1
+	.p2:0 .tmp  ?+1  #[ret]=[a]+[b]
 	#Return
 	0     0     .a5:5
+#Variables
 .a0:0
-.pos:0
-.neg:0
 .tmp:0
+.pt:0
 
 uint.sub:
-	#Call  : 0 ? uint.sub r a b
-	#Effect: [r]=[a]-[b]
-	.pos  .pos  ?+1
-	.neg  .neg  ?+1
-	#Setup stack pointer.
+	#Call  : 0 ? uint.sub ret a b
+	#Effect: [ret]=[a]-[b]
+	#Setup the stack.
 	.tmp  .tmp  ?+1
 	.tmp  .a0   ?+1
 	0     .tmp  ?+1
@@ -918,41 +919,43 @@ uint.sub:
 	.a3   0     ?+1
 	.a4   0     ?+1
 	.a5   0     ?+1
-	#Get [r]
+	#Get [ret]
 	.tmp  .tmp  ?+1
 	.tmp  .a2:2 ?+1
 	.p0   .p0   ?+1
 	.p0   .tmp  ?+1
 	.p1   .p1   ?+1
 	.p1   .tmp  ?+1
-	.pos  .p0:0 ?+1  #[pos]=-[r]
 	#Get [a]
 	.tmp  .tmp  ?+1
 	.tmp  .a3:3 ?+1
 	.p2   .p2   ?+1
 	.p2   .tmp  ?+1
-	.neg  .p2:0 ?+1  #[neg]=-[a]
 	#Get [b]
 	.tmp  .tmp  ?+1
 	.tmp  .a4:4 ?+1
 	.p3   .p3   ?+1
 	.p3   .tmp  ?+1
-	.pos  .p3:0 ?+1  #[pos]=-[r]-[b]
-	#Set [r]
-	.neg  .pos  ?+1  #[neg]=[r]-[a]+[b]
-	.p1:0 .neg  ?+1  #[r]=[a]-[b]
+	#Set [ret]
+	.tmp  .tmp  ?+1
+	.tmp  .p0:0 ?+1  #[tmp]=-[ret]
+	.tmp  .p3:0 ?+1  #[tmp]=-[ret]-[b]
+	.ret  .ret  ?+1
+	.ret  .p2:0 ?+1  #[ret]=-[a]
+	.ret  .tmp  ?+1  #[ret]=[ret]-[a]+[b]
+	.p1:0 .ret  ?+1  #[ret]=[a]-[b]
 	#Return
 	0     0     .a5:5
+#Variables
 .a0:0
-.pos:0
-.neg:0
+.ret:0
 .tmp:0
 
 uint.mul:
 	#Call  : 0 ? uint.mul high low a b
 	#Effect:
-	#     [high]=[a]*[b]>>64
-	#     [low] =[a]*[b]&(2^64-1)
+	#     [high]=([a]*[b])/2^64
+	#     [low] =([a]*[b])%2^64
 	#Setup stack pointer.
 	.tmp  .tmp  ?+1
 	.tmp  .a0   ?+1
@@ -1001,7 +1004,7 @@ uint.mul:
 	.b    .z    .ret
 	#We can left shift [rh] and [rl] for the first loop.
 	.rl   .z-1  ?+1
-	.i    .bits .nocarry
+	.i    .bits .nocarry0
 .loop:
 	.i    .z+1  .ret
 	#Left shift [rh] and [rl], don't decrement [rl] for when we add [a] to [rl].
@@ -1010,31 +1013,32 @@ uint.mul:
 	.tmp  .tmp  ?+1
 	.tmp  .rl   ?+1
 	.tmp  .z+1  ?+1
-	.rl   .tmp  .nocarry
+	.rl   .tmp  .nocarry0
 	.rh   .z-1  ?+1
-.nocarry:
+.nocarry0:
 	.tmp  .tmp  ?+1
 	#If the highest bit of [b] is set, add [a] to [rl] and carry to [rh].
 	.tmp  .b    ?+1
 	.tmp  .z+1  ?+1
-	.b    .tmp  .notset
-	.rl   .a    .notset
+	.b    .tmp  .nocarry1
+	.rl   .a    .nocarry1
 	.rh   .z-1  ?+1
-.notset:
+.nocarry1:
 	.rl   .z+1  ?+1
 	.tmp  .tmp  .loop
 .ret:
-	#Set high.
+	#Set [high].
 	.rh   .r0:0 ?+1
 	.tmp  .tmp  ?+1
 	.tmp  .rh   ?+1
 	.r1:0 .tmp  ?+1
-	#Set low.
+	#Set [low].
 	.rl   .r2:0 ?+1
 	.tmp  .tmp  ?+1
 	.tmp  .rl   ?+1
 	.r3:0 .tmp  ?+1
 	0     0     .a6:6
+#Variables
 .tmp:0
 .a0:0
 .a:0
@@ -1150,8 +1154,8 @@ uint.div:
 #Bitwise Arithmetic
 
 uint.shl:
-	#Call  : 0 ? uint.shl r a s
-	#Effect: [r]=[a]<<[s]
+	#Call  : 0 ? uint.shl ret a s
+	#Effect: [ret]=[a]<<[s]
 	#Setup stack pointer.
 	.z    .a0   ?+1
 	0     .z    ?+1
@@ -1161,7 +1165,7 @@ uint.shl:
 	.a3   0     ?+1
 	.a4   0     ?+1
 	.a5   0     ?+1
-	#Get [r]
+	#Get ret.
 	.z    .a2:2 ?+1
 	.r0   .r0   ?+1
 	.r0   .z    ?+1
@@ -1194,11 +1198,13 @@ uint.shl:
 	.a    .z    ?+1
 	.z    .z    .loop
 .ret:
+	#Set [ret].
 	.z    .r0:0 ?+1
 	.a    .z    ?+1
 	.r1:0 .a    ?+1
 	.z    .z    ?+1
 	0     0     .a5:5
+#Variables
 .a:0
 .s:0
 .bits0:64
@@ -1207,8 +1213,8 @@ uint.shl:
 .z:0 1
 
 uint.shr:
-	#Call  : 0 ? uint.shr r a s
-	#Effect: [r]=[a]>>[s]
+	#Call  : 0 ? uint.shr ret a s
+	#Effect: [ret]=[a]>>[s]
 	#Setup stack pointer.
 	.z    .a0   ?+1
 	0     .z    ?+1
@@ -1218,7 +1224,7 @@ uint.shr:
 	.a3   0     ?+1
 	.a4   0     ?+1
 	.a5   0     ?+1
-	#Get [r]
+	#Get ret
 	.z    .a2:2 ?+1
 	.r0   .r0   ?+1
 	.r0   .z    ?+1
@@ -1255,11 +1261,13 @@ uint.shr:
 	.r    .z    ?+1
 	.z    .z    .loop
 .ret:
+	#Set [ret].
 	.r    .r0:0 ?+1
 	.z    .r    ?+1
 	.r1:0 .z    ?+1
 	.z    .z    ?+1
 	0     0     .a5:5
+#Variables
 .a:0
 .r:0
 .s:0
@@ -1268,44 +1276,46 @@ uint.shr:
 0-1 .z:0 1
 
 uint.not:
-	#Call  : 0 ? uint.not r a
-	#Effect: [r]=~[a]
+	#Call  : 0 ? uint.not ret a
+	#Effect: [ret]=~[a]
 	#Use the relation -1-[a]=~[a]
+	#Setup the stack.
 	.tmp  .tmp  ?+1
-	.tmp  .p0   ?+1
-	0     .z+2  ?+1
+	.tmp  .a2   ?+1
 	0     .tmp  ?+1
-	.p0   0     ?+1
-	.p2   0     ?+1
-	.ret  0     ?+1
-	.val  .val  ?+1
-	.val  .z+1  ?+1
-	#Get [r]
+	0     .z+2  ?+1
+	.a2   0     ?+1
+	.a3   0     ?+1
+	.a4   0     ?+1
+	#Get [ret]
 	.tmp  .tmp  ?+1
-	.tmp  .p0:0 ?+1
+	.tmp  .a2:2 ?+1
+	.p0   .p0   ?+1
+	.p0   .tmp  ?+1
 	.p1   .p1   ?+1
 	.p1   .tmp  ?+1
-	.p6   .p6   ?+1
-	.p6   .tmp  ?+1
-	.val  .p1:0 ?+1 #[pos]=-[r]
 	#Get [a]
 	.tmp  .tmp  ?+1
-	.tmp  .p2:1 ?+1
-	.p3   .p3   ?+1
-	.p3   .tmp  ?+1
-	.val  .p3:0 ?+1 #[neg]=-[a]
-	#ret
+	.tmp  .a3:3 ?+1
+	.p2   .p2   ?+1
+	.p2   .tmp  ?+1
+	#Set [ret]
 	.tmp  .tmp  ?+1
-	.tmp  .val  ?+1
-	.p6:0 .tmp  ?+1
-	0     0     .ret:2
+	.tmp  .p0:0 ?+1  #[tmp]=-[ret]
+	.tmp  .p2:0 ?+1  #[tmp]=-[ret]-[a]
+	.tmp  .z+1  ?+1
+	.ret  .ret  ?+1
+	.ret  .tmp  ?+1  #[ret]=[ret]+[a]
+	.p1:0 .ret  ?+1  #[ret]=[ret]-([ret]+[a])=-[a]
+	0     0     .a4:4
+#Variables
 .z:0 1 2
-.val:0
+.ret:0
 .tmp:0
 
 uint.and:
-	#Call  : 0 ? uint.and r a b
-	#Effect: [r]=[a]&[b]
+	#Call  : 0 ? uint.and ret a b
+	#Effect: [ret]=[a]&[b]
 	#Setup stack pointer.
 	.at   .at   ?+1
 	.at   .a0   ?+1
@@ -1363,7 +1373,7 @@ uint.and:
 	.at   .a    ?+1
 	.r1:0 .at   ?+1
 	0 0 .a5:5
-#Constants.
+#Variables
 .a:0 .at:0
 .b:0 .bt:0
 .i:0
@@ -1372,8 +1382,8 @@ uint.and:
 0-1 .z:0 1
 
 uint.or:
-	#Call  : 0 ? uint.or r a b
-	#Effect: [r]=[a]|[b]
+	#Call  : 0 ? uint.or ret a b
+	#Effect: [ret]=[a]|[b]
 	#Setup stack pointer.
 	.at   .at   ?+1
 	.at   .a0   ?+1
@@ -1431,7 +1441,7 @@ uint.or:
 	.at   .a    ?+1
 	.r1:0 .at   ?+1
 	0 0 .a5:5
-#Constants.
+#Variables
 .a:0 .at:0
 .b:0 .bt:0
 .i:0
@@ -1440,8 +1450,8 @@ uint.or:
 0-1 .z:0 1
 
 uint.xor:
-	#Call  : 0 ? uint.xor r a b
-	#Effect: [r]=[a]^[b]
+	#Call  : 0 ? uint.xor ret a b
+	#Effect: [ret]=[a]^[b]
 	#Setup stack pointer.
 	.at   .at   ?+1
 	.at   .a0   ?+1
@@ -1499,7 +1509,7 @@ uint.xor:
 	.at   .a    ?+1
 	.r1:0 .at   ?+1
 	0 0 .a5:5
-#Constants.
+#Variables
 .a:0 .at:0
 .b:0 .bt:0
 .i:0
@@ -1547,9 +1557,9 @@ ASCII Table
 0 0 print.test
 
 print:
+	#Call: 0 ? print char0 char1 char2 ... 0
 	#Print function. Prints a zero terminated ascii string. If -1 is used as a
 	#character value, then treat the next character as a pointer to a number.
-	#Arguments: 0 ? print char0 char1 char2 ... 0
 	.ptr  .ptr   ?+1
 	.ptr  0      ?+1
 	.ptr  .z-2   ?+1

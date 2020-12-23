@@ -53,14 +53,14 @@ shown below.</p>
 <br>
 <table class="datatable headerrow">
 <tr><td>Metric</td><td>Description</td></tr>
-<tr><td>sum holes</td><td>The count of all holes on the grid. A cell is a hole is it is empty and a
+<tr><td>sum holes</td><td>The count of all holes on the grid. A cell is a hole if it is empty and a
 filled cell is above it.</td></tr>
 <tr><td>sum height</td><td>The sum of the column heights.</td></tr>
 <tr><td>row flip</td><td>The number of times neighboring cells flip between empty and filled along a
 row.</td></tr>
 <tr><td>column flip</td><td>The number of times neighboring cells flip between empty and filled
 along a column.</td></tr>
-<tr><td>piece height</td><td>The height of the top block of the most recently placed piece. Do not
+<tr><td>piece height</td><td>The height of the top cell of the most recently placed piece. Do not
 take into account line clears.</td></tr>
 <tr><td>sum well</td><td>The sum of squared well heights. A well is an opening 1 cell wide, which
 happens to function as a chokepoint.</td></tr>
@@ -90,79 +90,8 @@ lines before I forced it to terminate. During that time, it totally cleared the 
 times.</p>
 </div>
 
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Standards ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<!--<div class="content"><div class="title">Standards</div>
-Historically, most popular tetris implementations have used their own interpretation of how the game
-should play frame-by-frame, with the most notable differences occurring in spawning, rotation, and
-controls. This has led the Tetris Company to propose a standardized ruleset
-(<a href="http://tetris.wikia.com/wiki/Tetris_Guideline">here</a>) which has not
-officially been released to the public. Since many of the rules are fairly complex in order to
-accomodate other game modes, we outline our own rules here:
-
-states/frames
-different kicks
-
-Coloring is based off the current Tetris Company standard:
-
-svg
-</div>-->
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Metrics ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<!--<div class="content"><div class="title">Metrics</div>
-Colin Fahey
-used/unused metrics and explanations.
-</div>-->
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ AI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<!--<div class="content"><div class="title">AI</div>
-PSO for AI<br>
-simplified testing environment<br>
-actual mapping
-	ai lag frames
-	lookup cell
-	next move
-	suggest position
-height histogram and testing setup (0 lag, etc)<br>
-a*x*e^(-b*x^2)+c
-Data:
-Lines 19032064, Time 207070.729594
- H: pieces
- 0: 23588
- 1: 1107704
- 2: 6933174
- 3: 12129869
- 4: 12051837
- 5: 8486038
- 6: 4290841
- 7: 1684403
- 8: 587242
- 9: 193098
-10: 63114
-11: 19795
-12: 6435
-13: 2086
-14: 673
-15: 203
-16: 50
-17: 12
-18: 0
-19: 0
-20: 0
-  = 47580162
-P(H>h)=1-p(0)-p(1)-...-p(h)
-P(H>21)=y
-pieces=1/y
-</div>-->
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Conclusion ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<!--<div class="content"><div class="title">Conclusion</div>
-brython performance issues<br>
-4-line clearing AI<br>
-full line test on better hardware
-</div>-->
-
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 27 May 2018 - Modified on 10 Nov 2020<br>
+<div id="footer">Created on 27 May 2018 - Modified on 22 Dec 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

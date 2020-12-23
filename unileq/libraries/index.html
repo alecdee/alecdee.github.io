@@ -14,10 +14,15 @@
 <div class="content"><h1>Libraries</h1>
 <p>This page lists the libraries I've worked on to build <a href="../index.html">unileq</a> up from
 one instruction into an easy to use architecture.</p>
+<br>
+<p>Libraries:<br>
+<br>
+<a href="#string_printing" style="margin-left:4rem">String Printing</a><br>
+<a href="#uint" style="margin-left:4rem">Unsigned Integers</a><br></p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ String Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content"><h1>String Printing</h1>
+<div class="content" id="string_printing"><h1>String Printing</h1>
 <p><a href="./print.unl">print.unl</a> is fundamental to working on other libraries. It defines the
 function <i>print</i> which allows us to print ASCII strings as well as numerical values. This
 allows to print diagnostic messages and see what other libraries are actually doing. It can be
@@ -42,7 +47,7 @@ ascii     : 72 101 108 108 111
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unsigned Integers ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content"><h1>Unsigned Integers</h1>
+<div class="content" id="uint"><h1>Unsigned Integers</h1>
 <p><a href="./uint.unl">uint.unl</a> defines all of the usual functions for handling unsigned
 integer arithmetic and bitwise operations. For example, to compute the bitwise AND of <i>[B]</i> and
 <i>[C]</i> and store it <i>[A]</i>, we would call</p>
@@ -55,9 +60,9 @@ unileq instructions required per function call.</p>
 <table class="datatable insttable headerrow">
 <tr><td>Function</td><td>Instructions</td></tr>
 <tr><td>cmp</td><td>28</td></tr>
-<tr><td>set</td><td>25</td></tr>
+<tr><td>set</td><td>24</td></tr>
 <tr><td>neg</td><td>25</td></tr>
-<tr><td>add</td><td>31</td></tr>
+<tr><td>add</td><td>30</td></tr>
 <tr><td>sub</td><td>31</td></tr>
 <tr><td>mul</td><td>933</td></tr>
 <tr><td>div</td><td>978</td></tr>
@@ -73,7 +78,7 @@ unileq instructions required per function call.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 19 Dec 2020<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 21 Dec 2020<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>
