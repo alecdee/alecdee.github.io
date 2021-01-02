@@ -17,12 +17,13 @@ one instruction into an easy to use architecture.</p>
 <br>
 <p>Libraries:<br>
 <br>
-<a href="#string_printing" style="margin-left:4rem">String Printing</a><br>
-<a href="#uint" style="margin-left:4rem">Unsigned Integers</a><br></p>
+<a href="#printing" style="margin-left:4rem">String Printing</a><br>
+<a href="#uint" style="margin-left:4rem">Unsigned Integers</a><br>
+<a href="#random" style="margin-left:4rem">Random Number Generation</a><br></p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ String Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="string_printing"><h1>String Printing</h1>
+<div class="content" id="printing"><h1>String Printing</h1>
 <p><a href="./print.unl">print.unl</a> is fundamental to working on other libraries. It defines the
 function <i>print</i> which allows us to print ASCII strings as well as numerical values. This
 allows to print diagnostic messages and see what other libraries are actually doing. It can be
@@ -74,11 +75,35 @@ unileq instructions required per function call.</p>
 <tr><td>xor</td><td>676</td></tr>
 </table>
 <br>
-<p>Testing is carried out by <a href="./uint_test_compiled.unl">uint_test_compiled.unl</a>.</p>
+<p>Testing is carried out by <a href="./uinttest.unl">uinttest.unl</a>. It needs to be concatenated
+together with <a href="./uint.unl">uint.unl</a> and <a href="./print.unl">print.unl</a>. The
+command to do so is in uinttest.unl.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Random Number Generation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="random"><h1>Random Number Generation</h1>
+<p><a href="./random.unl">random.unl</a> defines a PRNG with a period of 2^64. It provides five
+functions for handling random numbers:</p>
+<br>
+<div class="codeblock langunileq">random.seed    num
+random.jump    num
+random.get     dst
+random.mod     dst mod
+random.shuffle arr len</div>
+<br>
+<p>For instance, to get a random number mod 52 and store it in <i>rand</i>, call:</p>
+<br>
+<div class="codeblock langunileq">0 ? random.get rand mod
+rand:0
+mod:52</div>
+<br>
+<p>Testing is carried out by <a href="./randomtest.unl">randomtest.unl</a>. It needs to be
+concatenated together with <a href="./random.unl">random.unl</a> and
+<a href="./print.unl">print.unl</a>. The command to do so is in randomtest.unl.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 21 Dec 2020<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 2 Jan 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>
