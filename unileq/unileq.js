@@ -465,7 +465,7 @@ function unlparsestr(st,str) {
 					NEXT();
 				}
 			} else if (c===63) {
-				//Next address token.
+				//Current address token.
 				token=1;
 				u64set(val,addr);
 				NEXT();

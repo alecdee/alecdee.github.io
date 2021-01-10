@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Unsigned Integer Operations - v3.00
+Unsigned Integer Operations - v3.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -22,10 +22,10 @@ set: 24
 neg: 25
 add: 30
 sub: 31
-mul: 933
+mul: 869
 div: 978
-shl: 81
-shr: 130
+shl: 83
+shr: 131
 not: 26
 and: 676
  or: 676
@@ -56,10 +56,8 @@ uint.xor ret a b
 --------------------------------------------------------------------------------
 TODO
 
-Optimize mul if high=0, and div if quot=0.
-Add comparisons for jeq, jne, jle, and jl.
-Use fibonacci for multiplication and division. Reverse fibonacci works with
-unileq. Ex: 55 34 21 13 8 5 3 2 1 1 0
+Optimize uint.mul if high=0, and uint.div if quot=0. Add tests.
+Test uint.mul for correctness for all inputs, mod 256.
 |#
 
 #--------------------------------------------------------------------------------
@@ -282,9 +280,9 @@ uint.mul:
 	#     [low] =([a]*[b])%2^64
 	#Setup stack pointer.
 	.tmp  .tmp  ?+1
-	.tmp  .a0   ?+1
+	.tmp  .a2   ?+1
 	0     .tmp  ?+1
-	.a0   0     ?+1
+	0     .z+2  ?+1
 	.a2   0     ?+1
 	.a3   0     ?+1
 	.a4   0     ?+1
@@ -323,33 +321,36 @@ uint.mul:
 	#Init rl and rh.
 	.rh   .rh   ?+1
 	.rl   .rl   ?+1
-	#If [a]=0 or [b]=0, abort.
+	#If [a]=0 or [b]=0, return.
 	.a    .z    .ret
 	.b    .z    .ret
 	#We can left shift [rh] and [rl] for the first loop.
 	.rl   .z-1  ?+1
-	.i    .bits .nocarry0
+	.i    .bits .nocarry
 .loop:
-	.i    .z+1  .ret
+	.i    .z+1  .correct
 	#Left shift [rh] and [rl], don't decrement [rl] for when we add [a] to [rl].
+	.tmp  .tmp  ?+1
 	.tmp  .rh   ?+1
 	.rh   .tmp  ?+1
 	.tmp  .tmp  ?+1
 	.tmp  .rl   ?+1
 	.tmp  .z+1  ?+1
-	.rl   .tmp  .nocarry0
+	.rl   .tmp  .nocarry
 	.rh   .z-1  ?+1
-.nocarry0:
-	.tmp  .tmp  ?+1
+.nocarry:
 	#If the highest bit of [b] is set, add [a] to [rl] and carry to [rh].
+	.tmp  .tmp  ?+1
 	.tmp  .b    ?+1
 	.tmp  .z+1  ?+1
-	.b    .tmp  .nocarry1
-	.rl   .a    .nocarry1
-	.rh   .z-1  ?+1
-.nocarry1:
-	.rl   .z+1  ?+1
-	.tmp  .tmp  .loop
+	.b    .tmp  .loop
+	.rl   .a    .loop
+	.rh   .z-1  .loop
+.correct:
+	#Correct for [rl]-1 each loop.
+	.rl   .z-1  ?+1
+	.rl   .z    ?+4
+	.rh   .z+1  ?+1
 .ret:
 	#Set [high].
 	.rh   .r0:0 ?+1
@@ -364,14 +365,13 @@ uint.mul:
 	0     0     .a6:6
 #Variables
 .tmp:0
-.a0:0
 .a:0
 .b:0
 .rh:0
 .rl:0
 .i:0
 .bits:0-64
-0-1 .z:0 1
+0-1 .z:0 1 2
 
 uint.div:
 	#Call  : 0 ? uint.div quot rem num den

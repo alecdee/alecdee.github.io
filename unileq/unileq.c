@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.20
+unileq.c - v1.22
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -119,13 +119,9 @@ Interpreter Calls
      C=2: stdin will be written to mem[B].
 
 --------------------------------------------------------------------------------
-TODO
+Notes
 
 Keep source under 20,000 bytes.
-Add randomized cases to testing.
-Simplify max memory calculation. Test using u8/u16.
-Simplify parser error highlighting.
-What happens if memory error in unlsetmem() during parsing?
 
 Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
@@ -336,7 +332,7 @@ void unlparsestr(unlstate* st,const char* str) {
 				if (c=='0' && (NEXT=='x' || c=='X')) {token=16;NEXT;}
 				while ((n=CNUM(c))<token) {val=val*token+n;NEXT;}
 			} else if (c=='?') {
-				//Next address token.
+				//Current address token.
 				token=1;
 				val=addr;
 				NEXT;
@@ -402,11 +398,12 @@ void unlparsestr(unlstate* st,const char* str) {
 			while (s1>s0 && ustr[s1-1]<=' ') {s1--;}
 			//Extract the line and underline the error.
 			s0=j>s0+30?j-30:s0;
-			for (k=0;k<61;k++,s0++) {
-				c=s0<s1 && k<60?ustr[s0]:0;
+			for (k=0;k<60 && s0<s1;k++,s0++) {
+				c=ustr[s0];
 				window[k]=c;
-				under[k]=c && s0>=j && s0<i?'^':(c<=' '?c:' ');
+				under[k]=s0>=j && s0<i?'^':(c<=' '?c:' ');
 			}
+			window[k]=under[k]=0;
 		}
 		snprintf(st->statestr,sizeof(st->statestr),fmt,err,line,window,under);
 	}
@@ -480,8 +477,10 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 		u64 alloc=1,*mem=0;
 		while (alloc && alloc<=addr) {alloc+=alloc;}
 		if (alloc==0) {alloc--;}
-		size_t salloc=(size_t)alloc,smax=((size_t)-1)/sizeof(u64);
-		if (((u64)salloc)!=alloc || salloc>smax) {alloc=smax;}
+		size_t max=((size_t)-1)/sizeof(u64);
+		if ((sizeof(u64)>sizeof(size_t) || ((size_t)alloc)>max) && alloc>((u64)max)) {
+			alloc=(u64)max;
+		}
 		//Attempt to allocate.
 		if (alloc>addr) {
 			mem=(u64*)realloc(st->mem,((size_t)alloc)*sizeof(u64));

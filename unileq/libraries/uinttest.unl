@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Unsigned Integer Testing - v1.00
+Unsigned Integer Testing - v1.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -8,32 +8,23 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 About
 
 To compile the necessary files together, run
-cat uinttest.unl uint.unl print.unl > uint_test_compiled.unl
-./unileq uint_test_compiled.unl
+cat uinttest.unl uint.unl print.unl random.unl > test.unl;./unileq test.unl
 
-Average instructions per function
+Average instructions per function:
 cmp: 28
 set: 24
 neg: 25
 add: 30
 sub: 31
-mul: 933
+mul: 869
 div: 978
-shl: 81
-shr: 130
+shl: 83
+shr: 131
 not: 26
 and: 676
  or: 676
 xor: 676
 
---------------------------------------------------------------------------------
-TODO
-
-time: 1.530
-Better handling of A=-1 in test.measure.
-Simplify random number generation:
-	test.rand.mod takes 532 instructions
-	test.rand.uint takes 36000 instructions. 65*532=34580.
 |#
 
 0 0 test.main
@@ -54,11 +45,11 @@ test.main:
 	#Generate A, B, and C parameters.
 	0 ? test.rand.uint .a
 	0 ? test.rand.uint .b
-	0 ? test.rand.mod  .c .shiftmax
+	0 ? random.mod     .c .shiftmax
 	.c .shiftsub ?+1
 
 	#Randomly set A=B.
-	0 ? test.rand.mod  .tmp0 .eqprob
+	0 ? random.mod     .tmp0 .eqprob
 	.tmp0 .z    ?+4
 	.tmp0 .tmp0 .nosetab
 	.tmp0 .b    ?+1
@@ -382,85 +373,6 @@ test.main:
 0-65 .nbits:0-64
 .bits:64 65 66
 
-test.rand.mod:
-	#Call  : 0 ? test.rand.mod ret mod
-	#Effect: [ret]=(rand)%[mod]
-	#Setup new stack.
-	.tmp0 .tmp0 ?+1
-	.tmp0 .p0   ?+1
-	0     .z+2  ?+1
-	0     .tmp0 ?+1
-	.p0   0     ?+1
-	.p1   0     ?+1
-	.addr 0     ?+1
-	#Get [ret]
-	.tmp0 .tmp0 ?+1
-	.tmp0 .p0:0 ?+1
-	.p5   .p5   ?+1
-	.p5   .tmp0 ?+1
-	.p6   .p6   ?+1
-	.p6   .tmp0 ?+1
-	#Get [mod] and -[mod]
-	.tmp0 .tmp0 ?+1
-	.tmp0 .p1:1 ?+1
-	.p2   .p2   ?+1
-	.p2   .tmp0 ?+1
-	.nmod .nmod ?+1
-	.nmod .p2:0 ?+1
-	.nmod .z-1  ?+1
-	.mod  .mod  ?+1
-	.mod  .nmod ?+1
-	#[val]=4660046610375530309*[val]+14656126911870262207
-	.tmp0 .tmp0 ?+1
-	.i    .i0   ?+1
-.mul:
-	.tmp0 .val  ?+1
-	.val  .tmp0 ?+1
-	.i    .z-2  .mul
-	.val  .inc  ?+1
-	#Use top 32 bits of val to compute rand%[mod].
-	.rand .rand ?+1
-	.tmp1 .tmp1 ?+1
-	.tmp1 .val  ?+1
-	.tmp0 .tmp0 ?+1
-	.tmp0 .tmp1 ?+1
-	.i    .i1   ?+1
-.shift:
-	#[rand]<<=1
-	.tmp1 .tmp1 ?+1
-	.tmp1 .rand ?+1
-	.rand .tmp1 ?+1
-	#[tmp0]<<=1, [rand]+=carry
-	.tmp1 .tmp1 ?+1
-	.tmp1 .tmp0 ?+1
-	.tmp1 .z+1  ?+1
-	.tmp0 .tmp1 .nocarry
-	.rand .z-1  ?+1
-.nocarry:
-	.rand .mod  .nomod
-	.rand .z+1  ?+1
-	.rand .mod  ?+1
-.nomod:
-	.rand .nmod ?+1
-	.i    .z-2  .shift
-	#Return
-	.tmp0 .tmp0 ?+1
-	.rand .p5:0 ?+1
-	.tmp0 .rand ?+1
-	.p6:0 .tmp0 ?+1  #[ret]=[rand]
-	0     0     .addr:2
-0-2 0-1 .z:0 1 2
-.i:1
-.i0:90
-.i1:64
-.tmp0:0
-.tmp1:0
-.rand:0
-.mod:0
-.nmod:0
-.val:4844720744148949087
-.inc:0-14656126911870262207
-
 test.rand.uint:
 	#Call  : 0 ? test.rand ret
 	#Effect: [ret]=(rand)
@@ -481,45 +393,13 @@ test.rand.uint:
 	.p6   .p6   ?+1
 	.p6   .tmp0 ?+1
 	#Shuffle arr.
-	.i    .i    ?+1
-	.i    .p62  ?+1
-.shuffle:
-	.i    .n64  ?+1
-	0 ? test.rand.mod .tmp0 .i
-	.i    .z+1  ?+1
-	#Setup j swap address.
-	.tmp1 .tmp1 ?+1
-	.tmp1 .tmp0 ?+1
-	.tmp1 .arr0 ?+1
-	.j0   .j0   ?+1
-	.j0   .tmp1 ?+1
-	.j1   .j1   ?+1
-	.j1   .tmp1 ?+1
-	#Setup i swap address.
-	.tmp1 .tmp1 ?+1
-	.tmp1 .i    ?+1
-	.tmp1 .arr0 ?+1
-	.i0   .i0   ?+1
-	.i0   .tmp1 ?+1
-	.i1   .i1   ?+1
-	.i1   .tmp1 ?+1
-	#Swap i and j.
-	.tmp0 .tmp0 ?+1
-	.tmp0 .i0:0 ?+1  #[t0]=-[i]
-	.tmp1 .tmp1 ?+1
-	.tmp1 .j0:0 ?+1  #[t1]=-[j]
-	.tmp1 .tmp0 ?+1  #[t1]=-[j]+[i]
-	.i1:0 .tmp1 ?+1  #[i]=[i]+[j]-[i]=[j]
-	.tmp0 .tmp0 ?+1
-	.tmp0 .tmp1 ?+1  #[t0]=[j]-[i]
-	.j1:0 .tmp0 ?+1  #[j]=[j]-[j]+[i]
-	.i    .p62  .shuffle
+	0 ? random.shuffle .arr0 .arrlen
 	#Calculate how many bits we want to set.
 	.i    .n64  ?+1
-	0 ? test.rand.mod .i .i
+	0 ? random.mod .i .i
 	.tmp0 .tmp0 ?+1
 	.b0   .b0   ?+1
-	.b0   .arr1 ?+1
+	.b0   .narr ?+1
 	.i    .z-1  ?+1
 .setbits:
 	.i    .z+1  .setdone
@@ -532,8 +412,8 @@ test.rand.uint:
 	.tmp0 .tmp1 ?+1
 	.p6:0 .tmp0 ?+1  #[ret]=[rand]
 	0     0     .addr:1
+#Variables
 0-1 .z:0 1 2
-.p62:62
 .n64:0-64
 .tmp0:0
 .tmp1:0
@@ -549,8 +429,9 @@ test.rand.uint:
 	0x20000000000000 0x40000000000000 0x80000000000000 0x100000000000000
 	0x200000000000000 0x400000000000000 0x800000000000000 0x1000000000000000
 	0x2000000000000000 0x4000000000000000 0x8000000000000000
+.arrlen:?-.arr
 .arr0:.arr
-.arr1:0-.arr
+.narr:0-.arr
 
 test.cmp:
 	#Call  : 0 ? test.cmp exp val id
