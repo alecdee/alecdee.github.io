@@ -1,0 +1,30 @@
+#|==============================================================================
+
+Memory Testing - v1.00
+
+Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+
+--------------------------------------------------------------------------------
+TODO
+
+cat memtest.unl uint.unl print.unl random.unl mem.unl > test.unl;./unileq test.unl
+
+|#
+
+0 0 memtest.main
+
+memtest.main:
+	0 ? print 115 116 97 114 116 105 110 103 32 109 101 109 111 114 121 32 116 101 115 116 115 10 0
+.loop:
+	0 ? uint.cmp .trial .trials ?+3 .done .done
+	0 ? print 0-1 .trial 10 0
+	#Allocate random length
+	.trial .z-1 .loop
+.done:
+	0 ? mem.alloc.status
+	0 ? print 112 97 115 115 101 100 10 0
+	0-1 0 0
+#Variables
+0-1 .z:0
+.trials:16
+.trial:0

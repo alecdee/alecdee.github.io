@@ -24,10 +24,11 @@ program we want. Unileq is based off of the
 <p>To execute a unileq instruction, we first load 3 operands: <i>A</i>, <i>B</i>, and <i>C</i>. We
 then subtract the value at address <i>B</i> from the value at address <i>A</i>. If the value at
 <i>A</i> was less than or equal to the value at <i>B</i>, then we jump to <i>C</i>. Otherwise, we
-load the next 3 operands after <i>A</i>, <i>B</i>, and <i>C</i>.</p>
+jump by 3.</p>
 <br>
-<p>We keep track of the memory we're executing with the instruction pointer, <i>IP</i>, which is
-set to <i>0</i> at the start of the program. The pseudocode below shows the main unileq loop:</p>
+<p>We keep track of the instruction operands we're loading with the instruction pointer, <i>IP</i>,
+which is set to <i>0</i> at the start of the program. The pseudocode below shows the main unileq
+loop:</p>
 <br>
 <div class="codeblock">while true
 	A=mem[IP+0]
@@ -477,7 +478,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 14 Dec 2020<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 18 Jan 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

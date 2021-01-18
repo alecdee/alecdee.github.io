@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.22
+unileq.c - v1.23
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -32,12 +32,12 @@ want. Unileq is based off of the subleq architecture.
 
 To execute a unileq instruction, we first load 3 operands: A, B, and C. We then
 subtract the value at address B from the value at address A. If the value at A
-was less than or equal to the value at B, then we jump to C. Otherwise, we load
-the next 3 operands after A, B, and C.
+was less than or equal to the value at B, then we jump to C. Otherwise, we jump
+by 3.
 
-We keep track of the memory we're executing with the instruction pointer, IP,
-which is set to 0 at the start of the program. The pseudocode below shows the
-main unileq loop:
+We keep track of the instruction operands we're loading with the instruction
+pointer, IP, which is set to 0 at the start of the program. The pseudocode below
+shows the main unileq loop:
 
 	while true
           A=mem[IP+0]

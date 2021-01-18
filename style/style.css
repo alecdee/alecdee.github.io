@@ -90,7 +90,7 @@ sub {vertical-align:sub;font-size:80%;}
 }
 .content .codeblock, .content .consoleblock, .content i, .diagram
 {
-	font-family:monospace,monospace;
+	font-family:Consolas,monospace,monospace;
 	-moz-tab-size:5;
 	-o-tab-size:5;
 	tab-size:5;
@@ -214,7 +214,7 @@ button:hover,select:hover
 	margin-bottom:1rem;
 	/*border:2px dashed #333333;*/
 	/*background:#333333;*/
-	font-family:monospace,monospace;
+	font-family:Consolas,monospace,monospace;
 	stroke-width:2px;
 	stroke:#eeeeee;
 	stroke-linecap:round;

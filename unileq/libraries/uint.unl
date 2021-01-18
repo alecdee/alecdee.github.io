@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Unsigned Integer Operations - v3.01
+Unsigned Integer Operations - v3.02
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -23,7 +23,7 @@ neg: 25
 add: 30
 sub: 31
 mul: 869
-div: 978
+div: 911
 shl: 83
 shr: 131
 not: 26
@@ -324,10 +324,18 @@ uint.mul:
 	#If [a]=0 or [b]=0, return.
 	.a    .z    .ret
 	.b    .z    .ret
-	#We can left shift [rh] and [rl] for the first loop.
+	#Increment [rl] for the first loop.
 	.rl   .z-1  ?+1
-	.i    .bits .nocarry
+	.i    .bits ?+1
 .loop:
+	#If the highest bit of [b] is set, add [a] to [rl] and carry to [rh].
+	.tmp  .tmp  ?+1
+	.tmp  .b    ?+1
+	.tmp  .z+1  ?+1
+	.b    .tmp  ?+7
+	.rl   .a    ?+4
+	.rh   .z-1  ?+1
+	#Check loop.
 	.i    .z+1  .correct
 	#Left shift [rh] and [rl], don't decrement [rl] for when we add [a] to [rl].
 	.tmp  .tmp  ?+1
@@ -336,18 +344,10 @@ uint.mul:
 	.tmp  .tmp  ?+1
 	.tmp  .rl   ?+1
 	.tmp  .z+1  ?+1
-	.rl   .tmp  .nocarry
-	.rh   .z-1  ?+1
-.nocarry:
-	#If the highest bit of [b] is set, add [a] to [rl] and carry to [rh].
-	.tmp  .tmp  ?+1
-	.tmp  .b    ?+1
-	.tmp  .z+1  ?+1
-	.b    .tmp  .loop
-	.rl   .a    .loop
+	.rl   .tmp  .loop
 	.rh   .z-1  .loop
 .correct:
-	#Correct for [rl]-1 each loop.
+	#Correct for [rl]+1 each loop.
 	.rl   .z-1  ?+1
 	.rl   .z    ?+4
 	.rh   .z+1  ?+1
@@ -380,9 +380,9 @@ uint.div:
 	#     [rem] =[num]%[den]
 	#Setup stack pointer.
 	.tmp  .tmp  ?+1
-	.tmp  .a0   ?+1
+	.tmp  .a2   ?+1
 	0     .tmp  ?+1
-	.a0   0     ?+1
+	0     .z+2  ?+1
 	.a2   0     ?+1
 	.a3   0     ?+1
 	.a4   0     ?+1
@@ -418,36 +418,36 @@ uint.div:
 	.p1   .tmp  ?+1
 	.nden .nden ?+1
 	.nden .p1:0 ?+1
+	#If [den]=0, abort
+	.nden .z    .divz
+	.nden .z-1  ?+1
 	.den  .den  ?+1
 	.den  .nden ?+1
-	#If [den]=0, abort
-	.den  .z    .divz
-	.tmp  .tmp  ?+1
+	#Start loop.
+	.quot .quot ?+1
 	.rem  .rem  ?+1
 	.i    .bits ?+1
 .loop:
+	#[rem]+=[num]>>63, [num]<<=1
+	.tmp  .tmp  ?+1
+	.tmp  .num  ?+1
+	.tmp  .z+1  ?+1
+	.num  .tmp  ?+4
+	.rem  .z-1  ?+1
+	#if [rem]>=[den], [quot]+=1
+	.rem  .den  ?+7
+	.rem  .z+1  ?+1
+	.quot .z-1  ?+4
+	.rem  .nden ?+1
 	.i    .z+1  .ret
 	#[quot]<<=1
+	.tmp  .tmp  ?+1
 	.tmp  .quot ?+1
 	.quot .tmp  ?+1
 	#[rem]<<=1
 	.tmp  .tmp  ?+1
 	.tmp  .rem  ?+1
-	.rem  .tmp  ?+1
-	#[rem]+=[num]>>63, [num]<<=1
-	.tmp  .tmp  ?+1
-	.tmp  .num  ?+1
-	.tmp  .z+1  ?+1
-	.num  .tmp  .nocarry
-	.rem  .z-1  ?+1
-.nocarry:
-	#if [rem]>=[den], [quot]+=1
-	.rem  .den  .noden
-	.quot .z-1  .noden+6
-.noden:
-	.rem  .z    .noden-3
-	.rem  .nden ?+1
-	.tmp  .tmp  .loop
+	.rem  .tmp  .loop
 .ret:
 	#Set quotient.
 	.quot .r0:0 ?+1
@@ -463,7 +463,6 @@ uint.div:
 .divz:
 	#Abort.
 	0-1 0 0
-.a0:0
 .num:0
 .den:0
 .nden:0
@@ -471,8 +470,8 @@ uint.div:
 .rem:0
 .tmp:0
 .i:0
-.bits:0-65
-0-1 .z:0 1
+.bits:0-64
+0-1 .z:0 1 2
 
 #--------------------------------------------------------------------------------
 #Bitwise Arithmetic

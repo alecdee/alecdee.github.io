@@ -1,0 +1,351 @@
+#|==============================================================================
+
+Memory - v1.00
+
+Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+
+--------------------------------------------------------------------------------
+About
+
+This library handles common memory management functions. If it is concatenated
+with other files, it must be included last for memory allocation to work.
+
+--------------------------------------------------------------------------------
+Index
+
+mem.deref ret addr refs
+mem.getargs num_of_addresses dst0 refs0 dst1 refs1 ...
+mem.read ret a b
+	[ret]=[[a]+[b]]
+mem.write a b val
+	[[a]+[b]]=[val]
+
+--------------------------------------------------------------------------------
+TODO
+
+alloc if debug is enabled
+	Add 4 random values before and after allocation.
+	When memory is freed, check gaurds and randomize all values. Set last
+	element to hash. When memory is reused or application ends, check hash.
+	Add flag to see if memory is already freed.
+
+mem.zero
+mem.copy
+mem.sort
+	Have comparison function. use jumps
+	Use block sort: https://en.wikipedia.org/wiki/Block_Sort
+mem.find
+	finds a unique identifier within unileq's memory
+mem.alloc
+mem.realloc
+mem.free
+mem.push
+mem.pop
+mem.peek
+Unroll mem.read and mem.write.
+
+In mem.deref:
+	Instead of zeroing .p0, .p1, etc and decrementing 0, start p0=2,p1=3,...
+	and subtract the difference between the last stack address and the new one.
+
+	When setting .dst, subtract the difference in .dst instead of zeroing and
+	setting. Also store positive value of .dst in .addr; cuts down 1
+	dereference.
+
+	Remove "0" references, use ".z".
+
+	Make sure "mem.deref 0 x y", "mem.deref x 0 y", and "mem.deref x x y" work.
+	Get params before any dereferencing.
+	Set 0 before any dereferencing.
+|#
+
+mem.debug: 1
+
+mem.deref:
+	#0 ? mem.deref dst addr refs
+	#refs=0: [dst]=stack address
+	#refs=1: [dst]=addr
+	#refs=2: [dst]=[addr]
+	#refs=3: [dst]=[[addr]]
+	#Get dst.
+	0     .z+2  ?+1
+	.p0   .p0   ?+1
+	.p0   0     ?+1
+	.dst  .dst  ?+1
+	.dst  .p0:0 ?+1
+	#Get addr.
+	0     .z+1  ?+1
+	.p1   .p1   ?+1
+	.p1   0     ?+1
+	.addr .addr ?+1
+	.addr .p1:0 ?+1  #[addr]=-stack address
+	#Get refs.
+	0     .z+1  ?+1
+	.p2   .p2   ?+1
+	.p2   0     ?+1
+	.refs .p2:0 ?+1
+	#Set return address.
+	0     .z+1  ?+1
+	.ret  0     ?+1
+	0     0     ?+1
+	#Dereference argument.
+.refl:
+	.refs .z-1  ?+1
+	.refs .z    .ref0
+	.p3   .addr ?+1  #[p3]=[addr]
+	.addr .addr ?+1
+	.addr .p3:0 ?+1  #[addr]=-[[addr]]
+	.p3   .p3   .refl
+.ref0:
+	#Write the dereferenced value to dst.
+	.p4+0 .p4+0 ?+1
+	.p4+0 .dst  ?+1
+	.p4+1 .p4+1 ?+1
+	.p4+1 .dst  ?+1
+	.p4+3 .p4+3 ?+1
+	.p4+3 .dst  ?+1
+	.p4:0 0     ?+1  #dst dst ?+1
+	0     .addr ?+1  #dst arg ?+1
+	#Return to call.
+	.ret  .ret  .ret:0
+.dst:0
+.addr:0
+.refs:0
+0-1 .z:0 1 2
+
+mem.getargs:
+	#mem.getargs.call ? mem.getargs num_of_addresses dst0 refs0 dst1 refs1 ...
+	#refs=0: [dst]=0_stack
+	#refs=1: [dst]=[0_stack]
+	#refs=2: [dst]=[[0_stack]]
+	#refs=3: [dst]=[[[0_stack]]]
+	.orig .orig ?+1
+	0     .z+2  ?+1
+	.orig 0     ?+1  #Original stack
+	0     0     ?+1
+	.call .z+2  ?+1  #Calling stack
+	#Get number of args.
+	.p0   .p0   ?+1
+	.p0   .call ?+1
+	.call .z+1  ?+1
+	.args .p0:0 ?+1
+.argloop:
+	.args .z    .ret
+	#Get destination address from call stack.
+	.p1   .p1   ?+1
+	.p1   .call ?+1
+	.call .z+1  ?+1
+	.dst  .dst  ?+1
+	.dst  .p1:0 ?+1
+	#Get dereferencing depth.
+	.p2   .p2   ?+1
+	.p2   .call ?+1
+	.call .z+1  ?+1
+	.ref  .p2:0 ?+1  #ref=-1-depth. Abort if -1.
+	#Get argument from original stack and dereference.
+	.arg  .arg  ?+1
+	.arg  .orig ?+1
+	.orig .z-1  ?+1
+.refl:
+	.ref  .z    .ref0
+	.p3   .p3   ?+1
+	.p3   .arg  ?+1  #[p1]=[arg]
+	.arg  .arg  ?+1
+	.arg  .p3:0 ?+1  #[arg]=-[[arg]]
+	.ref  .z-1  .refl
+.ref0:
+	#Write original arg to call destination address.
+	.p4+0 .p4+0 ?+1
+	.p4+0 .dst  ?+1
+	.p4+1 .p4+1 ?+1
+	.p4+1 .dst  ?+1
+	.p4+3 .p4+3 ?+1
+	.p4+3 .dst  ?+1
+	.p4:0 0     ?+1  #dst dst ?+1
+	0     .arg  ?+1  #dst arg ?+1
+	#Increment and go to next arg.
+	.args .z-1 .argloop
+.ret:
+	.p5   .p5   ?+1
+	.p5   .call ?+1
+	.call .call .p5:0
+.orig:0
+.call:0
+.arg:0
+.args:0
+.dst:0
+.ref:0
+0-1 .z:0 1 2
+
+mem.read:
+	#0 ? mem.read dst a b
+	#[dst]=[[a]+[b]]
+	mem.getargs.call ? mem.getargs 4 .dst 1 .a 2 .b 1 .ret 0
+	.z .b:0 ?+1
+	.a   .z ?+1
+	0 ? mem.deref .dst:0 .a:0 2
+	.z   .z .ret:0
+.z:0
+
+mem.write:
+	#0 ? mem.write a b val
+	#[[a]+[b]]=[val]
+	mem.getargs.call ? mem.getargs 4 .a 2 .b 1 .val 1 .ret 0
+	.z .b:0 ?+1
+	.a   .z ?+1
+	0 ? mem.deref .a:0 .val:0 2
+	.z   .z .ret:0
+.z:0
+
+#[[mem0]+[off0]]=[[mem1]+[off1]]
+
+#|
+mem.zero:
+	#Call  : 0 ? mem.zero mem len
+	#Effect: Zeroes out memory addresses in [[mem],[mem]+[len]).
+	#Time  : O(n)=1+2*n+2*(n-1)
+	.len  .z    .done
+.loop:
+	.p0:0 .p1:0 ?+1
+	.len  .z+1  .done
+	.p0   .z-1  ?+1
+	.p1   .z-1  .loop
+.done:
+	0     0     .ret:0
+
+mem.copy:
+	#Call  : 0 ? mem.copy dst src len
+	#Effect: Copies data from [[src],[src]+[len]) onto [[dst],[dst]+[len]).
+	#Time  : O(n)=1+4*n+5*(n-1)
+	inc=-1
+	d0=d1=dst
+	s0=src
+	#If len=0, return.
+	.len  .z    .done
+if dst<src:
+if dst>src:
+	.inc .inc ?+1
+	.inc .z-1 ?+1
+	d0=d1=dst+len-1
+	s0=src+len-1
+	.tmp0 .tmp0 ?+1
+.loop:
+	.tmp0 .d0:0 ?+1
+	.tmp1 .tmp1 ?+1
+	.tmp1 .tmp0 ?+1
+	.tmp1 .s0:0 ?+1
+	.d1:0 .tmp1 ?+1
+	.len  .z+1  .done
+	.d0   .inc  ?+1
+	.d1   .inc  ?+1
+	.s0   .inc  ?+1
+	.tmp0 .tmp0 .loop
+.done:
+	0     0     .ret:0
+
+	.tmp  .s0:0 ?+1
+	.d0:0 .d1:0 ?+1
+	.d2:0 .tmp  ?+1
+	.len  .z+1  .done
+	.d0   .inc  ?+1
+	.d1   .inc  ?+1
+	.d2   .inc  ?+1
+	.s0   .inc  ?+1
+	.tmp  .tmp  .loop
+
+What if dst or src loops around 2^64?
+
+	Cases:
+	1: Disjoint
+	     [src     src+len)................
+	     ................[dst     dst+len)
+	     Copy in any order.
+	
+	2: Overlap, src<dst
+	     [src     src+len)................
+	     ..............[dst     dst+len)..
+		inc=-1, start=dst+len-1,src+len-1
+
+	3: Overlap, src>dst
+	     ..............[src     src+len)..
+	     [dst     dst+len)................
+		inc=1, start=dst,src
+
+	4: Overlap, src at end of memory
+	     [src+len)...............[src....]
+	     ..[dst....dst+len)...............
+
+	5: Overlap, dst at end of memory
+
+	#If [len]=0, we're done.
+	.len  .z    .done
+	.inc  .inc  ?+1
+	.inc  .z-1  .start
+.le:
+	#If [dst]=[src], we're done.
+	.dif  .z    .done
+	.inc  .z+1  .start
+.loop:
+	.len  .z+1  .done
+	.d0   .inc  ?+1
+	.d1   .inc  ?+1
+	.d2   .inc  ?+1
+	.s0   .inc  ?+1
+.start:
+	.tmp  .tmp  ?+1
+	.tmp  .s0:0 ?+1
+	.d0:0 .d1:0 ?+1
+	.d2:0 .tmp  .loop
+.done:
+	0     0     .ret:0
+|#
+
+#--------------------------------------------------------------------------------
+#Allocation
+
+#|
+Normal allocation:
+	[len][...data...]
+	If [len]=0, return 0.
+	When allocating, set data to 0.
+	When freeing, if [mem]=0, do nothing.
+
+Debug allocation:
+	[len][hash][...guard...][...data...][...guard...]
+	If [len]=0, allocate anyway.
+	When allocating set [hash]=0, set guards, and set data to 0.
+	When freeing, check guards and check [hash]=0. Randomize all data and set
+	[hash] to a hash of all data and guards. If [hash]=0, set to 1.
+	When data is recycled or program ends, check [hash].
+	When freeing, if [mem]=0, do nothing.
+|#
+
+mem.alloc:
+	#Call  : 0 ? mem.alloc mem len
+	#Effect: Sets [mem] to a memory address with [len] free cells. Cells are
+	#initialized to 0.
+#	.len .z .ret
+#.ret:
+#	0 0 .a4:4
+.guards:4
+.end:mem.alloc.start
+
+mem.free:
+	#Call  : 0 ? mem.free mem
+	#Effect: Frees the memory block at [mem] that was allocated by mem.alloc.
+	0-1 0 0
+
+mem.alloc.status:
+	#Call  : 0 ? mem.alloc.status
+	#Effect: Prints what memory is allocated.
+	.ret .ret ?+1
+	.ret 0    ?+1
+	.ret .z-2 ?+1
+	0 0 .ret:0
+#Variables
+0-2 0-1 .z:0
+
+mem.alloc.start:
+#The end of the universe and the start of unused memory. Nothing should come
+#after this label.
+

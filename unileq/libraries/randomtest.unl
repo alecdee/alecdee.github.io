@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Random Number Generator Testing - v1.00
+Random Number Generator Testing - v1.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -8,8 +8,7 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 About
 
 To compile, run
-cat randomtest.unl random.unl print.unl > rand_test.unl
-./unileq rand_test.unl
+cat randomtest.unl random.unl print.unl > test.unl;./unileq test.unl
 |#
 
 0 0 random.test
