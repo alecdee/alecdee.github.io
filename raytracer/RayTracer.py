@@ -1,5 +1,5 @@
 """
-RayTracer.py - v1.19
+RayTracer.py - v1.20
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -49,15 +49,11 @@ Notes:
 TODO
 
 Add a quick, 1 pass rendering mode.
-Use fixed point instead of floating point.
-Add NaN check to render RGB calculation. Put gamma in bmp header.
+Put gamma in bmp header.
 Add recalcnorm() and applytransform() to mesh.
-Simplify cube construction. Create 1 side and mirror across axis'.
 Add vert/face unique id tracking. Add delete/get.
 Add text primitives.
 Check if BVH AABB should change. If so, remake BVH.
-Remove BVH ray sign. Choose child based on ray distance. Store history in ray.
-Should diffusion scatter on first collision?
 Spectral rendering. Double slit experiment.
 """
 
