@@ -34,8 +34,8 @@ mem.copy
 mem.sort
 	Have comparison function. use jumps
 	Use block sort: https://en.wikipedia.org/wiki/Block_Sort
-mem.find
-	finds a unique identifier within unileq's memory
+mem.binsearch mem len val cmp
+	use +-2^n instead of division by 2
 mem.alloc
 mem.realloc
 mem.free
@@ -43,6 +43,11 @@ mem.push
 mem.pop
 mem.peek
 Unroll mem.read and mem.write.
+
+mem.status debug
+	check prev is consistent
+	if alloc: check guards
+	if free and node is not last (node+size+len!=-2): check all values
 
 In mem.deref:
 	Instead of zeroing .p0, .p1, etc and decrementing 0, start p0=2,p1=3,...
@@ -57,6 +62,7 @@ In mem.deref:
 	Make sure "mem.deref 0 x y", "mem.deref x 0 y", and "mem.deref x x y" work.
 	Get params before any dereferencing.
 	Set 0 before any dereferencing.
+
 |#
 
 mem.debug: 1
@@ -178,8 +184,8 @@ mem.getargs:
 0-1 .z:0 1 2
 
 mem.read:
-	#0 ? mem.read dst a b
-	#[dst]=[[a]+[b]]
+	#Call  : 0 ? mem.read dst a b
+	#Effect: [dst]=[[a]+[b]]
 	mem.getargs.call ? mem.getargs 4 .dst 1 .a 2 .b 1 .ret 0
 	.z .b:0 ?+1
 	.a   .z ?+1
@@ -197,13 +203,11 @@ mem.write:
 	.z   .z .ret:0
 .z:0
 
-#[[mem0]+[off0]]=[[mem1]+[off1]]
-
 #|
 mem.zero:
 	#Call  : 0 ? mem.zero mem len
 	#Effect: Zeroes out memory addresses in [[mem],[mem]+[len]).
-	#Time  : O(n)=1+2*n+2*(n-1)
+	#Time  : O(n)=4*n
 	.len  .z    .done
 .loop:
 	.p0:0 .p1:0 ?+1
@@ -304,46 +308,768 @@ What if dst or src loops around 2^64?
 #Allocation
 
 #|
-Normal allocation:
-	[len][...data...]
-	If [len]=0, return 0.
-	When allocating, set data to 0.
-	When freeing, if [mem]=0, do nothing.
+The memory module must be included at the end of the program so that
+mem.alloc.start can mark the beginning of unused space.
 
-Debug allocation:
-	[len][hash][...guard...][...data...][...guard...]
-	If [len]=0, allocate anyway.
-	When allocating set [hash]=0, set guards, and set data to 0.
-	When freeing, check guards and check [hash]=0. Randomize all data and set
-	[hash] to a hash of all data and guards. If [hash]=0, set to 1.
-	When data is recycled or program ends, check [hash].
-	When freeing, if [mem]=0, do nothing.
+
+     +------------------+---------+---------+---------+---------+---------+
+     | mem.alloc.start: | Buckets | Block 0 | Block 1 | Block 2 |   ...   |
+     +------------------+---------+---------+---------+---------+---------+
+
+
+A free block with space for data will have links for the bucket it's in.
+
+
+     +--------------------------------------------------------------------+
+     |                             Free Block                             |
+     +-----------+-----------+------------+------------+------------------+
+     | blocknext | blockprev | bucketprev | bucketnext | unused cells ... |
+     +-----------+-----------+------------+------------+------------------+
+
+
+When a block becomes allocated, blockprev and blocknext will be swapped. The
+rest of the cells will be used for data.
+
+
+     +--------------------------------------------------------------------+
+     |                          Allocated Block                           |
+     +-----------+-----------+------------+------------+------------------+
+     | blockprev | blocknext |   data 0   |   data 1   |       ...        |
+     +-----------+-----------+------------+------------+------------------+
+
+
+If blockprev<blocknext, then the block is allocated. The last block will have
+blocknext=mem.alloc.end.
+
+datapos=block+2. If blocknext=0, then datalen=mem.alloc.end-block-2. Otherwise,
+datalen=blocknext-block-2.
+
+Create an initial dummy block so we don't have to check if the previous block is
+valid.
+
+compare a and b and swap so a<=b
+	a b .le     #a=a-b
+.gt:
+	tmp tmp ?+1
+	tmp a   ?+1 #tmp=b-a
+	b   tmp ?+1 #b=a
+	a   b   ?+1 #a=-b
+	tmp tmp ?+1
+	tmp a   ?+1
+	a   a   ?+1
+	a   tmp ?+1
+.le:
+	tmp tmp ?+1
+	tmp b   ?+1
+	a   tmp ?+1 #a=a
+
+
+	na  na  ?+1
+	na  a   ?+1
+	nb  nb  ?+1
+	nb  b   ?+1
+	a   b   .le #a=a-b
+.gt:
+	b   b   ?+1
+	b   ta  ?+1 #b=a
+	a   a   ?+1
+.le:
+	a   tb  ?+1 #a=a or b
+
+If blockprev=block-1, then previous block is free.
+if blocknext[0]!=block, then allocated.
+otherwise
+	blocknext[1]>block
+
+Debug block layout:
+	0: length (including debug data)
+	1: block prev
+	2: bucket prev
+	3: bucket next or allocation length
+	   ...front guard...
+	   ...data       ...
+	   ...rear guard ...
+
+Memory layout after the starting address.
+	 0: 0
+	..: 0
+	63: pointer to first block (66)
+	64: pointer to catch node (65)
+	65: catch block length (-1)
+	66: first block length
+	67: 0
+	68: first block bucket
+
+block next=3+length
+For recall efficiency, store all fields by their negative values.
+If binprev=0, then the block is used.
+When freed, set binprev to bin head-3. This simplifies adding/removing
+blocks and makes sure binprev!=0.
+Place a block into bin n if 2^n<=len<2^(n+1).
+When allocating, pick a block from the smallest n such that len<=2^n.
+Pick the first block available in the bin. If there are 4 or more excess
+cells, create a new block. Otherwise, use the whole block.
+
+get.pot .head
+.nblk .z-1 ?+1
+.binloop:
+	.nblk .head:0 .bindone
+	.head .z-1    .binloop
+.bindone:
+.nblk .z+1 ?+1
+load node length and compare or error
+make catch all bin length 0
+if not power of two, advance by 1 bin
+	.len .z+1 ?+1
+	.head .z-1 ?+1
+	if 0, return -1 for head
+
+TODO
+use negative length
+Zero out block.prev and split fields with data zeroing loop
+Zero from back to front.
+When allocating, block.prev is linked list head. Can simplify removal. Needs to
+be performed before splitting, since a new block will be added.
+If N=0: ops=26
+If N>0: ops=con+4*(N-1)+2
+allocating
+	len+2*guardlen+1
+	set debuglen and randomize guards
+	data=mem+guardlen+1
+freeing
+	mem-guardlen-1
+	check guards and pointers
+	randomize data
+	skip randomizing debuglen, since it will be overwritten by block.next
+mem.debug.guardlen: 3
+mem.debug.status
+	go through each block and run checkblock
+	go through each bucket and check size and links back to root block
+	go through each block and check links back to bucket
+mem.debug.checkblock block
+	check pointers
+	if not last and prev=0, get length and check guards
+mem.debug.setguards  block
+mem.debug.setdata    block
+just count size allocated/freed?
+Create first block as if it's allocated, then free it in mem.init so it's put in
+the correct bucket.
+standardize block vs bucket
+only loop through blocks, not buckets
+check block pointers
+check block+length+3<=-1
+if prev=0
+	check guard hash
+else
+	if prev=bucket, check size
+	check bucket pointers
+	make sure block neighbors are being used
+
+block:
+	0: length = total length including header
+	1: block prev
+	2: bucket prev
+	3: bucket next / data
+
+if length<=1
+	error
+elif length<=3
+	free
+	not in any bucket
+	ignore bucketprev/next fields
+elif bucketprev!=0
+	free
+	in bucket
+else
+	in use
+	datapos=block+3
+	datalen=length-3
+
+mem.debug.set mem0 ref off0 ref mem1 ref off1 ref
+mem.debug.set .blk 2 mem.block.bktnext 2 .z 1 .z 1 #blk.bktnext=0
+mem.debug.set .prv 2 mem.block.bktnext 2 .blk 2 mem.block.bktnext 2 #prv.bktnext=blk.bktnext
+0 ? mem.get .tmp .blk .z+3  #tmp=blk.bktnext
+0 ? mem.set .prv .z+3 .tmp  #prv.bktnext=tmp
 |#
+
+mem.alloc.init:
+	#Call  : mem.alloc.init.z ? mem.alloc.init
+	#Effect: An internal function that initializes the memory allocator for use. Only
+	#runs once.
+	#Setup return.
+	.ret .z   ?+1
+	.z   .z   ?+1
+	#Modify allocation functions so alloc.init only runs once.
+	mem.alloc+2  .off ?+1
+	mem.free+2   .off ?+1
+	mem.debug.status+2 .off ?+1
+	#If we're debugging, make sure the first 1024 cells after the starting address
+	#are 0.
+	mem.debug .z .dbgdone
+.dbgloop:
+	.i .z+1 .dbgdone
+	.p:mem.alloc.start .z ?+4
+	0-1 1 0
+	.p .z-1 .dbgloop
+.dbgdone:
+	#Setup the allocation bins and initial blocks.
+	mem.alloc.start+63 .s63 ?+1
+	mem.alloc.start+64 .s64 ?+1
+	mem.alloc.start+65 .z+1 ?+1
+	mem.alloc.start+66 .s66 ?+1
+	mem.alloc.start+68 .s68 .ret:2
+#Variables.
+	0-1 .z:0 1
+	.off:0-3
+	.i:2049
+	.s63:0-mem.alloc.start-66
+	.s64:0-mem.alloc.start-65
+	.s66:mem.alloc.start+66+1+3
+	.s68:0-mem.alloc.start-63+3
+
+mem.pot:
+	#Setup the stack. 5 instructions.
+	#.tmp  .tmp  ?+1
+	.tmp  .a2   ?+1
+	0     .tmp  ?+1
+	0     .off  ?+1
+	.a2   0     ?+1
+	.a3   0     ?+1
+	#Get n. 10 instructions.
+	.tmp  .tmp  ?+1
+	.tmp  .a2:2 ?+1
+	.p0   .p0   ?+1
+	.p0   .tmp  ?+1
+	.p1   .p1   ?+1
+	.p1   .tmp  ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .p0:0 ?+1
+	.n    .n    ?+1
+	.n    .tmp  ?+1
+	#0 0 ?+1
+	#0 ? print 0-1 .n 0
+	#Compute log2(n). 13 instructions.
+	       .n .pos+32 .lt32
+	.ge32: .n .neg+32 ?+1 .n .pos+48 .lt48
+	.ge48: .n .neg+48 ?+1 .n .pos+56 .lt56
+	.ge56: .n .neg+56 ?+1 .n .pos+60 .lt60
+	.ge60: .n .neg+60 ?+1 .n .pos+62 .lt62
+	.ge62: .n .neg+62 ?+1 .n .pos+63 .lt63
+	.ge63: .n .eq+ 63 ?+1 .tmp .tmp .ret
+	.lt63: .n .eq+ 62 ?+1 .tmp .tmp .ret
+	.lt62: .n .neg+62 ?+1 .n .pos+61 .lt61
+	.ge61: .n .eq+ 61 ?+1 .tmp .tmp .ret
+	.lt61: .n .eq+ 60 ?+1 .tmp .tmp .ret
+	.lt60: .n .neg+60 ?+1 .n .pos+58 .lt58
+	.ge58: .n .neg+58 ?+1 .n .pos+59 .lt59
+	.ge59: .n .eq+ 59 ?+1 .tmp .tmp .ret
+	.lt59: .n .eq+ 58 ?+1 .tmp .tmp .ret
+	.lt58: .n .neg+58 ?+1 .n .pos+57 .lt57
+	.ge57: .n .eq+ 57 ?+1 .tmp .tmp .ret
+	.lt57: .n .eq+ 56 ?+1 .tmp .tmp .ret
+	.lt56: .n .neg+56 ?+1 .n .pos+52 .lt52
+	.ge52: .n .neg+52 ?+1 .n .pos+54 .lt54
+	.ge54: .n .neg+54 ?+1 .n .pos+55 .lt55
+	.ge55: .n .eq+ 55 ?+1 .tmp .tmp .ret
+	.lt55: .n .eq+ 54 ?+1 .tmp .tmp .ret
+	.lt54: .n .neg+54 ?+1 .n .pos+53 .lt53
+	.ge53: .n .eq+ 53 ?+1 .tmp .tmp .ret
+	.lt53: .n .eq+ 52 ?+1 .tmp .tmp .ret
+	.lt52: .n .neg+52 ?+1 .n .pos+50 .lt50
+	.ge50: .n .neg+50 ?+1 .n .pos+51 .lt51
+	.ge51: .n .eq+ 51 ?+1 .tmp .tmp .ret
+	.lt51: .n .eq+ 50 ?+1 .tmp .tmp .ret
+	.lt50: .n .neg+50 ?+1 .n .pos+49 .lt49
+	.ge49: .n .eq+ 49 ?+1 .tmp .tmp .ret
+	.lt49: .n .eq+ 48 ?+1 .tmp .tmp .ret
+	.lt48: .n .neg+48 ?+1 .n .pos+40 .lt40
+	.ge40: .n .neg+40 ?+1 .n .pos+44 .lt44
+	.ge44: .n .neg+44 ?+1 .n .pos+46 .lt46
+	.ge46: .n .neg+46 ?+1 .n .pos+47 .lt47
+	.ge47: .n .eq+ 47 ?+1 .tmp .tmp .ret
+	.lt47: .n .eq+ 46 ?+1 .tmp .tmp .ret
+	.lt46: .n .neg+46 ?+1 .n .pos+45 .lt45
+	.ge45: .n .eq+ 45 ?+1 .tmp .tmp .ret
+	.lt45: .n .eq+ 44 ?+1 .tmp .tmp .ret
+	.lt44: .n .neg+44 ?+1 .n .pos+42 .lt42
+	.ge42: .n .neg+42 ?+1 .n .pos+43 .lt43
+	.ge43: .n .eq+ 43 ?+1 .tmp .tmp .ret
+	.lt43: .n .eq+ 42 ?+1 .tmp .tmp .ret
+	.lt42: .n .neg+42 ?+1 .n .pos+41 .lt41
+	.ge41: .n .eq+ 41 ?+1 .tmp .tmp .ret
+	.lt41: .n .eq+ 40 ?+1 .tmp .tmp .ret
+	.lt40: .n .neg+40 ?+1 .n .pos+36 .lt36
+	.ge36: .n .neg+36 ?+1 .n .pos+38 .lt38
+	.ge38: .n .neg+38 ?+1 .n .pos+39 .lt39
+	.ge39: .n .eq+ 39 ?+1 .tmp .tmp .ret
+	.lt39: .n .eq+ 38 ?+1 .tmp .tmp .ret
+	.lt38: .n .neg+38 ?+1 .n .pos+37 .lt37
+	.ge37: .n .eq+ 37 ?+1 .tmp .tmp .ret
+	.lt37: .n .eq+ 36 ?+1 .tmp .tmp .ret
+	.lt36: .n .neg+36 ?+1 .n .pos+34 .lt34
+	.ge34: .n .neg+34 ?+1 .n .pos+35 .lt35
+	.ge35: .n .eq+ 35 ?+1 .tmp .tmp .ret
+	.lt35: .n .eq+ 34 ?+1 .tmp .tmp .ret
+	.lt34: .n .neg+34 ?+1 .n .pos+33 .lt33
+	.ge33: .n .eq+ 33 ?+1 .tmp .tmp .ret
+	.lt33: .n .eq+ 32 ?+1 .tmp .tmp .ret
+	.lt32: .n .neg+32 ?+1 .n .pos+16 .lt16
+	.ge16: .n .neg+16 ?+1 .n .pos+24 .lt24
+	.ge24: .n .neg+24 ?+1 .n .pos+28 .lt28
+	.ge28: .n .neg+28 ?+1 .n .pos+30 .lt30
+	.ge30: .n .neg+30 ?+1 .n .pos+31 .lt31
+	.ge31: .n .eq+ 31 ?+1 .tmp .tmp .ret
+	.lt31: .n .eq+ 30 ?+1 .tmp .tmp .ret
+	.lt30: .n .neg+30 ?+1 .n .pos+29 .lt29
+	.ge29: .n .eq+ 29 ?+1 .tmp .tmp .ret
+	.lt29: .n .eq+ 28 ?+1 .tmp .tmp .ret
+	.lt28: .n .neg+28 ?+1 .n .pos+26 .lt26
+	.ge26: .n .neg+26 ?+1 .n .pos+27 .lt27
+	.ge27: .n .eq+ 27 ?+1 .tmp .tmp .ret
+	.lt27: .n .eq+ 26 ?+1 .tmp .tmp .ret
+	.lt26: .n .neg+26 ?+1 .n .pos+25 .lt25
+	.ge25: .n .eq+ 25 ?+1 .tmp .tmp .ret
+	.lt25: .n .eq+ 24 ?+1 .tmp .tmp .ret
+	.lt24: .n .neg+24 ?+1 .n .pos+20 .lt20
+	.ge20: .n .neg+20 ?+1 .n .pos+22 .lt22
+	.ge22: .n .neg+22 ?+1 .n .pos+23 .lt23
+	.ge23: .n .eq+ 23 ?+1 .tmp .tmp .ret
+	.lt23: .n .eq+ 22 ?+1 .tmp .tmp .ret
+	.lt22: .n .neg+22 ?+1 .n .pos+21 .lt21
+	.ge21: .n .eq+ 21 ?+1 .tmp .tmp .ret
+	.lt21: .n .eq+ 20 ?+1 .tmp .tmp .ret
+	.lt20: .n .neg+20 ?+1 .n .pos+18 .lt18
+	.ge18: .n .neg+18 ?+1 .n .pos+19 .lt19
+	.ge19: .n .eq+ 19 ?+1 .tmp .tmp .ret
+	.lt19: .n .eq+ 18 ?+1 .tmp .tmp .ret
+	.lt18: .n .neg+18 ?+1 .n .pos+17 .lt17
+	.ge17: .n .eq+ 17 ?+1 .tmp .tmp .ret
+	.lt17: .n .eq+ 16 ?+1 .tmp .tmp .ret
+	.lt16: .n .neg+16 ?+1 .n .pos+ 8 .lt08
+	.ge08: .n .neg+ 8 ?+1 .n .pos+12 .lt12
+	.ge12: .n .neg+12 ?+1 .n .pos+14 .lt14
+	.ge14: .n .neg+14 ?+1 .n .pos+15 .lt15
+	.ge15: .n .eq+ 15 ?+1 .tmp .tmp .ret
+	.lt15: .n .eq+ 14 ?+1 .tmp .tmp .ret
+	.lt14: .n .neg+14 ?+1 .n .pos+13 .lt13
+	.ge13: .n .eq+ 13 ?+1 .tmp .tmp .ret
+	.lt13: .n .eq+ 12 ?+1 .tmp .tmp .ret
+	.lt12: .n .neg+12 ?+1 .n .pos+10 .lt10
+	.ge10: .n .neg+10 ?+1 .n .pos+11 .lt11
+	.ge11: .n .eq+ 11 ?+1 .tmp .tmp .ret
+	.lt11: .n .eq+ 10 ?+1 .tmp .tmp .ret
+	.lt10: .n .neg+10 ?+1 .n .pos+ 9 .lt09
+	.ge09: .n .eq+  9 ?+1 .tmp .tmp .ret
+	.lt09: .n .eq+  8 ?+1 .tmp .tmp .ret
+	.lt08: .n .neg+ 8 ?+1 .n .pos+ 4 .lt04
+	.ge04: .n .neg+ 4 ?+1 .n .pos+ 6 .lt06
+	.ge06: .n .neg+ 6 ?+1 .n .pos+ 7 .lt07
+	.ge07: .n .eq+  7 ?+1 .tmp .tmp .ret
+	.lt07: .n .eq+  6 ?+1 .tmp .tmp .ret
+	.lt06: .n .neg+ 6 ?+1 .n .pos+ 5 .lt05
+	.ge05: .n .eq+  5 ?+1 .tmp .tmp .ret
+	.lt05: .n .eq+  4 ?+1 .tmp .tmp .ret
+	.lt04: .n .neg+ 4 ?+1 .n .pos+ 2 .lt02
+	.ge02: .n .neg+ 2 ?+1 .n .pos+ 3 .lt03
+	.ge03: .n .eq+  3 ?+1 .tmp .tmp .ret
+	.lt03: .n .eq+  2 ?+1 .tmp .tmp .ret
+	.lt02: .n .neg+ 2 ?+1 .n .pos+ 1 .lt01
+	.ge01: .n .eq+  1 ?+1 .tmp .tmp .ret
+	.lt01: .n .eq+  0 ?+1 .tmp .tmp .ret
+.ret:
+	#Return. 2 instructions.
+	.p1:0 .n ?+1
+	#0 0 ?+1
+	#0 ? print 32 0-1 .n 10 0
+	0 0 .a3:3
+#Variables
+.tmp:0
+.n:0
+.off:2
+.pos:
+	0x0000000000000000 0x0000000000000001 0x0000000000000003 0x0000000000000007 0x000000000000000f 0x000000000000001f 0x000000000000003f 0x000000000000007f
+	0x00000000000000ff 0x00000000000001ff 0x00000000000003ff 0x00000000000007ff 0x0000000000000fff 0x0000000000001fff 0x0000000000003fff 0x0000000000007fff
+	0x000000000000ffff 0x000000000001ffff 0x000000000003ffff 0x000000000007ffff 0x00000000000fffff 0x00000000001fffff 0x00000000003fffff 0x00000000007fffff
+	0x0000000000ffffff 0x0000000001ffffff 0x0000000003ffffff 0x0000000007ffffff 0x000000000fffffff 0x000000001fffffff 0x000000003fffffff 0x000000007fffffff
+	0x00000000ffffffff 0x00000001ffffffff 0x00000003ffffffff 0x00000007ffffffff 0x0000000fffffffff 0x0000001fffffffff 0x0000003fffffffff 0x0000007fffffffff
+	0x000000ffffffffff 0x000001ffffffffff 0x000003ffffffffff 0x000007ffffffffff 0x00000fffffffffff 0x00001fffffffffff 0x00003fffffffffff 0x00007fffffffffff
+	0x0000ffffffffffff 0x0001ffffffffffff 0x0003ffffffffffff 0x0007ffffffffffff 0x000fffffffffffff 0x001fffffffffffff 0x003fffffffffffff 0x007fffffffffffff
+	0x00ffffffffffffff 0x01ffffffffffffff 0x03ffffffffffffff 0x07ffffffffffffff 0x0fffffffffffffff 0x1fffffffffffffff 0x3fffffffffffffff 0x7fffffffffffffff
+.neg:
+	0x0000000000000000 0xffffffffffffffff 0xfffffffffffffffd 0xfffffffffffffff9 0xfffffffffffffff1 0xffffffffffffffe1 0xffffffffffffffc1 0xffffffffffffff81
+	0xffffffffffffff01 0xfffffffffffffe01 0xfffffffffffffc01 0xfffffffffffff801 0xfffffffffffff001 0xffffffffffffe001 0xffffffffffffc001 0xffffffffffff8001
+	0xffffffffffff0001 0xfffffffffffe0001 0xfffffffffffc0001 0xfffffffffff80001 0xfffffffffff00001 0xffffffffffe00001 0xffffffffffc00001 0xffffffffff800001
+	0xffffffffff000001 0xfffffffffe000001 0xfffffffffc000001 0xfffffffff8000001 0xfffffffff0000001 0xffffffffe0000001 0xffffffffc0000001 0xffffffff80000001
+	0xffffffff00000001 0xfffffffe00000001 0xfffffffc00000001 0xfffffff800000001 0xfffffff000000001 0xffffffe000000001 0xffffffc000000001 0xffffff8000000001
+	0xffffff0000000001 0xfffffe0000000001 0xfffffc0000000001 0xfffff80000000001 0xfffff00000000001 0xffffe00000000001 0xffffc00000000001 0xffff800000000001
+	0xffff000000000001 0xfffe000000000001 0xfffc000000000001 0xfff8000000000001 0xfff0000000000001 0xffe0000000000001 0xffc0000000000001 0xff80000000000001
+	0xff00000000000001 0xfe00000000000001 0xfc00000000000001 0xf800000000000001 0xf000000000000001 0xe000000000000001 0xc000000000000001 0x8000000000000001
+.eq:
+	0xffffffffffffffff-mem.alloc.start 0xfffffffffffffffe-mem.alloc.start 0xfffffffffffffff7-mem.alloc.start 0xfffffffffffffff6-mem.alloc.start
+	0xffffffffffffffdd-mem.alloc.start 0xffffffffffffffdc-mem.alloc.start 0xffffffffffffff7b-mem.alloc.start 0xffffffffffffff7a-mem.alloc.start
+	0xfffffffffffffdf9-mem.alloc.start 0xfffffffffffffdf8-mem.alloc.start 0xfffffffffffff7f7-mem.alloc.start 0xfffffffffffff7f6-mem.alloc.start
+	0xffffffffffffdff5-mem.alloc.start 0xffffffffffffdff4-mem.alloc.start 0xffffffffffff7ff3-mem.alloc.start 0xffffffffffff7ff2-mem.alloc.start
+	0xfffffffffffdfff1-mem.alloc.start 0xfffffffffffdfff0-mem.alloc.start 0xfffffffffff7ffef-mem.alloc.start 0xfffffffffff7ffee-mem.alloc.start
+	0xffffffffffdfffed-mem.alloc.start 0xffffffffffdfffec-mem.alloc.start 0xffffffffff7fffeb-mem.alloc.start 0xffffffffff7fffea-mem.alloc.start
+	0xfffffffffdffffe9-mem.alloc.start 0xfffffffffdffffe8-mem.alloc.start 0xfffffffff7ffffe7-mem.alloc.start 0xfffffffff7ffffe6-mem.alloc.start
+	0xffffffffdfffffe5-mem.alloc.start 0xffffffffdfffffe4-mem.alloc.start 0xffffffff7fffffe3-mem.alloc.start 0xffffffff7fffffe2-mem.alloc.start
+	0xfffffffdffffffe1-mem.alloc.start 0xfffffffdffffffe0-mem.alloc.start 0xfffffff7ffffffdf-mem.alloc.start 0xfffffff7ffffffde-mem.alloc.start
+	0xffffffdfffffffdd-mem.alloc.start 0xffffffdfffffffdc-mem.alloc.start 0xffffff7fffffffdb-mem.alloc.start 0xffffff7fffffffda-mem.alloc.start
+	0xfffffdffffffffd9-mem.alloc.start 0xfffffdffffffffd8-mem.alloc.start 0xfffff7ffffffffd7-mem.alloc.start 0xfffff7ffffffffd6-mem.alloc.start
+	0xffffdfffffffffd5-mem.alloc.start 0xffffdfffffffffd4-mem.alloc.start 0xffff7fffffffffd3-mem.alloc.start 0xffff7fffffffffd2-mem.alloc.start
+	0xfffdffffffffffd1-mem.alloc.start 0xfffdffffffffffd0-mem.alloc.start 0xfff7ffffffffffcf-mem.alloc.start 0xfff7ffffffffffce-mem.alloc.start
+	0xffdfffffffffffcd-mem.alloc.start 0xffdfffffffffffcc-mem.alloc.start 0xff7fffffffffffcb-mem.alloc.start 0xff7fffffffffffca-mem.alloc.start
+	0xfdffffffffffffc9-mem.alloc.start 0xfdffffffffffffc8-mem.alloc.start 0xf7ffffffffffffc7-mem.alloc.start 0xf7ffffffffffffc6-mem.alloc.start
+	0xdfffffffffffffc5-mem.alloc.start 0xdfffffffffffffc4-mem.alloc.start 0x7fffffffffffffc3-mem.alloc.start 0x7fffffffffffffc2-mem.alloc.start
 
 mem.alloc:
 	#Call  : 0 ? mem.alloc mem len
 	#Effect: Sets [mem] to a memory address with [len] free cells. Cells are
 	#initialized to 0.
-#	.len .z .ret
-#.ret:
-#	0 0 .a4:4
-.guards:4
-.end:mem.alloc.start
+	.tmp0 .tmp0 ?+1
+	mem.alloc.init.z ? mem.alloc.init
+	.tmp0 .a2   ?+1
+	0     .tmp0 ?+1
+	0     .z+2  ?+1
+	.a2   0     ?+1
+	.a3   0     ?+1
+	.a4   0     ?+1
+	0     0     ?+1 ###################can remove
+	.nblk .nblk ?+1
+	#Get mem.
+	.r0   .a2:2 ?+1
+	.r1   .r0   ?+1
+	.r2   .r0   ?+1
+	.tmp0 .tmp0 ?+1
+	.tmp0 .r1   ?+1
+	.r0   .r0   ?+1
+	.r0   .tmp0 ?+1
+	#Get [len]. If [len]=0, set [mem]=0 and return.
+	.tmp0 .tmp0 ?+1
+	.tmp0 .a3:3 ?+1
+	.p0   .p0   ?+1
+	.p0   .tmp0 ?+1
+	.nlen .nlen ?+1
+	.nlen .p0:0 ?+1
+	.nlen .z    .ret
+	#.len  .len  ?+1
+	.len  .nlen ?+1
+	#Search through the bins until we find a block such that len<=blocklen.
+	.len  .z+1  ?+1
+	.p1   .p1   ?+1
+	.p1   .nst  ?+1
+.loop:
+	.nblk .p1:0 ?+1    #bin head
+	.nblk .z    .next
+	.blk  .blk  ?+1
+	.blk  .nblk ?+1
+	.nbln .nbln ?+1
+	.nbln .blk:0 ?+1
+	.slen .slen ?+1
+	.slen .nbln ?+1    #blocklen
+	.slen .len  ?+4    #blocklen<=len-1
+	.len  .z-1  .found
+	.nblk .nblk ?+1
+.next:
+	.p1   .z-1  .loop
+.found:
+	#If this is the catch-all bin, abort.
+	.p1   .ctch ?+4
+	0-1 2 0
+	#Align block pointers with the current block.
+	.b0   .blk  ?+1
+	#.b1   .b0   ?+1
+	#.b2   .b0   ?+1
+	.b3   .b0   ?+1
+	.b4   .b0   ?+1
+	.b5   .b0   ?+1
+	.b0   .b0   ?+1
+	.b0   .nblk ?+1
+	#[tmp1]=blocklen-len+1. If [tmp1]<=4, use the whole block. Otherwise split. Split
+	#block will have length [tmp1]-4 and address block+len+3.
+	#.tmp1 .z+4  ?+4
+	#.len  .z-4  ?+4
+	#.tmp1 .tmp1 ?+1 #use data zeroing to clear out split block
+	.slen .z+4  .nosplit
+	.nlen .z+3  ?+1
+	.slt  .slt  ?+1
+	.slt  .nblk ?+1
+	.slt  .nlen ?+1
+	.nslt .nslt ?+1
+	.nslt .slt  ?+1
+	.s0   .slt  ?+1
+	.s1   .s0   ?+1
+	.s2   .s0   ?+1
+	.s3   .s0   ?+1
+	.s4   .s0   ?+1
+	.s5   .s0   ?+1
+	.s6   .s0   ?+1
+	.s7   .s0   ?+1
+	.s8   .s0   ?+1
+	.s9   .s0   ?+1
+	.sa   .s0   ?+1
+	.sb   .s0   ?+1
+	.s0   .s0   ?+1
+	.s0   .nslt ?+1
+	#
+	.tmp2 .tmp2 ?+1
+	.tmp2 .slen ?+1
+	.tmp3 .tmp3 ?+1
+	.tmp3 .tmp2 ?+1
+	0 ? mem.pot .tmp3 #-prev+3
+	#Load list head
+	.hd0 .hd0 ?+1
+	.hd0 .tmp3 ?+1
+	.tmp3 .z-3 ?+1
+	.tmp2 .tmp2 ?+1
+	.tmp2 .tmp3 ?+1
+	.tmp4 .tmp4 ?+1
+	.tmp4 .hd0:0 ?+1 #-next
+	.tmp5 .tmp5 ?+1
+	.tmp5 .tmp4 ?+1  #next
+	#Set split.len
+	.tmp0 .tmp0 ?+1
+	.tmp0 .slen ?+1
+	.s0:0 .s1:0 ?+1
+	.s2:0 .tmp0 ?+1
+	#Set split.blockprev
+	.s3:1 .s4:1 ?+1
+	.s5:1 .nblk ?+1
+	#Set split.prev
+	.s6:2 .s7:2 ?+1
+	.s8:2 .tmp3 ?+1
+	#Set split.next
+	.s9:3 .sa:3 ?+1
+	.sb:3 .tmp4 ?+1
+	#Subtract the split length from the parent block.
+	.slen .z-3  ?+1
+	.b0:0 .slen ?+1
+	#
+	.t0   .tmp3 ?+1
+	.t1   .tmp4 ?+1
+	#prev.next=split
+	.t0   .z-3  ?+1
+	.tmp5 .slt  ?+1
+	.t0:0 .tmp5 ?+1
+	.t0   .t0   ?+1
+	#next.prev=split
+	.t1   .z    .nonext0
+	.t1   .z-2  ?+1
+	.tmp2 .slt  ?+1
+	.t1:0 .tmp2 ?+1
+	.t1   .t1   ?+1
+.nonext0:
+	#Set binnext.binprev to the split block.
+	.x0   .nblk ?+1
+	.x0   .nbln ?+1
+	.x0   .z-4  ?+1
+	.x0   .z    .nosplit
+	.x0:0 .nlen ?+1
+	.x0   .x0   ?+1
+.nosplit:
+	#Remove from bin list. We already know blk.prev.next=blk.next.prev=blk.
+	#Get blk.prev and set it to 0.
+	.tmp1 .tmp1 ?+1
+	.tmp1 .b3:2 ?+1
+	.n1   .tmp1 ?+1
+	.b4:2 .n1   ?+1
+	#Get blk.next
+	.tmp2 .tmp2 ?+1
+	.tmp2 .b5:3 ?+1
+	.n2   .tmp2 ?+1
+	#Set blk.prev.next
+	.n1   .z-3  ?+1
+	.tmp2 .nblk ?+1
+	.n1:0 .tmp2 ?+1
+	.n1   .n1   ?+1
+	#Set blk.next.prev
+	.n2   .z    .nonext1
+	.n2   .z-2  ?+1
+	.tmp1 .nblk ?+1
+	.n2:0 .tmp1 ?+1
+	.n2   .n2   ?+1
+.nonext1:
+	#Shift the block address to the start of the data.
+	.nblk .z+3  ?+1
+	#Zero data.
+	.b6   .b6   ?+1
+	.b6   .nblk ?+1
+	.b7   .b7   ?+1
+	.b7   .nblk ?+1
+.zloop:
+	.b6:0 .b7:0 ?+1
+	.len  .z+1  .ret
+	.b6   .z-1  ?+1
+	.b7   .z-1  .zloop
+.ret:
+	#Set [mem] and return.
+	.r0:0 .r1:0 ?+1
+	.r2:0 .nblk ?+1
+	0     0     .a4:4
+#Variables
+0-4 0-3 0-2 0-1 .z:0 1 2 3 4
+.tmp0:0
+.tmp1:0
+.tmp2:0
+.tmp3:0
+.tmp4:0
+.tmp5:0
+.nblk:0
+.len:0
+.nlen:0
+.slt:0
+.nslt:0
+.slen:0
+.nbln:0
+.nst:0-mem.alloc.start
+.ctch:mem.alloc.start+63
 
 mem.free:
 	#Call  : 0 ? mem.free mem
 	#Effect: Frees the memory block at [mem] that was allocated by mem.alloc.
-	0-1 0 0
-
-mem.alloc.status:
-	#Call  : 0 ? mem.alloc.status
-	#Effect: Prints what memory is allocated.
 	.ret .ret ?+1
+	mem.alloc.init.z ? mem.alloc.init
 	.ret 0    ?+1
-	.ret .z-2 ?+1
+	.ret .z-3 ?+1
+	0 0 ?+1
+	0 ? print 102 114 101 101 10 0
 	0 0 .ret:0
 #Variables
+0-3 0-2 0-1 .z:0
+
+mem.debug.status:
+	#Call  : 0 ? mem.alloc.status
+	#Effect: Prints what memory is allocated.
+	.ret   .ret   ?+1
+	mem.alloc.init.z ? mem.alloc.init
+	.ret   0      ?+1
+	.ret   .z-2   ?+1
+	mem.debug .z .nodebug
+	0 0 ?+1
+	0 ? print 77 101 109 111 114 121 32 115 116 97 116 117 115 58 10 0
+	#Reset counters.
+	.alen  .alen  ?+1
+	.acnt  .acnt  ?+1
+	.flen  .flen  ?+1
+	.fcnt  .fcnt  ?+1
+	#Reset block pointers.
+	.blk   .blk0  ?+1
+	.prv   .blk0  ?+1
+.loop:
+	.blk   .z     .done
+	.blk   .z+1   ?+1
+	0 ? mem.debug.checkblock .blk
+	.tmp   .tmp   ?+1
+	.tmp   .blk:0 ?+1
+	.tmp   .z+3   ?+1
+	.prv:1 .z     ?+7
+	.flen  .tmp   ?+1
+	.fcnt  .z-1   ?+7
+	.alen  .tmp   ?+1
+	.acnt  .z-1   ?+1
+	.blk   .tmp   ?+1
+	.prv   .tmp   ?+1
+	.blk   .z-1   .loop
+.done:
+	#Print status.
+	0 ? print 0-1 .alen 32 99 101 108 108 115 32 97 108 108 111 99 97 116 101 100 32 97 99 114 111 115 115 32 0-1 .acnt 32 98 108 111 99 107 115 10 0
+	0 ? print 0-1 .flen 32 99 101 108 108 115 32 102 114 101 101 32 97 99 114 111 115 115 32 0-1 .fcnt 32 98 108 111 99 107 115 10 0
+.nodebug:
+	0 0 .ret:0
+#Variables
+0-2 0-1 .z:0 1 2 3
+.tmp:0
+.blk0:0-mem.alloc.start-66-1
+.alen:0
+.acnt:0
+.flen:0
+.fcnt:0
+
+mem.debug.hash:
+	#Call  : 0 ? mem.debug.hash ret val
+	#Effect: Hashes [val] and returns [ret].
+	#Setup the stack.
+	.tmp  .tmp  ?+1
+	.tmp  .a2   ?+1
+	.tmp  .z-2  ?+1
+	0     .tmp  ?+1
+	.a2   0     ?+1
+	.a3   0     ?+1
+	.a4   0     ?+1
+	#Get [ret]
+	.p0   .a2:2 ?+1
+	.p1   .p0   ?+1
+	.p2   .p0   ?+1
+	.tmp  .tmp  ?+1
+	.tmp  .p1   ?+1
+	.p0   .p0   ?+1
+	.p0   .tmp  ?+1
+	#Get [val]
+	.tmp  .tmp  ?+1
+	.tmp  .a3:3 ?+1
+	.p3   .p3   ?+1
+	.p3   .tmp  ?+1
+	.hash .hash ?+1
+	.hash .p3:0 ?+1
+	#Hash [val].
+	.tmp  .tmp  ?+1
+	.i    .i0   ?+1
+.loop:
+	.tmp  .hash ?+1 .hash .tmp ?+4 .hash .z-1 ?+4 .hash .con+0 ?+1
+	.tmp  .hash ?+1 .hash .tmp ?+4 .hash .z-1 ?+4 .hash .con+1 ?+1
+	.tmp  .hash ?+1 .hash .tmp ?+4 .hash .z-1 ?+4 .hash .con+2 ?+1
+	.tmp  .hash ?+1 .hash .tmp ?+4 .hash .z-1 ?+4 .hash .con+3 ?+1
+	.tmp  .hash ?+1 .hash .tmp ?+4 .hash .z-1 ?+4 .hash .con+4 ?+1
+	.i    .z-2  .loop
+	#Set [ret]
+	.p0:0 .p1:0 ?+1
+	.p2:0 .hash ?+1
+	0     0     .a4:4
 0-2 0-1 .z:0
+.i:1
+.i0:18
+.hash:0
+.tmp:0
+.con: 0x0bd77c8087d5b45b 0xd07e76ffade040aa 0x8089c13e7820b893
+      0xd543edcbedba3301 0xb868ffad0d4c6ebd
+
+mem.debug.checkblock:
+	#Call  : 0 ? mem.debug.checkblock block
+	#Effect: Checks header and guards for an allocation block.
+	#Checks:
+	#1. start+66<=block<=-5.
+	#2. block+length+3<=-1.
+	#3. bucketprev>=start-3. If start-3<=bucketprev<start+63, check length.
+	#4. If bucketprev!=0, check bucketprev.next=block. Else, check guards.
+	#5. Check bucketnext.prev=block.
+	#6. Check blockprev.blocknext=block. If bucketprev!=0, blockprev.bucketprev!=0.
+	#7. Check blocknext.blockprev=block. If bucketprev!=0, blocknext.bucketprev!=0.
+	.tmp   .tmp   ?+1
+	.tmp   .ar2   ?+1
+	0      .tmp   ?+1
+	0      .z+2   ?+1
+	.ar2   0      ?+1
+	.ar3   0      ?+1
+	#Get block
+	.tmp   .tmp   ?+1
+	.tmp   .ar2:2 ?+1
+	.p0    .p0    ?+1
+	.p0    .tmp   ?+1
+	.nblk  .nblk  ?+1
+	.nblk  .p0:0  ?+1
+	.blk   .blk   ?+1
+	.blk   .nblk  ?+1
+	0 0 ?+1
+	0 ? print 99 104 101 99 107 32 98 108 111 99 107 32 0-1 .blk 10 0
+	#1. start+66<=block<=-5.
+	0 0 .ar3:3
+#Variables
+.z:0 1 2
+.tmp:0
+.blk:0
+.nblk:0
+
+mem.c.guard0: 0x123456789abcdef1
 
 mem.alloc.start:
 #The end of the universe and the start of unused memory. Nothing should come

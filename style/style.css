@@ -220,15 +220,15 @@ button:hover,select:hover
 	stroke-linecap:round;
 	fill:#eeeeee;
 }
-.diagram text       {stroke-width:0;/*fill:#8080ff;*/}
-.diagram .bgfill    {fill:#444444;}
-.diagram .bgstroke  {stroke:#444444;}
-.diagram .fgfill    {fill:#eeeeee;}
-.diagram .fgstroke  {stroke:#eeeeee;}
-.diagram .highfill  {fill:#6666ff;}
+.diagram text        {stroke-width:0;/*fill:#8080ff;*/}
+.diagram .bgfill     {fill:#444444;}
+.diagram .bgstroke   {stroke:#444444;}
+.diagram .fgfill     {fill:#eeeeee;}
+.diagram .fgstroke   {stroke:#eeeeee;}
+.diagram .highfill   {fill:#6666ff;}
 .diagram .highstroke {stroke:#6666ff;}
-.diagram .dimstroke {stroke:#666666;}
-.diagram .dimfill   {fill:#666666;}
+.diagram .dimstroke  {stroke:#666666;}
+.diagram .dimfill    {fill:#666666;}
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header/Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 #header, #footer
@@ -250,6 +250,10 @@ button:hover,select:hover
 	margin-top:-0.9rem;
 	margin-bottom:3.1rem;
 }
-#footer b {display:none;}
+#footer b
+{
+	display:none;
+	user-select:none
+}
 /*#footer:first-line {font-style:italic;}*/
 
