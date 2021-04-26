@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Unsigned Integer Operations - v3.02
+Unsigned Integer Operations - v3.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -22,14 +22,14 @@ set: 24
 neg: 25
 add: 30
 sub: 31
-mul: 869
+mul: 878
 div: 911
 shl: 83
 shr: 131
 not: 26
-and: 676
- or: 676
-xor: 676
+and: 675
+ or: 675
+xor: 675
 
 --------------------------------------------------------------------------------
 Index
@@ -54,10 +54,34 @@ uint.or  ret a b
 uint.xor ret a b
 
 --------------------------------------------------------------------------------
+Version History
+
+1.00
+     Initial version. Used uint.cmp, mem.get, and mem.set for proof of concept.
+     Functions take tens of thousands of instructions.
+2.00
+     Unrolled functions so they don't use mem.get and mem.set.
+     Functions take thousands of instructions.
+3.00
+     Optimized functions so they are all under 1000 instructions.
+3.01
+     Optimized uint.and, or, and xor so the final value is stored in [a]. This
+     removes the need for a temporary storage variable.
+     Cleaned up uint.cmp so its branching is more straight forward.
+3.02
+     Optimized uint.set and uint.add to remove 1 instruction.
+3.03
+     Fixed an error in uint.mul when carrying from low to high. Removed need to
+     offset [b] by 1 to check for carrying.
+     Updated formatting for uint.cmp.
+     Changed uint.div to abort with 0xd0 when dividing by 0.
+     Optimized uint.and/or/xor by removing 1 loop check.
+
+--------------------------------------------------------------------------------
 TODO
 
+Optimize uint.and/or/xor to not use offset by 1 to check carrying.
 Optimize uint.mul if high=0, and uint.div if quot=0. Add tests.
-Test uint.mul for correctness for all inputs, mod 256.
 |#
 
 #--------------------------------------------------------------------------------
@@ -69,48 +93,48 @@ uint.cmp:
 	#     if [a]<[b]: goto lt
 	#     if [a]=[b]: goto eq
 	#     if [a]>[b]: goto gt
-	.z  .a2   ?+1
-	0   .z    ?+1
-	0   .z+2  ?+1
-	.a2 0     ?+1
-	.a3 0     ?+1
-	.a4 0     ?+1
-	.a5 0     ?+1
-	.a6 0     ?+1
-	0   0     ?+1
+	.z      .arg2   ?+1
+	0       .z      ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	.arg6   0       ?+1
+	0       0       ?+1
 	#get [a]
-	.z  .z    ?+1
-	.z  .a2:2 ?+1
-	.p0 .p0   ?+1
-	.p0 .z    ?+1
-	.z  .z    ?+1
-	.z  .p0:0 ?+1
-	.a  .a    ?+1
-	.a  .z    ?+1
+	.z      .z      ?+1
+	.z      .arg2:2 ?+1
+	.p0     .p0     ?+1
+	.p0     .z      ?+1
+	.z      .z      ?+1
+	.z      .p0:0   ?+1
+	.a      .a      ?+1
+	.a      .z      ?+1
 	#get [b]
-	.z  .z    ?+1
-	.z  .a3:3 ?+1
-	.b  .b    ?+1
-	.b  .z    ?+1
+	.z      .z      ?+1
+	.z      .arg3:3 ?+1
+	.b      .b      ?+1
+	.b      .z      ?+1
 	#[a]-[b]
-	.z  .z    ?+1
-	.a  .b:0  .le
+	.z      .z      ?+1
+	.a      .b:0    .le
 	#[a]>[b]
-	.z  .a6:6 .ret
+	.z      .arg6:6 .ret
 .le:
-	.a  .z    .eq
+	.a      .z      .eq
 	#[a]<[b]
-	.z  .a4:4 .ret
+	.z      .arg4:4 .ret
 .eq:
 	#[a]=[b]
-	.z  .a5:5 .ret
+	.z      .arg5:5 .ret
 .ret:
-	.r  .r    ?+1
-	.r  .z    ?+1
-	.z  .z    .r:0
-#Variables
-.a:0
-.z:0 1 2
+	.r0     .r0     ?+1
+	.r0     .z      ?+1
+	.z      .z      .r0:0
+	#Variables
+	.a:0
+	.z:0 1 2
 
 #--------------------------------------------------------------------------------
 #Integer Arithmetic
@@ -279,99 +303,94 @@ uint.mul:
 	#     [high]=([a]*[b])/2^64
 	#     [low] =([a]*[b])%2^64
 	#Setup stack pointer.
-	.tmp  .tmp  ?+1
-	.tmp  .a2   ?+1
-	0     .tmp  ?+1
-	0     .z+2  ?+1
-	.a2   0     ?+1
-	.a3   0     ?+1
-	.a4   0     ?+1
-	.a5   0     ?+1
-	.a6   0     ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	.arg6   0       ?+1
 	#Get high.
-	.tmp  .tmp  ?+1
-	.tmp  .a2:2 ?+1
-	.r0   .r0   ?+1
-	.r0   .tmp  ?+1
-	.r1   .r1   ?+1
-	.r1   .tmp  ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.h0     .h0     ?+1
+	.h0     .tmp    ?+1
+	.h1     .h1     ?+1
+	.h1     .tmp    ?+1
 	#Get low.
-	.tmp  .tmp  ?+1
-	.tmp  .a3:3 ?+1
-	.r2   .r2   ?+1
-	.r2   .tmp  ?+1
-	.r3   .r3   ?+1
-	.r3   .tmp  ?+1
-	#Get [a]. Use -[a] for adding to [rl].
-	.tmp  .tmp  ?+1
-	.tmp  .a4:4 ?+1
-	.p0   .p0   ?+1
-	.p0   .tmp  ?+1
-	.a    .a    ?+1
-	.a    .p0:0 ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.l0     .l0     ?+1
+	.l0     .tmp    ?+1
+	.l1     .l1     ?+1
+	.l1     .tmp    ?+1
+	#Get -[a]. Use -[a] for adding to [lval].
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.a0     .a0     ?+1
+	.a0     .tmp    ?+1
+	.a      .a      ?+1
+	.a      .a0:0   ?+1
 	#Get [b].
-	.tmp  .tmp  ?+1
-	.tmp  .a5:5 ?+1
-	.p1   .p1   ?+1
-	.p1   .tmp  ?+1
-	.tmp  .tmp  ?+1
-	.tmp  .p1:0 ?+1
-	.b    .b    ?+1
-	.b    .tmp  ?+1
-	#Init rl and rh.
-	.rh   .rh   ?+1
-	.rl   .rl   ?+1
-	#If [a]=0 or [b]=0, return.
-	.a    .z    .ret
-	.b    .z    .ret
-	#Increment [rl] for the first loop.
-	.rl   .z-1  ?+1
-	.i    .bits ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.b0     .b0     ?+1
+	.b0     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .b0:0   ?+1
+	.b      .b      ?+1
+	.b      .tmp    ?+1
+	#Initialize lval and hval.
+	.hval   .hval   ?+1
+	.lval   .lval   ?+1
+	#Manually perform the first loop and make sure [b] is odd.
+	.tmp    .z+1    ?+1
+	.b      .tmp    ?+4
+	.lval   .a      ?+1
+	.i      .bits   ?+13
 .loop:
-	#If the highest bit of [b] is set, add [a] to [rl] and carry to [rh].
-	.tmp  .tmp  ?+1
-	.tmp  .b    ?+1
-	.tmp  .z+1  ?+1
-	.b    .tmp  ?+7
-	.rl   .a    ?+4
-	.rh   .z-1  ?+1
 	#Check loop.
-	.i    .z+1  .correct
-	#Left shift [rh] and [rl], don't decrement [rl] for when we add [a] to [rl].
-	.tmp  .tmp  ?+1
-	.tmp  .rh   ?+1
-	.rh   .tmp  ?+1
-	.tmp  .tmp  ?+1
-	.tmp  .rl   ?+1
-	.tmp  .z+1  ?+1
-	.rl   .tmp  .loop
-	.rh   .z-1  .loop
-.correct:
-	#Correct for [rl]+1 each loop.
-	.rl   .z-1  ?+1
-	.rl   .z    ?+4
-	.rh   .z+1  ?+1
+	.i      .z+1    .ret
+	#Left shift [hval] and [lval].
+	.tmp    .tmp    ?+1
+	.tmp    .hval   ?+1
+	.hval   .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .lval   ?+1
+	.tmp    .z+1    ?+1
+	.lval   .tmp    ?+4
+	.hval   .z-1    ?+1
+	.lval   .z+1    ?+1
+	#If the highest bit of [b] is set, add [a] to [lval] and carry to [hval].
+	#Since [b] is guaranteed to be odd, we don't need to offset it.
+	.tmp    .tmp    ?+1
+	.tmp    .b      ?+1
+	.b      .tmp    .loop
+	.lval   .a      .loop
+	.hval   .z-1    .loop
 .ret:
 	#Set [high].
-	.rh   .r0:0 ?+1
-	.tmp  .tmp  ?+1
-	.tmp  .rh   ?+1
-	.r1:0 .tmp  ?+1
+	.hval   .h0:0   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .hval   ?+1
+	.h1:0   .tmp    ?+1
 	#Set [low].
-	.rl   .r2:0 ?+1
-	.tmp  .tmp  ?+1
-	.tmp  .rl   ?+1
-	.r3:0 .tmp  ?+1
-	0     0     .a6:6
-#Variables
-.tmp:0
-.a:0
-.b:0
-.rh:0
-.rl:0
-.i:0
-.bits:0-64
-0-1 .z:0 1 2
+	.lval   .l0:0   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .lval   ?+1
+	.l1:0   .tmp    ?+1
+	0       0       .arg6:6
+	#Variables
+	0-1 .z:0 1 2
+	.tmp:0
+	.a:0
+	.b:0
+	.hval:0
+	.lval:0
+	.i:0
+	.bits:0-63
 
 uint.div:
 	#Call  : 0 ? uint.div quot rem num den
@@ -462,7 +481,7 @@ uint.div:
 	0     0     .a6:6
 .divz:
 	#Abort.
-	0-1 0 0
+	0-1 0xd0 0
 .num:0
 .den:0
 .nden:0
@@ -673,7 +692,7 @@ uint.and:
 	.b    .p1:0 ?+1
 	#Loop 64 times.
 	.at   .at   ?+1
-	.i    .bits ?+1
+	.i    .bits ?+4
 .loop:
 	.i    .z+1  .ret
 	#Prepare [a] for shift and carry.
@@ -701,7 +720,7 @@ uint.and:
 .b:0 .bt:0
 .i:0
 .a0:0
-.bits:0-65
+.bits:0-64
 0-1 .z:0 1
 
 uint.or:
@@ -741,7 +760,7 @@ uint.or:
 	.b    .p1:0 ?+1
 	#Loop 64 times.
 	.at   .at   ?+1
-	.i    .bits ?+1
+	.i    .bits ?+4
 .loop:
 	.i    .z+1  .ret
 	#Prepare [a] for shift and carry.
@@ -769,7 +788,7 @@ uint.or:
 .b:0 .bt:0
 .i:0
 .a0:0
-.bits:0-65
+.bits:0-64
 0-1 .z:0 1
 
 uint.xor:
@@ -809,7 +828,7 @@ uint.xor:
 	.b    .p1:0 ?+1
 	#Loop 64 times.
 	.at   .at   ?+1
-	.i    .bits ?+1
+	.i    .bits ?+4
 .loop:
 	.i    .z+1  .ret
 	#Prepare [a] for shift and carry.
@@ -837,6 +856,5 @@ uint.xor:
 .b:0 .bt:0
 .i:0
 .a0:0
-.bits:0-65
+.bits:0-64
 0-1 .z:0 1
-

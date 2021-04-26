@@ -16,14 +16,14 @@ set: 24
 neg: 25
 add: 30
 sub: 31
-mul: 869
+mul: 878
 div: 911
 shl: 83
 shr: 131
 not: 26
-and: 676
- or: 676
-xor: 676
+and: 675
+ or: 675
+xor: 675
 
 |#
 
@@ -474,8 +474,8 @@ test.cmp:
 	0 ? print 116 101 115 116 32 32 58 32 0-1 .id:2 10 0
 	#expect
 	0 ? print 101 120 112 101 99 116 58 32 0-1 .exp 10 0
-	#actual
-	0 ? print 97 99 116 117 97 108 58 32 0-1 .val 10 0
+	#return
+	0 ? print 114 101 116 117 114 110 58 32 0-1 .val 10 0
 	0-1 0 0
 .exp:0
 .val:0

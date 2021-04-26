@@ -648,6 +648,7 @@ function unlrun(st,iters) {
 
 function unlrun_fast(st,iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
+	//This version of unlrun() unrolls several operations to speed things up.
 	if (st.state!==UNL_RUNNING) {return;}
 	var a,b,c,ma,mb;
 	var pos=st.ip,tmp=u64create();
