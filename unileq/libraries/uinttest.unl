@@ -21,9 +21,9 @@ div: 911
 shl: 83
 shr: 131
 not: 26
-and: 675
- or: 675
-xor: 675
+and: 499
+ or: 501
+xor: 515
 
 |#
 

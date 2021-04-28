@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Unsigned Integer Operations - v3.03
+Unsigned Integer Operations - v3.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -8,8 +8,8 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 About
 
 This library provides functions for performing most of the common unsigned
-integer operations. In particular, it handles comparisons, arithmetic
-operations, and bitwise operations.
+integer operations. In particular, it handles comparisons, arithmetic, and
+bitwise operations.
 
 The 0 address will always be 0 upon function return, even if one of the return
 value addresses is 0.
@@ -27,9 +27,9 @@ div: 911
 shl: 83
 shr: 131
 not: 26
-and: 675
- or: 675
-xor: 675
+and: 499
+ or: 501
+xor: 515
 
 --------------------------------------------------------------------------------
 Index
@@ -76,12 +76,18 @@ Version History
      Updated formatting for uint.cmp.
      Changed uint.div to abort with 0xd0 when dividing by 0.
      Optimized uint.and/or/xor by removing 1 loop check.
+3.04
+     Optimized and/or/xor by 18%. a and b only need to be offset by 1 on the
+     first loop. This removes 2 decrement instructions per loop.
 
 --------------------------------------------------------------------------------
 TODO
 
-Optimize uint.and/or/xor to not use offset by 1 to check carrying.
-Optimize uint.mul if high=0, and uint.div if quot=0. Add tests.
+Remove decrement instruction from uint.shr.
+Optimize uint.mul if high=0. Can remove second decrement from lval and just
+correct at end.
+Optimize uint.div if quot=0.
+Standardize formatting: 8 spaces per column, 2 lines separating each function.
 |#
 
 #--------------------------------------------------------------------------------
@@ -93,6 +99,7 @@ uint.cmp:
 	#     if [a]<[b]: goto lt
 	#     if [a]=[b]: goto eq
 	#     if [a]>[b]: goto gt
+	#Time  : 28
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
@@ -655,206 +662,239 @@ uint.not:
 .ret:0
 .tmp:0
 
+
 uint.and:
 	#Call  : 0 ? uint.and ret a b
 	#Effect: [ret]=[a]&[b]
+	#Time  : 547
 	#Setup stack pointer.
-	.at   .at   ?+1
-	.at   .a0   ?+1
-	0     .at   ?+1
-	.a0   0     ?+1
-	.a2   0     ?+1
-	.a3   0     ?+1
-	.a4   0     ?+1
-	.a5   0     ?+1
-	#Get [r]
-	.at   .at   ?+1
-	.at   .a2:2 ?+1
-	.r0   .r0   ?+1
-	.r0   .at   ?+1
-	.r1   .r1   ?+1
-	.r1   .at   ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .arg2   ?+1
+	0       .atmp   ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	#Get [ret]
+	.atmp   .atmp   ?+1
+	.atmp   .arg2:2 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .atmp   ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .atmp   ?+1
 	#Get [a]
-	.at   .at   ?+1
-	.at   .a3:3 ?+1
-	.p0   .p0   ?+1
-	.p0   .at   ?+1
-	.a    .a    ?+1
-	.a    .z+1  ?+1
-	.a    .p0:0 ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .arg3:3 ?+1
+	.a0     .a0     ?+1
+	.a0     .atmp   ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .a0:0   ?+1
+	.a      .a      ?+1
+	.a      .atmp   ?+1
 	#Get [b]
-	.at   .at   ?+1
-	.at   .a4:4 ?+1
-	.p1   .p1   ?+1
-	.p1   .at   ?+1
-	.b    .b    ?+1
-	.b    .z+1  ?+1
-	.b    .p1:0 ?+1
-	#Loop 64 times.
-	.at   .at   ?+1
-	.i    .bits ?+4
+	.btmp   .btmp   ?+1
+	.btmp   .arg4:4 ?+1
+	.b0     .b0     ?+1
+	.b0     .btmp   ?+1
+	.btmp   .btmp   ?+1
+	.btmp   .b0:0   ?+1
+	.b      .b      ?+1
+	.b      .btmp   ?+1
+	#Perform the first iteration outside of the loop. We need [a] and [b] to be odd
+	#so that we can efficiently check for carrying in the loop. Flag if the top bit
+	#needs to be set.
+	.atmp   .z+1    ?+1
+	.btmp   .z+1    ?+1
+	        .a      .atmp   .l0x
+	.l1x:   .b      .btmp   .l10
+	.l11:   .top    .z+1    ?+1
+	.l10:   .atmp   .atmp   .loop-3
+	.l0x:   .b      .btmp   .l00
+	.l00:   .atmp   .atmp   .loop-3
+	#Loop 63 times.
+	.i      .iinit  ?+4
 .loop:
-	.i    .z+1  .ret
-	#Prepare [a] for shift and carry.
-	.at   .a    ?+1
-	.at   .z+1  ?+1
+	.i      .z+1    .done
 	#Prepare [b] for shift and carry.
-	.bt   .bt   ?+1
-	.bt   .b    ?+1
-	.bt   .z+1  ?+1
+	.btmp   .btmp   ?+1
+	.btmp   .b      ?+1
 	#Left shift [a] and [b] and check for carry. Set low bit of [a] if needed.
-	      .a .at  .f0x
-	.f1x: .b .bt  .f10
-	.f11: .a .z+1 ?+1 .at .at .loop
-	.f10: .a .z+1 ?+1 .at .at .loop
-	.f0x: .b .bt  .f00
-	.f01: .a .z+1 ?+1 .at .at .loop
-	.f00: .a .z+0 ?+1 .at .at .loop
-.ret:
-	.a    .r0:0 ?+1
-	.at   .a    ?+1
-	.r1:0 .at   ?+1
-	0 0 .a5:5
-#Variables
-.a:0 .at:0
-.b:0 .bt:0
-.i:0
-.a0:0
-.bits:0-64
-0-1 .z:0 1
+	        .atmp   .a      ?+1
+	        .a      .atmp   .f0x
+	.f1x:   .b      .btmp   .f00
+	.f11:   .a      .z-1    .f00
+	.f0x:   .b      .btmp   .f00
+	.f00:   .atmp   .atmp   .loop
+.done:
+	#Check if the top bit needs to be zero'd.
+	.top    .top:.z ?+4
+	.a      .b      ?+1
+	.a      .ret0:0 ?+1
+	.atmp   .a      ?+1
+	.ret1:0 .atmp   ?+1
+	0       0       .arg5:5
+	#Variables
+	0-1 .z:0 1 2
+	.a:0 .atmp:0
+	.b:0 .btmp:0
+	.i:0 .iinit:0-63
+
 
 uint.or:
 	#Call  : 0 ? uint.or ret a b
 	#Effect: [ret]=[a]|[b]
+	#Time  : 548
 	#Setup stack pointer.
-	.at   .at   ?+1
-	.at   .a0   ?+1
-	0     .at   ?+1
-	.a0   0     ?+1
-	.a2   0     ?+1
-	.a3   0     ?+1
-	.a4   0     ?+1
-	.a5   0     ?+1
-	#Get [r]
-	.at   .at   ?+1
-	.at   .a2:2 ?+1
-	.r0   .r0   ?+1
-	.r0   .at   ?+1
-	.r1   .r1   ?+1
-	.r1   .at   ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .arg2   ?+1
+	0       .atmp   ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	#Get [ret]
+	.atmp   .atmp   ?+1
+	.atmp   .arg2:2 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .atmp   ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .atmp   ?+1
 	#Get [a]
-	.at   .at   ?+1
-	.at   .a3:3 ?+1
-	.p0   .p0   ?+1
-	.p0   .at   ?+1
-	.a    .a    ?+1
-	.a    .z+1  ?+1
-	.a    .p0:0 ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .arg3:3 ?+1
+	.a0     .a0     ?+1
+	.a0     .atmp   ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .a0:0   ?+1
+	.a      .a      ?+1
+	.a      .atmp   ?+1
 	#Get [b]
-	.at   .at   ?+1
-	.at   .a4:4 ?+1
-	.p1   .p1   ?+1
-	.p1   .at   ?+1
-	.b    .b    ?+1
-	.b    .z+1  ?+1
-	.b    .p1:0 ?+1
-	#Loop 64 times.
-	.at   .at   ?+1
-	.i    .bits ?+4
+	.btmp   .btmp   ?+1
+	.btmp   .arg4:4 ?+1
+	.b0     .b0     ?+1
+	.b0     .btmp   ?+1
+	.btmp   .btmp   ?+1
+	.btmp   .b0:0   ?+1
+	.b      .b      ?+1
+	.b      .btmp   ?+1
+	#Perform the first iteration outside of the loop. We need [a] and [b] to be odd
+	#so that we can efficiently check for carrying in the loop. Flag if the top bit
+	#needs to be set.
+	.atmp   .z+1    ?+1
+	.btmp   .z+1    ?+1
+	        .a      .atmp   .l0x
+	.l1x:   .b      .btmp   .l11
+	.l11:   .atmp   .atmp   .loop-3
+	.l0x:   .b      .btmp   .l00
+	.l01:   .atmp   .atmp   .loop-3
+	.l00:   .top    .z+1    ?+1
+  	        .atmp   .atmp   .loop-3
+	#Loop 63 times.
+	.i      .iinit  ?+4
 .loop:
-	.i    .z+1  .ret
-	#Prepare [a] for shift and carry.
-	.at   .a    ?+1
-	.at   .z+1  ?+1
+	.i      .z+1    .done
 	#Prepare [b] for shift and carry.
-	.bt   .bt   ?+1
-	.bt   .b    ?+1
-	.bt   .z+1  ?+1
+	.btmp   .btmp   ?+1
+	.btmp   .b      ?+1
 	#Left shift [a] and [b] and check for carry. Set low bit of [a] if needed.
-	      .a .at  .f0x
-	.f1x: .b .bt  .f10
-	.f11: .a .z+1 ?+1 .at .at .loop
-	.f10: .a .z+0 ?+1 .at .at .loop
-	.f0x: .b .bt  .f00
-	.f01: .a .z+0 ?+1 .at .at .loop
-	.f00: .a .z+0 ?+1 .at .at .loop
-.ret:
-	.a    .r0:0 ?+1
-	.at   .a    ?+1
-	.r1:0 .at   ?+1
-	0 0 .a5:5
-#Variables
-.a:0 .at:0
-.b:0 .bt:0
-.i:0
-.a0:0
-.bits:0-64
-0-1 .z:0 1
+	        .atmp   .a      ?+1
+	        .a      .atmp   .f0x
+	.f1x:   .b      .btmp   .f11
+	.f11:   .atmp   .atmp   .loop
+	.f0x:   .b      .btmp   .f00
+	.f01:   .atmp   .atmp   .loop
+	.f00:   .a      .z-1    .f01
+.done:
+	#Check if the top bit needs to be zero'd.
+	.top    .top:.z ?+4
+	.a      .b      ?+1
+	.a      .z-1    ?+1
+	.atmp   .ret0:0 ?+1
+	.a      .atmp   ?+1
+	.ret1:0 .a      ?+1
+	0       0       .arg5:5
+	#Variables
+	0-1 .z:0 1 2
+	.a:0 .atmp:0
+	.b:0 .btmp:0
+	.i:0 .iinit:0-63
+
 
 uint.xor:
 	#Call  : 0 ? uint.xor ret a b
 	#Effect: [ret]=[a]^[b]
+	#Time  : 547
 	#Setup stack pointer.
-	.at   .at   ?+1
-	.at   .a0   ?+1
-	0     .at   ?+1
-	.a0   0     ?+1
-	.a2   0     ?+1
-	.a3   0     ?+1
-	.a4   0     ?+1
-	.a5   0     ?+1
-	#Get [r]
-	.at   .at   ?+1
-	.at   .a2:2 ?+1
-	.r0   .r0   ?+1
-	.r0   .at   ?+1
-	.r1   .r1   ?+1
-	.r1   .at   ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .arg2   ?+1
+	0       .atmp   ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	#Get [ret]
+	.atmp   .atmp   ?+1
+	.atmp   .arg2:2 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .atmp   ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .atmp   ?+1
 	#Get [a]
-	.at   .at   ?+1
-	.at   .a3:3 ?+1
-	.p0   .p0   ?+1
-	.p0   .at   ?+1
-	.a    .a    ?+1
-	.a    .z+1  ?+1
-	.a    .p0:0 ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .arg3:3 ?+1
+	.a0     .a0     ?+1
+	.a0     .atmp   ?+1
+	.atmp   .atmp   ?+1
+	.atmp   .a0:0   ?+1
+	.a      .a      ?+1
+	.a      .atmp   ?+1
 	#Get [b]
-	.at   .at   ?+1
-	.at   .a4:4 ?+1
-	.p1   .p1   ?+1
-	.p1   .at   ?+1
-	.b    .b    ?+1
-	.b    .z+1  ?+1
-	.b    .p1:0 ?+1
-	#Loop 64 times.
-	.at   .at   ?+1
-	.i    .bits ?+4
+	.btmp   .btmp   ?+1
+	.btmp   .arg4:4 ?+1
+	.b0     .b0     ?+1
+	.b0     .btmp   ?+1
+	.btmp   .btmp   ?+1
+	.btmp   .b0:0   ?+1
+	.b      .b      ?+1
+	.b      .btmp   ?+1
+	#Perform the first iteration outside of the loop. We need [a] and [b] to be odd
+	#so that we can efficiently check for carrying in the loop. Flag if the top bit
+	#needs to be set.
+	.atmp   .z+1    ?+1
+	.btmp   .z+1    ?+1
+	        .a      .atmp   .l0x
+	.l1x:   .b      .btmp   .l01
+	.l10:   .atmp   .atmp   .loop-3
+	.l0x:   .b      .btmp   .l00
+	.l01:   .top    .z+1    .l00
+	.l00:   .atmp   .atmp   .loop-3
+	#Loop 63 times.
+	.i      .iinit  ?+4
 .loop:
-	.i    .z+1  .ret
-	#Prepare [a] for shift and carry.
-	.at   .a    ?+1
-	.at   .z+1  ?+1
+	.i      .z+1    .done
 	#Prepare [b] for shift and carry.
-	.bt   .bt   ?+1
-	.bt   .b    ?+1
-	.bt   .z+1  ?+1
+	.btmp   .btmp   ?+1
+	.btmp   .b      ?+1
 	#Left shift [a] and [b] and check for carry. Set low bit of [a] if needed.
-	      .a .at  .f0x
-	.f1x: .b .bt  .f10
-	.f11: .a .z+1 ?+1 .at .at .loop
-	.f10: .a .z+0 ?+1 .at .at .loop
-	.f0x: .b .bt  .f00
-	.f01: .a .z+0 ?+1 .at .at .loop
-	.f00: .a .z+1 ?+1 .at .at .loop
-.ret:
-	.a    .r0:0 ?+1
-	.at   .a    ?+1
-	.r1:0 .at   ?+1
-	0 0 .a5:5
-#Variables
-.a:0 .at:0
-.b:0 .bt:0
-.i:0
-.a0:0
-.bits:0-64
-0-1 .z:0 1
+	        .atmp   .a      ?+1
+	        .a      .atmp   .f0x
+	.f1x:   .b      .btmp   .f01
+	.f11:   .atmp   .atmp   .loop
+	.f0x:   .b      .btmp   .f11
+	.f01:   .a      .z-1    .f11
+.done:
+	#Check if the top bit needs to be zero'd.
+	.top    .top:.z ?+4
+	.a      .b      ?+1
+	.a      .ret0:0 ?+1
+	.atmp   .a      ?+1
+	.ret1:0 .atmp   ?+1
+	0       0       .arg5:5
+	#Variables
+	0-1 .z:0 1 2
+	.a:0 .atmp:0
+	.b:0 .btmp:0
+	.i:0 .iinit:0-63
