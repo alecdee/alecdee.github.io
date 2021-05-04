@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.23
+unileq.c - v1.24
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -153,8 +153,8 @@ u32 unllabelcmp(unllabel* l,unllabel* r) {
 	unllabel *lv=0,*rv=0;
 	if (l->len!=r->len || l->hash!=r->hash) {return 1;}
 	for (u32 i=l->len-1;i!=(u32)-1;i--) {
-		if (i<l->len) {lv=l;l=l->scope;}
-		if (i<r->len) {rv=r;r=r->scope;}
+		if (l && i<l->len) {lv=l;l=l->scope;}
+		if (r && i<r->len) {rv=r;r=r->scope;}
 		if (lv==rv) {return 0;}
 		if (lv->data[i]!=rv->data[i]) {return 1;}
 	}
@@ -199,17 +199,18 @@ unllabel* unllabelinit(unlhashmap* map,unllabel* lbl,unllabel* scope,const uchar
 	//Count .'s to determine what scope we should be in.
 	u32 depth=0;
 	while (depth<len && data[depth]=='.') {depth++;}
-	while (scope->depth>depth) {scope=scope->scope;}
-	depth=scope->depth;
+	while (scope && scope->depth>depth) {scope=scope->scope;}
+	depth=scope?scope->depth:0;
+	u32 hash=scope?scope->hash:0;
+	u32 scopelen=scope?scope->len:0;
 	lbl->scope=scope;
 	lbl->depth=depth+1;
 	//Offset the data address by the parent scope's depth.
-	depth-=depth>0;
-	lbl->data=data+depth-scope->len;
-	lbl->len=len+scope->len-depth;
+	u32 dif=scopelen-depth+(depth>0);
+	lbl->data=data-dif;
+	lbl->len=len+dif;
 	//Compute the hash of the label. Use the scope's hash to speed up computation.
-	u32 hash=scope->hash;
-	for (u32 i=scope->len;i<lbl->len;i++) {
+	for (u32 i=scopelen;i<lbl->len;i++) {
 		hash+=lbl->data[i]+i;
 		hash=(hash>>9)|(hash<<23);
 		hash^=hash>>14;
@@ -294,9 +295,8 @@ void unlparsestr(unlstate* st,const char* str) {
 	//Process the string in 2 passes. The first pass is needed to find label values.
 	unlhashmap* map=unlhashcreate();
 	if (map==0) {err="Unable to allocate hash map";}
-	unllabel scope0={0,0,0,0,0,0,0},lbl0;
 	for (u32 pass=0;pass<2 && err==0;pass++) {
-		unllabel *scope=&scope0,*lbl;
+		unllabel *scope=0,*lbl,lbl0;
 		u64 addr=0,val=0,acc=0;
 		op=0;
 		i=0;
@@ -513,10 +513,9 @@ void unlrun(unlstate* st,u32 iters) {
 			ma=unlgetmem(st,a);
 			unlsetmem(st,a,ma-mb);
 			ip=ma>mb?ip:c;
-			continue;
 		}
 		//Otherwise, call the interpreter.
-		if (c==0) {
+		else if (c==0) {
 			//Exit.
 			st->state=UNL_COMPLETE;
 		} else if (c==1) {
