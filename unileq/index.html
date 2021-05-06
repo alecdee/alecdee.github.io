@@ -14,21 +14,20 @@
 <div class="content"><h1>The Unileq Architecture</h1>
 <p>Download the interpreter here: <a href="./unileq.c">unileq.c</a></p>
 <br>
-<p>Unileq is an architecture that is meant to show how minimal a computer can be and still work.
-Whereas most computer architectures have hundreds or thousands of different instructions that can be
-used to build a program, unileq has only one. Its one instruction is simple: it performs a
-subtraction and then jumps. Despite its simplicity, we can use this instruction to create any
-program we want. Unileq is based off of the
-<a href="https://en.wikipedia.org/wiki/Subleq">subleq</a> architecture.</p>
+<p>Unileq is an architecture that shows how minimal a computer can be and still work. Whereas most
+computer architectures have hundreds or thousands of different instructions that can be used to
+build a program, unileq has only one. Its one instruction is simple: it performs a subtraction and
+then jumps. Despite its simplicity, we can use this instruction to create any program we want.
+Unileq follows in the footsteps of the <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>
+architecture.</p>
 <br>
 <p>To execute a unileq instruction, we first load 3 operands: <i>A</i>, <i>B</i>, and <i>C</i>. We
 then subtract the value at address <i>B</i> from the value at address <i>A</i>. If the value at
 <i>A</i> was less than or equal to the value at <i>B</i>, then we jump to <i>C</i>. Otherwise, we
-jump by 3.</p>
+jump by 3. We then load the 3 operands at our new address in memory and begin again.</p>
 <br>
-<p>We keep track of the instruction operands we're loading with the instruction pointer, <i>IP</i>,
-which is set to <i>0</i> at the start of the program. The pseudocode below shows the main unileq
-loop:</p>
+<p>We keep track of the operands we're loading with the instruction pointer, <i>IP</i>, which is set
+to <i>0</i> at the start of the program. The pseudocode below shows the main unileq loop:</p>
 <br>
 <div class="codeblock">while true
 	A=mem[IP+0]
@@ -348,8 +347,7 @@ characters in a string.</p>
 <br>
 <p>We can use this self modifying property to generate some simple programs at run time, or make a
 self interpreter that counts the number of instructions used by another unileq function. However,
-more complicated self modification, like that seen in Lisp, would be difficult to perform in
-unileq.</p>
+symbolic self modification, like that seen in Lisp, would be difficult to perform in unileq.</p>
 <br>
 <h2>Interpreter Calls</h2>
 <br>
@@ -478,7 +476,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 18 Jan 2021<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 5 May 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

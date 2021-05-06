@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.04
+unileq.js - v1.05
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -23,19 +23,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 --------------------------------------------------------------------------------
 The Unileq Architecture
 
-Unileq is an architecture that is meant to show how minimal a computer can be
-and still work. Whereas most computer architectures have hundreds or thousands
-of different instructions that can be used to build a program, unileq has only
-one. Its one instruction is simple: it performs a subtraction and then jumps.
-Despite its simplicity, we can use this instruction to create any program we
-want. Unileq is based off of the subleq architecture.
+Unileq is an architecture that shows how minimal a computer can be and still
+work. Whereas most computer architectures have hundreds or thousands of
+different instructions that can be used to build a program, unileq has only one.
+Its one instruction is simple: it performs a subtraction and then jumps. Despite
+its simplicity, we can use this instruction to create any program we want.
+Unileq follows in the footsteps of the subleq architecture.
 
 To execute a unileq instruction, we first load 3 operands: A, B, and C. We then
 subtract the value at address B from the value at address A. If the value at A
-was less than or equal to the value at B, then we jump to C. Otherwise, we load
-the next 3 operands after A, B, and C.
+was less than or equal to the value at B, then we jump to C. Otherwise, we jump
+by 3. We then load the 3 operands at our new address in memory and begin again.
 
-We keep track of the memory we're executing with the instruction pointer, IP,
+We keep track of the operands we're loading with the instruction pointer, IP,
 which is set to 0 at the start of the program. The pseudocode below shows the
 main unileq loop:
 
@@ -121,7 +121,8 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-Webassembly. Wait until better integration with javascript.
+Webassembly. Speedup isn't that great compared to unlrun_fast(). Wait until
+better integration with javascript.
 Textarea highlighting. Not currently possible because text isn't in DOM.
 Audio
 Graphics
@@ -152,6 +153,7 @@ function u64create(hi,lo) {
 }
 
 function u64tostr(n) {
+	//Convert a 64-bit number to its base 10 representation.
 	//Powers of 10 split into high 32 bits and low 32 bits.
 	var pot=[
 		0x8ac72304,0x89e80000,0x0de0b6b3,0xa7640000,
@@ -302,8 +304,8 @@ function unllabelcmp(ls,rs) {
 	var llen=ls.len,rlen=rs.len;
 	if (llen!==rlen) {return llen<rlen?-1:1;}
 	for (var i=llen-1;i!==-1;i--) {
-		if (i<llen) {lv=ls;ls=ls.scope;llen=ls.len;}
-		if (i<rlen) {rv=rs;rs=rs.scope;rlen=rs.len;}
+		if (i<llen) {lv=ls;ls=ls.scope;llen=ls!==null?ls.len:0;}
+		if (i<rlen) {rv=rs;rs=rs.scope;rlen=rs!==null?rs.len:0;}
 		if (lv===rv) {return 0;}
 		lc=data[i+lv.pos];
 		rc=data[i+rv.pos];
@@ -330,19 +332,20 @@ function unllabelinit(map,lbl,scope,data,pos,len) {
 	}
 	var depth=0;
 	while (depth<len && data[pos+depth]==='.') {depth++;}
-	while (scope.depth>depth) {scope=scope.scope;}
-	depth=scope.depth;
+	while (scope!==null && scope.depth>depth) {scope=scope.scope;}
+	depth=scope!==null?scope.depth:0;
+	var hash=scope!==null?scope.hash:0;
+	var scopelen=scope!==null?scope.len:0;
 	lbl.scope=scope;
 	lbl.depth=depth+1;
 	//Offset the data address by the parent scope's depth.
-	depth-=depth>0;
+	var dif=scopelen-depth+(depth>0);
 	lbl.data=data;
-	lbl.pos=pos+depth-scope.len;
-	lbl.len=len+scope.len-depth;
+	lbl.pos=pos-dif;
+	lbl.len=len+dif;
 	//Compute the hash of the label. Use the scope's hash to speed up computation.
-	var hash=scope.hash;
-	for (i=scope.len;i<lbl.len;i++) {
-		hash+=lbl.data.charCodeAt(lbl.pos+i)+i;
+	for (i=scopelen;i<lbl.len;i++) {
+		hash+=data.charCodeAt(lbl.pos+i)+i;
 		hash&=0xffffffff;
 		hash=((hash>>9)|((hash&0x1ff)<<23));
 		hash^=hash>>14;
@@ -420,9 +423,9 @@ function unlparsestr(st,str) {
 	//Process the string in 2 passes. The first pass is needed to find label values.
 	var map=unlhashcreate();
 	if (map===null) {err="Unable to allocate hash map";}
-	var scope0=unllabelalloc(),lbl0=unllabelalloc();
+	var lbl0=unllabelalloc();
 	for (var pass=0;pass<2 && err===null;pass++) {
-		var scope=scope0,lbl=null;
+		var scope=null,lbl=null;
 		var addr=u64create(),val=u64create(),acc=u64create();
 		var tmp0=u64create(),tmp1=u64create();
 		op=0;
@@ -768,6 +771,8 @@ function unleditor(source,runid,resetid,inputid,outputid) {
 			runbutton.innerText=text;
 		}
 		if (running===1) {
+			//Instructions per frame is hard to time due to browser timer inconsistencies.
+			//250k instructions per frame seems to work well across platforms.
 			unlrun_fast(st,250000);
 			setTimeout(update,0);
 		}
