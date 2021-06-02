@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.25
+unileq.c - v1.26
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -24,16 +24,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 The Unileq Architecture
 
 Unileq is an architecture that shows how minimal a computer can be and still
-work. Whereas most computer architectures have hundreds or thousands of
-different instructions that can be used to build a program, unileq has only one.
-Its one instruction is simple: it performs a subtraction and then jumps. Despite
-its simplicity, we can use this instruction to create any program we want.
+work. Whereas most computer architectures have hundreds of different
+instructions that can be used to build a program, unileq only needs one. Its
+one instruction is simple: it performs a subtraction and then jumps. Despite
+its simplicity, this instruction is enough to create any program we want.
 Unileq follows in the footsteps of the subleq architecture.
 
 To execute a unileq instruction, we first load 3 operands: A, B, and C. We then
 subtract the value at address B from the value at address A. If the value at A
 was less than or equal to the value at B, then we jump to C. Otherwise, we jump
-by 3. We then load the 3 operands at our new address in memory and begin again.
+by 3. We then load the 3 operands at this new address and begin again.
 
 We keep track of the operands we're loading with the instruction pointer, IP,
 which is set to 0 at the start of the program. The pseudocode below shows the

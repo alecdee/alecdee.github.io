@@ -80,7 +80,7 @@ Version History
      offset [b] by 1 to check for carrying.
      Updated formatting for uint.cmp.
      Changed uint.div to abort with 0xd0 when dividing by 0.
-     Optimized uint.and/or/xor by removing 1 loop check.
+     Optimized uint.and/or/xor by skipping first loop check.
 3.04
      Optimized and/or/xor by 18%. a and b only need to be offset by 1 on the
      first loop. This removes 2 decrement instructions per loop.
@@ -98,10 +98,12 @@ Standardize formatting:
      8 spaces per column.
      2 lines separating each function.
      Indent trailing variables section.
+Use global uint: scope and shared variables (.z:, .tmp:, etc).
+Add effects to index section.
 Add better overview explanations for uint.and, uint.mul, and uint.div.
 Remove decrement offset instruction from uint.shr.
 Remove loop counter from uint.mul. Optimize if high=0.
-Remove loop counter from uint.div. Optimize if quot=0.
+Remove loop counter from uint.div. Optimize if quot=0 or den>=num.
 Calculating A&B might be faster by looking at bit changes in A-B. Use the changes
 in runs of 0's and 1's to determine where bit differences are.
 |#
@@ -684,9 +686,9 @@ uint.and:
 	#Effect: [ret]=[a]&[b]
 	#Time  : 484
 	#This function works by making sure that the bottom bit is set for [a] and [b].
-	#As we shift [b] left, if [b]=0, then we know we have processed all bits. And as
-	#we rotate [a] left, if we need to set a bit, we simply add 1 to it. The main
-	#loop is arranged to minimize the number of [a] bits set or [b]=0 checks needed.
+	#As we shift [b] left, if [b]=0, then we know we have processed all bits. As we
+	#rotate [a] left, if we need to set a bit, we simply add 1 to it. The main loop
+	#is arranged to minimize the number of [a] bits set or [b]=0 checks needed.
 	#Setup stack pointer.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1

@@ -22,6 +22,14 @@ Version History
      Added shuffling.
 1.02
      Optimized random.generate by removing offsets during shitfing.
+
+--------------------------------------------------------------------------------
+TODO
+
+Optimize random.jump base on uint.mul.
+Optimize random.mod and random.shuffle based on uint.div.
+Merge random.get and random.generate.
+Use time as initial random seed.
 |#
 
 random.table:
@@ -109,7 +117,7 @@ random.generate:
 	.z      .l+4    ?+4
 .loop:
 	.z      .z+1    .done
-	#Set [ret]=[ret]*256+128 and [t0]=table+([out]>>56). Offset [ret] by 1 so
+	#Set [ret]=[ret]*256+128 and [t0]=[table+([out]>>56)]. Offset [ret] by 1 so
 	#we can detect if a carry occurs.
 	.tmp .tmp ?+1 .tmp .ret ?+1 .tmp .z+1 ?+1 .ret .tmp ?+4
 	.tbl .l+0 ?+4 .tbl .l+8 ?+1
@@ -196,7 +204,7 @@ random.jump:
 	.tmp    .z+1    ?+1
 	.tmp    .num    ?+1
 	.num    .tmp    ?+4
-	.mul  random.generate.inc ?+1
+	.mul    random.generate.inc ?+1
 	.tmp    .tmp    ?+1
 	.i      .z+1    .done
 	#[mul]<<1
