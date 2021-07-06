@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.06
+unileq.js - v1.08
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -23,35 +23,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 --------------------------------------------------------------------------------
 The Unileq Architecture
 
-Unileq is an architecture that shows how minimal a computer can be and still
-work. Whereas most computer architectures have hundreds of different
-instructions that can be used to build a program, unileq only needs one. Its
-one instruction is simple: it performs a subtraction and then jumps. Despite
-its simplicity, this instruction is enough to create any program we want.
-Unileq follows in the footsteps of the subleq architecture.
+The goal of unileq is to create the functionality of a normal computer using
+only one computing instruction. This is like trying to build a working car out
+of legos while using only one type of lego piece. Since we only have one
+instruction, most modern conveniences are gone. Things like multiplying numbers
+or memory allocation need to built from scratch using unileq's instruction.
 
-To execute a unileq instruction, we first load 3 operands: A, B, and C. We then
-subtract the value at address B from the value at address A. If the value at A
-was less than or equal to the value at B, then we jump to C. Otherwise, we jump
-by 3. We then load the 3 operands at this new address and begin again.
+The instruction is fairly simple: Given A, B, and C, compute mem[A]-mem[B] and
+store the result in mem[A]. Then, if mem[A] was less than or equal to mem[B],
+jump to C. Otherwise, jump by 3. We use the instruction pointer (IP) to keep
+track of our place in memory. The python code below shows a unileq instruction:
 
-We keep track of the operands we're loading with the instruction pointer, IP,
-which is set to 0 at the start of the program. The pseudocode below shows the
-main unileq loop:
+     A, B, C = mem[IP+0], mem[IP+1], mem[IP+2]
+     IP = C if mem[A] <= mem[B] else (IP+3)
+     mem[A] = mem[A] - mem[B]
 
-	while true
-          A=mem[IP+0]
-          B=mem[IP+1]
-          C=mem[IP+2]
-          if mem[A]<=mem[B]
-               IP=C
-          else
-               IP=IP+3
-          endif
-          mem[A]=mem[A]-mem[B]
-	endwhile
-
-The instruction pointer and all memory values are 64 bit unsigned integers.
+The instruction pointer and memory values are all 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
 2^64-1 inclusive.
 
@@ -62,12 +49,11 @@ will end execution of the current unileq program.
 --------------------------------------------------------------------------------
 Unileq Assembly Language
 
-We can write a unileq program by setting the memory values directly, but it will
-be easier to both read and write a unileq program by using an assembly language.
+We can write a unileq program by setting the raw memory values directly, but it
+will be easier to both read and write a program by using an assembly language.
 Because there's only one instruction, we can omit any notation specifying what
-instruction to execute on some given memory values. We only need to specify what
-values will make up the program, and the unileq instruction will be executed on
-whatever values the instruction pointer is pointed to.
+instruction to execute on some given memory values. The flow of the program will
+decide what gets executed and what doesn't.
 
 An outline of our language is given below:
 

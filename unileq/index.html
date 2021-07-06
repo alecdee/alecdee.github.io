@@ -14,34 +14,23 @@
 <div class="content"><h1>The Unileq Architecture</h1>
 <p>Download the interpreter here: <a href="./unileq.c">unileq.c</a></p>
 <br>
-<p>Unileq is an architecture that shows how minimal a computer can be and still work. Whereas most
-computer architectures have hundreds of different instructions that can be used to build a program,
-unileq only needs one. Its one instruction is simple: it performs a subtraction and then jumps.
-Despite its simplicity, this instruction is enough to create any program we want. Unileq follows in
-the footsteps of the <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a> architecture.</p>
+<p>The goal of unileq is to create the functionality of a normal computer using only one computing
+instruction. This is like trying to build a working car out of legos while using only one type of
+lego piece. Since we only have one instruction, most modern conveniences are gone. Things like
+multiplying numbers or memory allocation need to built from scratch using unileq's instruction.</p>
 <br>
-<p>To execute a unileq instruction, we first load 3 operands: <i>A</i>, <i>B</i>, and <i>C</i>. We
-then subtract the value at address <i>B</i> from the value at address <i>A</i>. If the value at
-<i>A</i> was less than or equal to the value at <i>B</i>, then we jump to <i>C</i>. Otherwise, we
-jump by <i>3</i>. We then load the <i>3</i> operands at this new address and begin again.</p>
+<p>The instruction is fairly simple: Given <i>A</i>, <i>B</i>, and <i>C</i>, compute
+<i>mem[A]-mem[B]</i> and store the result in <i>mem[A]</i>. Then, if <i>mem[A]</i> was less than
+or equal to <i>mem[B]</i>, jump to <i>C</i>. Otherwise, jump by <i>3</i>. We use the instruction
+pointer (<i>IP</i>) to keep track of our place in memory. The python code below shows a unileq
+instruction:</p>
 <br>
-<p>We keep track of the operands we're loading with the instruction pointer, <i>IP</i>, which is set
-to <i>0</i> at the start of the program. The pseudocode below shows the main unileq loop:</p>
-<br>
-<div class="codeblock">while true
-	A=mem[IP+0]
-	B=mem[IP+1]
-	C=mem[IP+2]
-	if mem[A]&lt;=mem[B]
-		IP=C
-	else
-		IP=IP+3
-	endif
-	mem[A]=mem[A]-mem[B]
-endwhile
+<div class="codeblock langpython">A, B, C = mem[IP+0], mem[IP+1], mem[IP+2]
+IP = C if mem[A] &lt;= mem[B] else (IP+3)
+mem[A] = mem[A] - mem[B]
 </div>
 <br>
-<p>The instruction pointer and all memory values are 64 bit unsigned integers. Overflow and
+<p>The instruction pointer and memory values are all 64 bit unsigned integers. Overflow and
 underflow are handled by wrapping values around to be between <i>0</i> and <i>2^64-1</i>
 inclusive.</p>
 <br>
@@ -49,15 +38,17 @@ inclusive.</p>
 used to interact with the interpreter. For example, if <i>C=0</i>, then the interpreter will end
 execution of the current unileq program.</p>
 <br>
+<p>Unileq is based off of the <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>
+architecture.</p>
+<br>
 <h2>Unileq Assembly Language</h2>
 <br>
-<p>We can write a unileq program by setting the memory values directly, but it will be easier to
-both read and write a unileq program by using an assembly language. Because there's only one
-instruction, we can omit any notation specifying what instruction to execute on some given memory
-values. We only need to specify what values will make up the program, and the unileq instruction
-will be executed on whatever values the instruction pointer is pointed to.</p>
+<p>We can write a unileq program by setting the raw memory values directly, but it will be easier to
+both read and write a program by using an assembly language. Because there's only one instruction,
+we can omit any notation specifying what instruction to execute on some given memory values. The
+flow of the program will decide what gets executed and what doesn't.</p>
 <br>
-<p>An outline of our language is given below.</p>
+<p>An outline of our language is given below:</p>
 <br>
 <table class="datatable headerrow">
 <tr><td>Component</td><td>Description</td></tr>
@@ -183,117 +174,108 @@ we will also show how to turn these synthesized instructions into easy to call f
 unileq. For now, we are only focusing on basic instructions in order to show how the unileq
 architecture works.</p>
 <br>
-<p>For these code blocks, assume memory address <i>0</i> always starts with the value <i>0</i>, and
-<i>tmp</i> is some temporary address. At the end of every block, we must ensure that address
-<i>0</i> is restored to <i>0</i> if it's modified. We will also continue the use of <i>[x]</i> as
-shorthand for <i>mem[x]</i>, the value at address <i>x</i>.</p>
+<p>For these code blocks, <i>tmp</i> will denote an address for a temporary variable. It can have
+any value at the start of the block, so we'll usually need to zero it out. We will also continue the
+use of <i>[x]</i> as shorthand for <i>mem[x]</i>, or the value at address <i>x</i>.</p>
 <br>
-<p>Up first is one of the most common instructions, an unconditional jump to <i>dst</i>.</p>
+<p>Up first is one of the most common instructions, an unconditional jump to <i>dst</i>. It also
+sets <i>[tmp]=0</i>.</p>
 <br>
-<div class="codeblock langunileq">0 0 dst</div>
+<div class="codeblock langunileq">tmp  tmp  dst</div>
 <br>
-<p>We can abort any unileq program by using an interpreter call with <i>0</i> as the second operand.
+<p>We can abort any unileq program by using an interpreter call with <i>0</i> as the third operand.
 A call is any instruction that has <i>-1</i> as the first operand. Note that we need to calculate
-<i>-1</i> as <i>0-1</i> due to the syntax our assembly language.</p>
+<i>-1</i> as "<i>0-1</i>" due to the syntax our assembly language.</p>
 <br>
-<div class="codeblock langunileq">0-1 0 0</div>
+<div class="codeblock langunileq">0-1  0  0</div>
 <br>
-<p>Jump to <i>dst</i> if <i>[a]=[b]</i>. The series of <i>?+1</i> expressions points to the next
-memory address after the instruction. They simply serve to force the instruction pointer to go to
-the next instruction regardless of whether or not the unileq function would jump.</p>
+<p>Set <i>[a]=[b]</i>. The series of <i>?+1</i> expressions points to the next memory address after
+the instruction. They simply serve to force the instruction pointer to go to the next instruction
+regardless of whether or not the instruction would jump.</p>
 <br>
-<div class="codeblock langunileq">0   b   ?+1  #[0]=-[b]
-tmp tmp ?+1  #[tmp]=0
-tmp 0   ?+1  #[tmp]=-[0]=[b]
-tmp a   ?+1  #[tmp]=[b]-[a]
-0   0   ?+1  #[0]=0
-tmp 0   dst  #if [tmp]=0, then [a]=[b], so jump
+<div class="codeblock langunileq">tmp  tmp  ?+1  #[tmp]=0
+tmp  b    ?+1  #[tmp]=-[b]
+a    a    ?+1  #[a]=0
+a    tmp  ?+1  #[a]=-(-[tmp])=[b]
 </div>
 <br>
-<p>Jump to <i>dst</i> if <i>[a]&gt;[b]</i>.</p>
+<p>Jump to <i>dst</i> if <i>[a]=[b]</i>.</p>
 <br>
-<div class="codeblock langunileq">0   a   ?+1  #[0]=-[a]
-tmp tmp ?+1  #[tmp]=0
-tmp 0   ?+1  #[tmp]=-[0]=[a]
-0   0   ?+1  #[0]=0
-tmp b   ?+4  #skip next instruction if [a]&lt;=[b]
-0   0   dst  #[a]&gt;[b], jump
+<div class="codeblock langunileq">tmp1  tmp1  ?+1  #[tmp1]=0
+tmp1  b     ?+1  #[tmp1]=-[b]
+tmp2  tmp2  ?+1  #[tmp2]=0
+tmp2  tmp1  ?+1  #[tmp2]=-[tmp1]=[b]
+tmp2  a     ?+1  #[tmp2]=[b]-[a]
+tmp1  tmp1  ?+1  #[tmp1]=0
+tmp2  tmp1  dst  #if [tmp2]&lt;=0, then [a]=[b], so jump
 </div>
 <br>
 <p>We can print the character "A" to the screen by using an interpreter call with <i>1</i> as the
-third operand, and the address of the character as the third operand. We define <i>char</i> to be
+third operand, and the address of the character as the second operand. We define <i>char</i> to be
 the ASCII code for "A".</p>
 <br>
-<div class="codeblock langunileq">0-1 char 1
+<div class="codeblock langunileq">0-1  char  1
 char: 65
-</div>
-<br>
-<p>Negate <i>[a]=-[b]</i>, even if <i>a</i> and <i>b</i> are the same memory address.</p>
-<br>
-<div class="codeblock langunileq">tmp tmp ?+1  #[tmp]=0
-tmp b   ?+1  #[tmp]=-[b]
-0   tmp ?+1  #[0]=-[tmp]=[b]
-a   a   ?+1  #[a]=0
-a   0   ?+1  #[a]=-[b]
-0   0   ?+1  #[0]=0
-</div>
-<br>
-<p>Set <i>[a]=[b]</i>.</p>
-<br>
-<div class="codeblock langunileq">0 b ?+1  #[0]=-[b]=-[b]
-a a ?+1  #[a]=0
-a 0 ?+1  #[a]=-(-[b])=[b]
-0 0 ?+1  #[0]=0
-</div>
-<br>
-<p>Add <i>[a]=[a]+[b]</i>.</p>
-<br>
-<div class="codeblock langunileq">0 b ?+1  #[0]=-[b]
-a 0 ?+1  #[a]=[a]-[0]=[a]+[b]
-0 0 ?+1  #[0]=0
 </div>
 <br>
 <p>Increment <i>[a]</i>.</p>
 <br>
-<div class="codeblock langunileq">a neg ?+1  #[a]=[a]-[neg]=[a]-(-1)=[a]+1
+<div class="codeblock langunileq">a  neg  ?+1  #[a]=[a]-[neg]=[a]-(-1)=[a]+1
 neg: 0-1
 </div>
 <br>
 <p>Decrement <i>[a]</i>.</p>
 <br>
-<div class="codeblock langunileq">a one ?+1  #[a]=[a]-[one]=[a]-1
+<div class="codeblock langunileq">a  one  ?+1  #[a]=[a]-[one]=[a]-1
 one: 1
 </div>
 <br>
-<p>Dereference <i>[a]=[[b]]</i>. This is an extremely useful technique that allows us to perform the
-same actions on different memory addresses. It will form the backbone of functions in unileq.</p>
+<p>Set <i>[C]=[[A]+[B]]</i>. This is the same as getting the value at an array index, as in
+<i>C=arr[i]</i> in other languages. This will form the backbone of functions in unileq.</p>
 <br>
-<div class="codeblock langunileq">0   b     ?+1  #[0]=-[b]
-ptr ptr   ?+1  #[ptr]=0
-ptr 0     ?+1  #[ptr]=[b]
-0   0     ?+1  #[0]=0
-0   ptr:0 ?+1  #[0]=-[[b]]
-a   a     ?+1  #[a]=0
-a   0     ?+1  #[a]=[[b]]
-0   0     ?+1  #[0]=0
+<div class="codeblock langunileq">tmp  tmp    ?+1
+tmp  A      ?+1
+tmp  B      ?+1  #[tmp]=-[A]-[B]
+ptr  ptr    ?+1
+ptr  tmp    ?+1  #[ptr]=[A]+[B]
+tmp  tmp    ?+1
+tmp  ptr:0  ?+1  #[tmp]=-[[A]+[B]]
+C    C      ?+1
+C    tmp    ?+1  #[C]=[[A]+[B]]
+</div>
+<br>
+<p>Set <i>[[A]+[B]]=[C]</i>. This is the same as assigning a value to an array, as in
+<i>arr[i]=C</i>. Assume <i>[p0]=[p1]=[p2]</i>.</p>
+<br>
+<div class="codeblock langunileq">p0    A     ?+1
+p0    B     ?+1  #[p0]=[p0]-[A]-[B]
+p1    p0    ?+1  #[p1]=[A]+[B]
+p2    p0    ?+1  #[p2]=[A]+[B]
+tmp   tmp   ?+1
+tmp   p1    ?+1
+p0    p0    ?+1
+p0    tmp   ?+1  #[p0]=[A]+[B]
+tmp   tmp   ?+1
+tmp   C     ?+1
+p0:0  p1:0  ?+1  #[[A]+[B]]=0
+p2:0  tmp   ?+1  #[[A]+[B]]=[C]
 </div>
 <br>
 <p>If we allow a unileq instruction to be atomic, we can actually create a spinlock. When the lock
-is first acquired, the value of <i>[lock+1]</i> is overwritten from <i>dif</i> to
-<i>dif-[dif]=dif+1</i> and we jump to the critical section. When a second thread tries to acquire
-the lock, it will subtract <i>[dif+1]=0</i> from <i>dif+1</i>, which will fail to jump, and the
-thread will be caught by the next instruction, <i>dif+1 dif+1 lock</i>. When the owning thread is
-done with the lock, it just needs to subtract <i>[dif+2]=1</i> from <i>[lock]</i> to allow the lock
-to be acquired by a new thread.</p>
+is first acquired, the value of <i>[lock+1]</i> is overwritten from <i>z-1</i> to <i>z-1-[z-1]=z</i>
+and we jump to the critical section. When a second thread tries to acquire the lock, it will
+subtract <i>[z]=0</i> from <i>z</i>, which will fail to jump, and the thread will be caught by the
+next instruction, <i>z z lock</i>. When the owning thread is done with the lock, it just needs to
+subtract <i>[z+1]=1</i> from <i>[lock]</i> to allow the lock to be acquired by a new thread.</p>
 <br>
-<div class="codeblock langunileq">lock: ?+1    dif   crit  #acquire lock
-      dif+1  dif+1 lock  #failed to acquire, try again
-crit: #
-      # critical section
-      #
-      lock+1 dif+2 ?+1   #reopen spinlock
-      dif+1  dif+1 dst   #jump
-dif:  0-1 0 1
+<div class="codeblock langunileq">lock: lock+1  z-1  crit  #acquire lock
+      z       z    lock  #failed to acquire, try again
+crit:                    #
+                         #critical section
+                         #
+      lock+1  z+1  ?+1   #reopen spinlock
+      z       z    dst   #jump
+      0-1 z:0 1
 </div>
 </div>
 
@@ -371,10 +353,12 @@ screen, without needing to define even more special memory addresses.</p>
 <br>
 <h2>Turing Complete</h2>
 <br>
-<p>I claimed at the beginning of the article that unileq can do anything that a more complicated
-architecture can do. I will prove this by showing that unileq can replicate the operations in
-Minsky's <a href="http://www.cba.mit.edu/events/03.11.ASE/docs/Minsky.pdf">Computation: Finite and
-Infinite Machines</a>, and by doing so, show that unileq is Turing complete.</p>
+<p>We set out at the beginning of the article to "build up to what a normal computer can do", which
+begs the question of whether or not this goal is possible. We will prove that it's possible by
+showing that unileq can replicate the operations in Minsky's
+<a href="http://www.cba.mit.edu/events/03.11.ASE/docs/Minsky.pdf">Computation: Finite and
+Infinite Machines</a>. By doing so, we will show that unileq is Turing complete and thus can
+replicate any more complicated computer.</p>
 <br>
 <p>Let <i>regn</i> denote some register and let the following assembly code initialize our
 program.</p>
@@ -475,7 +459,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 1 Jun 2021<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 5 Jul 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

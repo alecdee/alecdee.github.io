@@ -1,6 +1,6 @@
 #|==============================================================================
 
-Unsigned Integer Testing - v1.03
+Unsigned Integer Testing - v1.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -8,7 +8,8 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 About
 
 To compile the necessary files together, run
-cat uinttest.unl uint.unl print.unl random.unl > test.unl;./unileq test.unl
+cat uinttest.unl uint.unl print.unl random.unl > uinttest_combined.unl
+./unileq uinttest_combined.unl
 
 Average instructions per function:
 cmp: 28

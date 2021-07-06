@@ -98,9 +98,10 @@ Standardize formatting:
      8 spaces per column.
      2 lines separating each function.
      Indent trailing variables section.
-Use global uint: scope and shared variables (.z:, .tmp:, etc).
+Use global "uint" scope and shared variables (.z:, .tmp:, etc).
 Add effects to index section.
 Add better overview explanations for uint.and, uint.mul, and uint.div.
+Remove bit length check in uint.shl. Abort early if 0.
 Remove decrement offset instruction from uint.shr.
 Remove loop counter from uint.mul. Optimize if high=0.
 Remove loop counter from uint.div. Optimize if quot=0 or den>=num.
