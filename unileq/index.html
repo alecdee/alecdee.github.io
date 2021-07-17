@@ -5,10 +5,40 @@
 	<title>Unileq - A One Instruction Architecture</title>
 	<link rel="stylesheet" href="../style/style.css" type="text/css">
 	<script type="text/javascript" src="../style/style.js"></script>
+	<script type="text/javascript" src="./unileq.js"></script>
+	<script type="text/javascript" src="./interpreter.js"></script>
 </head>
 <body>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div id="header"><a href="../index.html">Alec Dee's Homepage</a></div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Online Interpreter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content"><h1>Unileq Online Interpreter</h1>
+	<div style="text-align:center;">
+		<button id="unileq_run">&#9654;&nbsp;&nbsp;&nbsp;Run</button>
+		<button id="unileq_reset">&#8634;&nbsp;&nbsp;&nbsp;Reset</button>
+		<label>Demos:
+			<select id="unileq_demo">
+				<option value="./libraries/helloworld_demo.unl">Hello World</option>
+				<option value="./libraries/print_demo.unl">String Printing</option>
+				<option value="./libraries/uint_demo.unl">Unsigned Math</option>
+				<option value="./libraries/random_demo.unl">Random Numbers</option>
+			</select>
+		</label>
+	</div>
+	<textarea id="unileq_output" rows="10" style="box-sizing:border-box;width:100%;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
+	<textarea id="unileq_editor" rows="32" style="box-sizing:border-box;width:100%;" class="codeblock" spellcheck="false">loop: len  one   exit  #Decrement [len].
+      0-1  text  1     #Print a letter.
+      ?-2  neg   loop  #Increment letter pointer.
+exit: 0-1  0     0
+
+text: 72 101 108 108 111 44 32  #Hello,
+      87 111 114 108 100 33 10  #World!
+len:  len-text+1
+one:  1
+neg:  0-1
+</textarea>
+</div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unileq Architecture ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>The Unileq Architecture</h1>
@@ -34,7 +64,7 @@ mem[A] = mem[A] - mem[B]
 underflow are handled by wrapping values around to be between <i>0</i> and <i>2^64-1</i>
 inclusive.</p>
 <br>
-<p>If <i>A=2^64-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
+<p>If <i>A=-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
 used to interact with the interpreter. For example, if <i>C=0</i>, then the interpreter will end
 execution of the current unileq program.</p>
 <br>
@@ -441,7 +471,7 @@ offer a decent balance between speed and wasted space. It would be used like so:
 <br>
 <p>However, testing on large applications will need to be done.</p>
 <br>
-<p>Create an animated heat map showing memory activity. This would be useful in showing how the
+<p>Creating an animated heat map showing memory activity would be useful in showing how the
 architecture works to casual observers.</p>
 <br>
 <p>To support multithreading, make each instruction atomic. The interpreter can spawn threads with
@@ -459,7 +489,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 5 Jul 2021<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 17 Jul 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.08
+unileq.js - v1.09
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -42,9 +42,9 @@ The instruction pointer and memory values are all 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
 2^64-1 inclusive.
 
-If A=2^64-1, then instead of executing a normal instruction, B and C will be
-used to interact with the interpreter. For example, if C=0, then the interpreter
-will end execution of the current unileq program.
+If A=-1, then instead of executing a normal instruction, B and C will be used to
+interact with the interpreter. For example, if C=0, then the interpreter will
+end execution of the current unileq program.
 
 --------------------------------------------------------------------------------
 Unileq Assembly Language
@@ -107,7 +107,7 @@ Interpreter Calls
 --------------------------------------------------------------------------------
 TODO
 
-Webassembly. Speedup isn't that great compared to unlrun_fast(). Wait until
+Webassembly speedup isn't that great compared to unlrun_fast(). Wait until
 better integration with javascript.
 Textarea highlighting. Not currently possible because text isn't in DOM.
 Audio
@@ -537,19 +537,6 @@ function unlparsestr(st,str) {
 	}
 }
 
-function unlparsefile(st,path) {
-	//Load and parse a source file.
-	unlclear(st);
-	st.state=UNL_ERROR_PARSER;
-	try {
-		var res=fetch(path);
-		var str=res.text();
-		unlparsestr(st,str);
-	} catch (err) {
-		st.statestr=err;
-	}
-}
-
 function unlgetmem(st,addr) {
 	//Return the memory value at addr.
 	var i=addr.lo;
@@ -725,68 +712,3 @@ function unlrun_fast(st,iters) {
 	pos.hi=iphi;
 	pos.lo=iplo;
 }
-
-//--------------------------------------------------------------------------------
-//Editor.
-
-function unleditor(source,runid,resetid,inputid,outputid) {
-	var runbutton=document.getElementById(runid);
-	var resetbutton=document.getElementById(resetid);
-	var input=document.getElementById(inputid);
-	var output=document.getElementById(outputid);
-	var st=unlcreate(output);
-	var running=0;
-	var frametime=0;
-	function update() {
-		var time=performance.now();
-		var rem=frametime-time+16.666667;
-		if (rem>1.0) {setTimeout(update,1);return;}
-		rem=rem>-16.0?rem:-16.0;
-		frametime=time+rem;
-		var text="Stop";
-		if (st.state!==UNL_RUNNING) {
-			running=0;
-			text="Run";
-			if (st.state!==UNL_COMPLETE && output!==null) {
-				output.value+=st.statestr;
-			}
-		} else if (running===0) {
-			text="Resume";
-		}
-		if (runbutton!==null && runbutton.innertext!==text) {
-			runbutton.innerText=text;
-		}
-		if (running===1) {
-			//Instructions per frame is hard to time due to browser timer inconsistencies.
-			//250k instructions per frame seems to work well across platforms.
-			unlrun_fast(st,250000);
-			setTimeout(update,0);
-		}
-	}
-	if (runbutton!==null) {
-		runbutton.onclick=function() {
-			if (st.state===UNL_RUNNING) {
-				running=1-running;
-			} else {
-				if (source!==null) {
-					unlparsestr(st,source);
-				} else {
-					unlparsestr(st,input.value);
-				}
-				running=1;
-			}
-			if (running===1) {
-				frametime=performance.now()-17;
-				setTimeout(update,0);
-			}
-		};
-	}
-	if (resetbutton!==null) {
-		resetbutton.onclick=function() {
-			unlclear(st);
-			running=0;
-		};
-	}
-	return st;
-}
-

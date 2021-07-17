@@ -18,20 +18,23 @@ one instruction into an easy to use architecture.</p>
 <p>Libraries:<br>
 <br>
 <a href="#printing" style="margin-left:4rem">String Printing</a><br>
-<a href="#uint" style="margin-left:4rem">Unsigned Integers</a><br>
+<a href="#uint" style="margin-left:4rem">Unsigned Math</a><br>
 <a href="#random" style="margin-left:4rem">Random Number Generation</a><br></p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ String Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="printing"><h1>String Printing</h1>
+<p>Download <a href="./print.unl">print.unl</a> or try the live demo
+<a href="../index.html?demo=String%20Printing">here</a>.</p>
+<br>
 <p><a href="./print.unl">print.unl</a> is fundamental to working on other libraries. It defines the
-function <i>print</i> which allows us to print ASCII strings as well as numerical values. This
+<i>print</i> function which allows us to print ASCII strings as well as numerical values. This
 allows to print diagnostic messages and see what other libraries are actually doing. It can be
 called like this:</p>
 <br>
 <div class="codeblock langunileq">0 ? print 120 32 61 32 0-1 x 10 0</div>
 <br>
-<p>The values after <i>print</i> are the ASCII values for "x = ", followed by <i>0-1 x</i> which
+<p>The numbers after <i>print</i> are the ASCII values for "x = ", followed by <i>0-1 x</i> which
 prints out the value of <i>[x]</i>. So if <i>[x]=20</i>, then this will get output to the console:
 </p>
 <br>
@@ -45,44 +48,51 @@ values.</p>
 enter text: Hello
 ascii     : 72 101 108 108 111
 </div>
+<br>
+<p><a href="./print_demo.unl">print_demo.unl</a> shows how to use the library. It's also used in
+the live version linked above.</p>
 </div>
 
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unsigned Integers ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="uint"><h1>Unsigned Integers</h1>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unsigned Math ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="uint"><h1>Unsigned Math</h1>
+<p>Download <a href="./uint.unl">uint.unl</a> or try the live demo
+<a href="../index.html?demo=Unsigned%20Math">here</a>.</p>
+<br>
 <p><a href="./uint.unl">uint.unl</a> defines all of the usual functions for handling unsigned
 integer arithmetic and bitwise operations. For example, to compute the bitwise AND of <i>[B]</i> and
 <i>[C]</i> and store it <i>[A]</i>, we would call</p>
 <br>
 <div class="codeblock langunileq">0 ? uint.and A B C</div>
 <br>
-<p>All of the functions are fairly well optimized. The table below gives the average number of
-unileq instructions required per function call.</p>
+<p>All of the functions are fairly well optimized. The table below gives the worst case number of
+instructions required per function call.</p>
 <br>
 <table class="datatable insttable headerrow">
-<tr><td>Function</td><td>Instructions</td></tr>
-<tr><td>cmp</td><td>28</td></tr>
-<tr><td>set</td><td>24</td></tr>
-<tr><td>neg</td><td>25</td></tr>
-<tr><td>add</td><td>30</td></tr>
-<tr><td>sub</td><td>31</td></tr>
-<tr><td>mul</td><td>878</td></tr>
-<tr><td>div</td><td>911</td></tr>
-<tr><td>shl</td><td>83</td></tr>
-<tr><td>shr</td><td>131</td></tr>
-<tr><td>not</td><td>26</td></tr>
-<tr><td>and</td><td>469</td></tr>
-<tr><td>or</td><td>470</td></tr>
-<tr><td>xor</td><td>471</td></tr>
+<tr><td>Function</td><td>Time</td><td>O(n)</td></tr>
+<tr><td>cmp</td><td>29</td><td>29</td></tr>
+<tr><td>set</td><td>24</td><td>24</td></tr>
+<tr><td>neg</td><td>25</td><td>25</td></tr>
+<tr><td>add</td><td>30</td><td>30</td></tr>
+<tr><td>sub</td><td>31</td><td>31</td></tr>
+<tr><td>mul</td><td>993</td><td>33+15*bits</td></tr>
+<tr><td>div</td><td>1006</td><td>46+15*bits</td></tr>
+<tr><td>shl</td><td>289</td><td>33+4*bits</td></tr>
+<tr><td>shr</td><td>609</td><td>33+9*bits</td></tr>
+<tr><td>not</td><td>26</td><td>26</td></tr>
+<tr><td>and</td><td>485</td><td>44+7*bits</td></tr>
+<tr><td>or</td><td>486</td><td>45+7*bits</td></tr>
+<tr><td>xor</td><td>487</td><td>46+7*bits</td></tr>
 </table>
 <br>
-<p>Testing is carried out by <a href="./uinttest.unl">uinttest.unl</a>. It needs to be combined with
-<a href="./uint.unl">uint.unl</a>, <a href="./print.unl">print.unl</a>, and
-<a href="./random.unl">random.unl</a> to work. The combined file can be found here:
-<a href="./uinttest_combined.unl">uinttest_combined.unl</a>.</p>
+<p><a href="./uint_demo.unl">uint_demo.unl</a> shows how to use the library. It's also used in
+the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Random Number Generation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="random"><h1>Random Number Generation</h1>
+<p>Download <a href="./random.unl">random.unl</a> or try the live demo
+<a href="../index.html?demo=Random%20Numbers">here</a>.</p>
+<br>
 <p><a href="./random.unl">random.unl</a> defines a PRNG with a period of 2^64. It provides five
 functions for handling random numbers:</p>
 <br>
@@ -98,14 +108,12 @@ random.shuffle arr len</div>
 rand:0
 mod:52</div>
 <br>
-<p>Testing is carried out by <a href="./randomtest.unl">randomtest.unl</a>. It needs to be
-combined with <a href="./random.unl">random.unl</a> and <a href="./print.unl">print.unl</a> to work.
-The combined file can be found here:
-<a href="./randomtest_combined.unl">randomtest_combined.unl</a>.</p>
+<p><a href="./random_demo.unl">random_demo.unl</a> shows how to use the library. It's also used in
+the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 23 Jun 2021<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 17 Jul 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>

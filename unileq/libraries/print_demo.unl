@@ -1,3 +1,31 @@
+0 0 demo
+
+demo:
+
+	#Use ASCII character codes.
+	#Message must end with a '0'.
+
+	#test
+	0 ? print 116 101 115 116 10 0
+
+	#a = [a]
+	0 ? print 97 32 61 32 0-1 .a 10 0
+
+	#b = [b]
+	0 ? print 98 32 61 32 0-1 .b 10 0
+
+	#[a], [b]
+	0 ? print 0-1 .a 44 32 0-1 .b 10 0
+
+	#done
+	0 ? print 100 111 110 101 10 0
+
+	0-1 0 0
+
+	#Variables
+	.a:10
+	.b:0-1
+
 #|==============================================================================
 
 String Printing - v1.04

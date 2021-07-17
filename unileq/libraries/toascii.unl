@@ -1,6 +1,6 @@
 #|==============================================================================
 
-ASCII Converter - v1.00
+ASCII Converter - v1.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -15,101 +15,102 @@ the output.
 0 0 toascii
 
 print:
-	#Print function. Prints a zero terminated ascii string. If -1 is used as a
+	#Call: 0 ? print char0 char1 char2 ... 0
+	#Print function. Prints a zero terminated ASCII string. If -1 is used as a
 	#character value, then treat the next character as a pointer to a number.
-	#Arguments: 0 ? print char0 char1 char2 ... 0
-	.ptr  .ptr   ?+1
-	.ptr  0      ?+1
-	.ptr  .z-2   ?+1
-	0     0      ?+2
-	.ret: .tmp
+	.ptr    .ptr    ?+1
+	.ptr    0       ?+1
+	.ptr    .z-2    ?+1
+	0       0       ?+2
+	.ret:   .tmp
 .loop:
 	#Get the next character.
-	.tmp  .ptr:0 ?+1
-	.ptr  .z-1   ?+1
-	.char .char  ?+1
-	.char .tmp   .p0:?+1
+	.tmp    .ptr:0  ?+1
+	.ptr    .z-1    ?+1
+	.char   .char   ?+1
+	.char   .tmp    .p0:?+1
 	#If [char]=0, we've reached the end of the string.
-	.char .z     .ret
+	.char   .z      .ret
 	#If [char]>0, and [tmp]<=1, then [char]=-1.
-	.tmp  .z+1   .numprep
+	.tmp    .z+1    .numprep
 	#Print [char].
 .print:
-	0-1   .char  1
-	.tmp  .tmp   .loop
+	0-1     .char   1
+	.tmp    .tmp    .loop
 .numprep:
 	#Prepare to print a number.
 	#First entry. Jump back to beginning of loop to get the number's pointer.
-	.p0   .pset  .loop
+	.p0     .pset   .loop
 	#Second entry. Get the number from [char].
-	.p0   .prem  ?+1
-	.tmp  .tmp   ?+1
-	.tmp  .char:0 ?+1
-	.num  .tmp   ?+1
-	.show .show  ?+1
-	.base .base0 ?+1
+	.p0     .prem   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .char:0 ?+1
+	.num    .tmp    ?+1
+	.show   .show   ?+1
+	.base   .base0  ?+1
 .numloop:
 	#Store a power of 10 in [tmp].
-	.tmp  .tmp   ?+1
-	.tmp  .base:.base10+19 ?+1
-	.char .char  ?+1
-	.char .char0 ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .base:.base10+19 ?+1
+	.char   .char   ?+1
+	.char   .char0  ?+1
 	#Subtract [tmp] from [num] to get the next digit.
 .digitloop:
-	.num  .tmp   .digitdone
-	.num  .z+1   ?+1
-	.show .z-1   ?+1
-	.char .z-1   .digitloop
+	.num    .tmp    .digitdone
+	.num    .z+1    ?+1
+	.show   .z-1    ?+1
+	.char   .z-1    .digitloop
 .digitdone:
 	#If [tmp]=0 then return to the main loop and print the last digit.
-	.tmp  .z     .print
+	.tmp    .z      .print
 	#Add [num]+=[tmp] to correct for the last [num]-[tmp] operation.
-	.z    .tmp   ?+1
-	.num  .z     ?+1
-	.z    .z     ?+1
+	.z      .tmp    ?+1
+	.num    .z      ?+1
+	.z      .z      ?+1
 	#If [show]>0, then we can print digits.
-	.show .z     .noshow
-	0-1   .char  1
+	.show   .z      .noshow
+	0-1     .char   1
 .noshow:
-	.base .z-1   .numloop
-#Contants.
-0-2 0-1 .z:0 1
-.num:0
-.tmp:0
-.show:0
-.char0:0-48
-.base0:19
-.pset:.p0-.numprep-2
-.prem:.numprep-.p0+2
-#1-10^n
-.base10:
-	0-9999999999999999999 0-999999999999999999 0-99999999999999999
-	   0-9999999999999999    0-999999999999999    0-99999999999999
-	      0-9999999999999       0-999999999999       0-99999999999
-	         0-9999999999          0-999999999          0-99999999
-	            0-9999999             0-999999             0-99999
-	               0-9999                0-999                0-99
-	                  0-9                    0
+	.base   .z-1    .numloop
+	#Variables
+	0-2 0-1 .z:0 1
+	.num:0
+	.tmp:0
+	.show:0
+	.char0:0-48
+	.base0:19
+	.pset:.p0-.numprep-2
+	.prem:.numprep-.p0+2
+	#1-10^n
+	.base10:
+		0-9999999999999999999 0-999999999999999999 0-99999999999999999
+		   0-9999999999999999    0-999999999999999    0-99999999999999
+		      0-9999999999999       0-999999999999       0-99999999999
+		         0-9999999999          0-999999999          0-99999999
+		            0-9999999             0-999999             0-99999
+		               0-9999                0-999                0-99
+		                  0-9                    0
 
 toascii:
 	#enter text:
 	0 ? print 101 110 116 101 114 32 116 101 120 116 58 32 0
 	#Wait for input.
-	0-1 .t0 2
+	0-1     .tmp0   2
 	0 ? print 97 115 99 105 105 32 32 32 32 32 58 32 0
 	#Loop through stdin and print ascii character codes.
 .loop:
 	#If we've read the eol character, exit.
-	.t1 .t0  ?+1
-	.t1 .eol ?+1
-	.t1 0    .exit
-	0 ? print 0-1 .t0 32 0
-	0-1 .t0  2
-	.t1 .t1  .loop
+	.tmp1   .tmp0   ?+1
+	.tmp1   .eol    ?+1
+	.tmp1   0       .exit
+	0 ? print 0-1 .tmp0 32 0
+	0-1     .tmp0   2
+	.tmp1   .tmp1   .loop
 .exit:
-	0-1 .t0 1
-	0-1 0   0
-.t0:0
-.t1:0
-.eol:0-10
+	0-1     .tmp0   1
+	0-1     0       0
+	#Variables
+	.tmp0:0
+	.tmp1:0
+	.eol:0-10
 

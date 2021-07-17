@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.28
+unileq.c - v1.29
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -42,9 +42,9 @@ The instruction pointer and memory values are all 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
 2^64-1 inclusive.
 
-If A=2^64-1, then instead of executing a normal instruction, B and C will be
-used to interact with the interpreter. For example, if C=0, then the interpreter
-will end execution of the current unileq program.
+If A=-1, then instead of executing a normal instruction, B and C will be used to
+interact with the interpreter. For example, if C=0, then the interpreter will
+end execution of the current unileq program.
 
 --------------------------------------------------------------------------------
 Unileq Assembly Language
