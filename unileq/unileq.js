@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.09
+unileq.js - v1.10
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -614,8 +614,9 @@ function unlrun(st,iters) {
 				st.state=UNL_COMPLETE;
 			} else if (c.lo===1) {
 				//Write mem[b] to stdout.
-				if (st.output!==null && st.output.value.length<10000) {
-					st.output.value+=String.fromCharCode(mb.lo&255);
+				var output=st.output;
+				if (output!==null && output.value.length<10000) {
+					output.value+=String.fromCharCode(meml[mb]&255);
 				}
 			}
 		}
@@ -703,8 +704,9 @@ function unlrun_fast(st,iters) {
 				break;
 			} else if (c===1) {
 				//Write mem[b] to stdout.
-				if (st.output!==null && st.output.value.length<10000) {
-					st.output.value+=String.fromCharCode(meml[mb]&255);
+				var output=st.output;
+				if (output!==null && output.value.length<10000) {
+					output.value+=String.fromCharCode(meml[mb]&255);
 				}
 			}
 		}

@@ -6,7 +6,7 @@
 	<link rel="stylesheet" href="../style/style.css" type="text/css">
 	<script type="text/javascript" src="../style/style.js"></script>
 	<script type="text/javascript" src="./unileq.js"></script>
-	<script type="text/javascript" src="./interpreter.js"></script>
+	<script type="text/javascript" src="./editor.js"></script>
 </head>
 <body>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
@@ -26,14 +26,19 @@
 			</select>
 		</label>
 	</div>
-	<textarea id="unileq_output" rows="10" style="box-sizing:border-box;width:100%;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
-	<textarea id="unileq_editor" rows="32" style="box-sizing:border-box;width:100%;" class="codeblock" spellcheck="false">loop: len  one   exit  #Decrement [len].
+	<textarea id="unileq_output" style="box-sizing:border-box;width:100%;height:14rem;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
+	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">#Edit this
+
+loop: len  one   exit  #Decrement [len]. If [len]<=1, exit.
       0-1  text  1     #Print a letter.
       ?-2  neg   loop  #Increment letter pointer.
 exit: 0-1  0     0
 
-text: 72 101 108 108 111 44 32  #Hello,
-      87 111 114 108 100 33 10  #World!
+text: 72 10 101 10 108 10 108 10 111 10 44 10 32  #Hello,
+      87 10 111 10 114 10 108 10 100 10 33 10  #World!
+
+#text: 72 101 108 108 111 44 32  #Hello,
+#      87 111 114 108 100 33 10  #World!
 len:  len-text+1
 one:  1
 neg:  0-1
@@ -120,10 +125,10 @@ will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
 <p>We can show how the unileq assembly language and architecture work with a simple program that
 prints "Hello, World" to the screen:</p>
 <br>
-<div class="codeblock langunileq">loop: len one  exit  #Decrement [len]. If [len]&lt;=1, exit.
-      0-1 text 1     #Print a letter.
-      ?-2 neg  loop  #Increment the text pointer and restart the loop.
-exit: 0-1 0    0
+<div class="codeblock langunileq">loop: len  one   exit  #Decrement [len]. If [len]&lt;=1, exit.
+      0-1  text  1     #Print a letter.
+      ?-2  neg   loop  #Increment letter pointer.
+exit: 0-1  0     0
 
 text: 72 101 108 108 111 44 32  #Hello,
       87 111 114 108 100 33 10  #World!
@@ -139,7 +144,7 @@ make the program work.</p>
 <p>For brevity, we will use <i>[x]</i> as shorthand for <i>mem[x]</i>, the value at address
 <i>x</i>. With that said, we can now describe what each line does.</p>
 <br>
-<div class="codeblock langunileq">loop: len one  exit</div>
+<div class="codeblock langunileq">loop: len  one   exit</div>
 <br>
 <p>The first line declares the label <i>loop:</i> to mark the memory address of where our loop
 starts. It also contains the instruction <i>len one exit</i>. When this instruction is executed, it
@@ -151,7 +156,7 @@ subtracting), then we will jump to <i>exit</i> and end the program.</p>
 <p>Thus, when the program is running, we expect it to count from <i>len-text+1</i> down to <i>1</i>
 and then exit.</p>
 <br>
-<div class="codeblock langunileq">      0-1 text 1</div>
+<div class="codeblock langunileq">      0-1  text  1</div>
 <br>
 <p>The second instruction of our loop has <i>-1</i> as the first operand, which specifies an
 interpreter call. When the interpreter encounters an interpreter call, it won't execute a normal
@@ -159,7 +164,7 @@ unileq instruction. Instead it will perform some special action depending on the
 operands. Since the third operand is <i>1</i>, the interpreter will print <i>[text]</i> to the
 screen.</p>
 <br>
-<div class="codeblock langunileq">      ?-2 neg  loop</div>
+<div class="codeblock langunileq">      ?-2  neg   loop</div>
 <br>
 <p>The third instruction is used to advance to the next character to print and restart the loop.
 Recall from the assembly specification that <i>?</i> refers to the current address, so <i>?-2</i>
@@ -168,7 +173,8 @@ refers to two memory addresses back. In this case, it points to the previous ins
 will have the effect of advancing to the next character that we want to print. Since we are using
 unsigned arithmetic, <i>[neg]=-1=2^64-1</i> will be greater than or equal to any other value. Thus
 this instruction will always jump to <i>loop</i> and restart the loop.</p>
-<br><div class="codeblock langunileq">exit: 0-1 0    0</div>
+<br>
+<div class="codeblock langunileq">exit: 0-1  0     0</div>
 <br>
 <p>The last instruction of our program is another interpreter call, since <i>-1</i> is the first
 operand. In this case, having <i>0</i> as the second operand will tell the interpreter to end the
@@ -394,11 +400,11 @@ replicate any more complicated computer.</p>
 program.</p>
 <br>
 <div class="codeblock langunileq">0 0 start
-neg1:0-1
-pos1:1
-reg0:0
-reg1:0
-reg2:0
+neg1: 0-1
+pos1: 1
+reg0: 0
+reg1: 0
+reg2: 0
 #...
 start:
 </div>
@@ -406,14 +412,14 @@ start:
 <p>We have the operation <i>regn'</i>, which increments register <i>regn</i> and jumps to the next
 instruction. In unileq, this can be performed by</p>
 <br>
-<div class="codeblock langunileq">regn neg1 ?+1</div>
+<div class="codeblock langunileq">regn  neg1  ?+1</div>
 <br>
 <p>And we have the second operation, <i>regn<sup>-</sup>(n)</i>, which jumps to some memory address
 <i>n</i> if <i>regn=0</i>, otherwise it decrements <i>regn</i> and jumps to the next instruction. In
 unileq, this can be performed by</p>
 <br>
-<div class="codeblock langunileq">regn 0 n
-regn pos1 ?+1</div>
+<div class="codeblock langunileq">regn  0     n
+regn  pos1  ?+1</div>
 <br>
 <p>Thus, unileq is Turing complete.</p>
 <br>

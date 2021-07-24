@@ -105,7 +105,9 @@ TODO
 Use global "uint" scope and shared variables (.z:, .tmp:, etc).
 Add effects to index section.
 Add better overview explanations for uint.and, uint.mul, and uint.div.
-Remove bit length check in uint.shl. Abort early if 0.
+Remove bit length check in uint.shl. Shift in blocks and abort early if 0.
+Remove bit length check in uint.shr. Set ret=1<<shift. Then shift x into ret and
+abort when emits a 1 from the high bit. Also abort if 1<<shift=0.
 Remove decrement offset instruction from uint.shr.
 Remove loop counter from uint.mul. Optimize if high=0.
 Remove loop counter from uint.div. Optimize if quot=0 or den>=num.
@@ -523,7 +525,7 @@ uint.div:
 	0       0       .arg6:6
 .divz:
 	#Abort.
-	0-1 0xd0 0
+	0-1     0xd0    0
 	#Variables
 	.num:0
 	.den:0

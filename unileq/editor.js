@@ -3,7 +3,7 @@
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
-function InitInterpreter() {
+function init_editor() {
 	var runbutton=document.getElementById("unileq_run");
 	var resetbutton=document.getElementById("unileq_reset");
 	var input=document.getElementById("unileq_editor");
@@ -23,6 +23,7 @@ function InitInterpreter() {
 					var name=path.split("/");
 					input.value=xhr.response;
 					output.value="Loaded "+name[name.length-1];
+					highlight.innerHTML=unileq_highlight(input.value);
 				} else {
 					output.value="Unable to open "+path;
 				}
@@ -44,6 +45,8 @@ function InitInterpreter() {
 		if (output!==null && output.value.length>=10000) {
 			output.value="";
 		}
+		//There's no good unicode character for a pause button, so use 2 vertical bars
+		//instead.
 		var text="<span style='font-size:60%;vertical-align:middle'>&#9616;&#9616;</span>&nbsp;&nbsp;&nbsp;Pause";
 		if (unl.state!==UNL_RUNNING) {
 			running=0;
@@ -91,7 +94,7 @@ function InitInterpreter() {
 		loadfile(select.value);
 	};
 	//Parse arguments.
-	var regex=/.*?\?(file|demo|source)=(.*)/g;
+	var regex=new RegExp(".*?\\?(file|demo|source)=(.*)","g");
 	var match=regex.exec(decodeURI(window.location.href));
 	if (match!==null) {
 		var type=match[1];
@@ -111,6 +114,65 @@ function InitInterpreter() {
 			output.value="";
 		}
 	}
+	//Setup editor highlighting. We do this by creating a textarea and then displaying
+	//a colored div directly under it.
+	var container=document.createElement("div");
+	var highlight=document.createElement("div");
+	input.parentNode.replaceChild(container,input);
+	container.appendChild(highlight);
+	container.appendChild(input);
+	//Copy the textarea attributes to the container div.
+	//We need to do this before changing the input attributes.
+	var inputstyle=window.getComputedStyle(input);
+	var valuelist=Object.values(inputstyle);
+	var allow=new RegExp("(background|border|margin)","i");
+	for (var i=0;i<valuelist.length;i++) {
+		var name=valuelist[i];
+		if (name.match(allow)) {
+			container.style[name]=inputstyle[name];
+		}
+	}
+	container.style.position="relative";
+	container.style.overflow="hidden";
+	//Set the textarea to absolute positioning within the container and remove all
+	//decorations.
+	var caretcolor=inputstyle["caret-color"];
+	input.style.position="absolute";
+	input.style.left="0";
+	input.style.top="0";
+	input.style.margin="0";
+	input.style.border="none";
+	input.style.background="none";
+	//Copy the textarea attributes to the highlight div.
+	inputstyle=window.getComputedStyle(input);
+	var block=new RegExp("color","i");
+	for (var i=0;i<valuelist.length;i++) {
+		var name=valuelist[i];
+		if (name.match(allow) || !name.match(block)) {
+			highlight.style[name]=inputstyle[name];
+		}
+	}
+	highlight.style.resize="none";
+	highlight.style.overflow="hidden";
+	//Make the textarea's text invisible, except for the caret.
+	input.style.color="rgba(0,0,0,0)";
+	input.style["caret-color"]=caretcolor;
+	function update_text() {
+		highlight.innerHTML=unileq_highlight(input.value);
+	}
+	function update_position() {
+		container.style.width=input.style.width;
+		container.style.height=input.style.height;
+		highlight.style.left=(-input.scrollLeft).toString()+"px";
+		highlight.style.top=(-input.scrollTop).toString()+"px";
+		highlight.style.width=(input.clientWidth+input.scrollLeft).toString()+"px";
+		highlight.style.height=(input.clientHeight+input.scrollTop).toString()+"px";
+	}
+	input.oninput=update_text;
+	input.onscroll=update_position;
+	new ResizeObserver(update_position).observe(input);
+	update_text();
+	update_position();
 }
 
-window.addEventListener("load",InitInterpreter,true);
+window.addEventListener("load",init_editor,true);

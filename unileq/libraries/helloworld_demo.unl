@@ -1,4 +1,6 @@
-loop: len  one   exit  #Decrement [len].
+#Edit this
+
+loop: len  one   exit  #Decrement [len]. If [len]<=1, exit.
       0-1  text  1     #Print a letter.
       ?-2  neg   loop  #Increment letter pointer.
 exit: 0-1  0     0
