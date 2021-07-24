@@ -23,7 +23,7 @@ function init_editor() {
 					var name=path.split("/");
 					input.value=xhr.response;
 					output.value="Loaded "+name[name.length-1];
-					highlight.innerHTML=unileq_highlight(input.value);
+					update_text();
 				} else {
 					output.value="Unable to open "+path;
 				}
@@ -41,10 +41,6 @@ function init_editor() {
 		}
 		rem=rem>-16.0?rem:-16.0;
 		frametime=time+rem;
-		//Clear the output buffer if it gets full.
-		if (output!==null && output.value.length>=10000) {
-			output.value="";
-		}
 		//There's no good unicode character for a pause button, so use 2 vertical bars
 		//instead.
 		var text="<span style='font-size:60%;vertical-align:middle'>&#9616;&#9616;</span>&nbsp;&nbsp;&nbsp;Pause";
@@ -91,7 +87,13 @@ function init_editor() {
 	};
 	//Setup the example select menu.
 	select.onchange=function() {
-		loadfile(select.value);
+		if (select.value==="") {
+			unlclear(unl);
+			input.value="";
+			update_text();
+		} else {
+			loadfile(select.value);
+		}
 	};
 	//Parse arguments.
 	var regex=new RegExp(".*?\\?(file|demo|source)=(.*)","g");

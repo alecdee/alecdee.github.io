@@ -23,6 +23,7 @@
 				<option value="./libraries/print_demo.unl">String Printing</option>
 				<option value="./libraries/uint_demo.unl">Unsigned Math</option>
 				<option value="./libraries/random_demo.unl">Random Numbers</option>
+				<option value="">Blank</option>
 			</select>
 		</label>
 	</div>
@@ -34,11 +35,8 @@ loop: len  one   exit  #Decrement [len]. If [len]<=1, exit.
       ?-2  neg   loop  #Increment letter pointer.
 exit: 0-1  0     0
 
-text: 72 10 101 10 108 10 108 10 111 10 44 10 32  #Hello,
-      87 10 111 10 114 10 108 10 100 10 33 10  #World!
-
-#text: 72 101 108 108 111 44 32  #Hello,
-#      87 111 114 108 100 33 10  #World!
+text: 72 101 108 108 111 44 32  #Hello,
+      87 111 114 108 100 33 10  #World!
 len:  len-text+1
 one:  1
 neg:  0-1
@@ -473,7 +471,7 @@ Although the array will grow if we try to access a memory address outside of its
 for speed reasons the array will not check if it can be shrunk. Using a paged memory system may
 offer a decent balance between speed and wasted space. It would be used like so:</p>
 <br>
-<div class="codeblock">val=mem[addr>>48][(addr>>32)&0xffff][(addr>>16)&0xffff][addr&0xffff]</div>
+<div class="codeblock">val=mem[addr&gt;&gt;48][(addr&gt;&gt;32)&0xffff][(addr&gt;&gt;16)&0xffff][addr&0xffff]</div>
 <br>
 <p>However, testing on large applications will need to be done.</p>
 <br>

@@ -1,5 +1,5 @@
 //Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 19 Jul 2021
+//Modified: 24 Jul 2021
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
@@ -107,90 +107,25 @@ function python_highlight(text) {
 	return ret+"</span>";
 }
 
-function unileq_highlight0(text)
-{
-	//Set up regular expressions to match an expression to a style.
-	var style_default ="color:#eeeeee";
-	var style_comment ="color:#999999";
-	var style_number  ="color:#eeeeee";
-	var style_operator="color:#eeeeee";
-	var style_labelref="color:#eeeeee";
-	var style_labeldec="color:#aabb80";
-	var htmlreplace={"&":"&amp","<":"&lt;",">":"&gt;"};
-	var regex_match=
-	[
-		["[\\._a-zA-Z][\\._a-zA-Z0-9]*",style_labelref],
-		["[\\._a-zA-Z][\\._a-zA-Z0-9]*\\:",style_labeldec],
-		["\\?",style_labelref],
-		["0[xX][0-9a-fA-F]*",style_number],
-		["[0-9]+",style_number],
-		["[\\-\\+]",style_operator],
-		["#.*",style_comment],
-		["#\\|[\\s\\S]*?\\|#",style_comment]
-	];
-	for (var i=0;i<regex_match.length;i++)
-	{
-		var reg=regex_match[i][0];
-		regex_match[i][0]=new RegExp(reg);
-	}
-	//Begin parsing the text.
-	var prev=style_default;
-	var ret="<span style=\""+style_default+"\">";
-	while (text.length>0)
-	{
-		var minpos=text.length;
-		var mintext="";
-		var minstyle=style_default;
-		//Find the regex closest to index 0. If two occur at the same index, take the
-		//latter regex.
-		for (var i=0;i<regex_match.length;i++)
-		{
-			var match=text.match(regex_match[i][0]);
-			if (match!==null && minpos>=match.index)
-			{
-				minpos=match.index;
-				mintext=match[match.length-1];
-				minstyle=regex_match[i][1];
-			}
-		}
-		//If we skipped over text and it's not whitespace, give it the default style.
-		var prefix=text.substring(0,minpos);
-		if (prefix.trim().length>0 && prev!==style_default)
-		{
-			ret+="</span><span style=\""+style_default+"\">";
-			prev=style_default;
-		}
-		ret+=prefix;
-		//Append and style the best matched regex.
-		if (prev!==minstyle)
-		{
-			ret+="</span><span style=\""+minstyle+"\">";
-			prev=minstyle;
-		}
-		for (var i=0;i<mintext.length;i++)
-		{
-			var c=mintext[i];
-			var r=htmlreplace[c];
-			if (r===undefined) {ret+=c;}
-			else {ret+=r;}
-		}
-		text=text.substring(minpos+mintext.length);
-	}
-	return ret+"</span>";
-}
-
 function unileq_highlight(str) {
-	var style_default ="eeeeee";
-	var style_comment ="999999";
-	var style_number  ="eeeeee";
-	var style_operator="eeeeee";
-	var style_labelref="eeeeee";
-	var style_labeldec="aabb80";
+	//Convert unileq assembly language into a formatted HTML string.
+	//Define styles.
+	var stylearr=[
+		"<span style='color:#eeeeee'>", //default, number, operator, label ref
+		"<span style='color:#999999'>", //comment
+		"<span style='color:#aabb80'>"  //label declaration
+	];
+	var styledefault =0;
+	var stylecomment =1;
+	var stylenumber  =0;
+	var styleoperator=0;
+	var stylelabelref=0;
+	var stylelabeldec=2;
+	var style=styledefault,prevstyle=styledefault;
 	var htmlconvert=document.createElement("div");
-	var ret="";
-	var style=null,prevstyle=null;
-	//Convert unileq assembly language into a unileq program.
-	var i=0,j0=0,j1=0,len=str.length,c;
+	var htmlret="";
+	//Helper functions for processing the string.
+	var i=0,i0=0,j=0,len=str.length,c;
 	function  CNUM(c) {return (c<=57?c+208:((c+191)&~32)+10)&255;}
 	function ISLBL(c) {return CNUM(c)<36 || c===95 || c===46 || c>127;}
 	function  ISOP(c) {return c===43 || c===45;}
@@ -198,7 +133,7 @@ function unileq_highlight(str) {
 	//Process the string.
 	NEXT();
 	while (c!==0) {
-		j1=i-1;
+		i0=i-1;
 		if (c===13 || c===10 || c===9 || c===32) {
 			//Whitespace.
 			NEXT();
@@ -207,59 +142,56 @@ function unileq_highlight(str) {
 			var mask=0,eoc=10,n=0;
 			if (NEXT()===124) {mask=255;eoc=31779;NEXT();}
 			while (c!==0 && n!==eoc) {n=((n&mask)<<8)+c;NEXT();}
-			style=style_comment;
+			style=stylecomment;
 		} else if (ISOP(c)) {
 			//Operator.
 			NEXT();
-			style=style_operator;
+			style=styleoperator;
 		} else if (CNUM(c)<10) {
 			//Number. If it starts with "0x", use hexadecimal.
 			var token=10;
 			if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
 			while (CNUM(c)<token) {NEXT();}
-			style=style_number;
+			style=stylenumber;
 		} else if (c===63) {
 			//Current address token.
 			NEXT();
-			style=style_labelref;
+			style=stylelabelref;
 		} else if (ISLBL(c)) {
 			//Label.
 			while (ISLBL(c)) {NEXT();}
 			if (c===58) {
 				//Label declaration.
 				NEXT();
-				style=style_labeldec;
+				style=stylelabeldec;
 			} else {
-				style=style_labelref;
+				style=stylelabelref;
 			}
 		} else if (c===58) {
 			//Lone label declaration.
 			NEXT();
-			style=style_labeldec;
+			style=stylelabeldec;
 		} else {
 			//Unknown
 			NEXT();
-			style=style_default;
+			style=styledefault;
 		}
 		if (prevstyle!==style) {
 			//Extract the highlighted substring and convert it to HTML friendly text.
-			if (prevstyle!==null) {
-				var sub=str.substring(j0,j1);
-				htmlconvert.innerText=sub;
-				sub=htmlconvert.innerHTML;
-				ret+='<span style="color:#'+prevstyle+'">'+sub+'</span>';
-				j0=j1;
-			}
+			var sub=str.substring(j,i0);
+			htmlconvert.innerText=sub;
+			sub=htmlconvert.innerHTML;
+			htmlret+=stylearr[prevstyle]+sub+"</span>";
+			j=i0;
 			prevstyle=style;
 		}
 	}
-	if (prevstyle!==null) {
-		var sub=str.substring(j0,i);
-		htmlconvert.innerText=sub;
-		sub=htmlconvert.innerHTML;
-		ret+='<span style="color:#'+prevstyle+'">'+sub+'</span>';
-	}
-	return ret;
+	//We need to manually handle the tail end of the string.
+	var sub=str.substring(j,str.length);
+	htmlconvert.innerText=sub;
+	sub=htmlconvert.innerHTML;
+	htmlret+=stylearr[prevstyle]+sub+"</span>";
+	return htmlret;
 }
 
 function style_highlight(classname,func) {

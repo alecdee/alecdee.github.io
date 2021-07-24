@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.10
+unileq.js - v1.11
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -395,6 +395,19 @@ function unlclear(st) {
 	}
 }
 
+function unlprint(st,str) {
+	//Print to output and autoscroll to bottom.
+	var output=st.output;
+	if (output!==null) {
+		var newtext=output.value+str;
+		if (newtext.length>4096) {
+			newtext=newtext.substring(0,4096);
+		}
+		output.value=newtext;
+		output.scrollTop=output.scrollHeight;
+	}
+}
+
 function unlparsestr(st,str) {
 	//Convert unileq assembly language into a unileq program.
 	unlclear(st);
@@ -562,7 +575,7 @@ function unlsetmem(st,addr,val) {
 			try {
 				memh=new Uint32Array(alloc+1);
 				meml=new Uint32Array(alloc+1);
-			} catch {
+			} catch(error) {
 				memh=null;
 				meml=null;
 			}
@@ -614,10 +627,7 @@ function unlrun(st,iters) {
 				st.state=UNL_COMPLETE;
 			} else if (c.lo===1) {
 				//Write mem[b] to stdout.
-				var output=st.output;
-				if (output!==null && output.value.length<10000) {
-					output.value+=String.fromCharCode(meml[mb]&255);
-				}
+				unlprint(st,String.fromCharCode(unlgetmem(st,mb).lo&255));
 			}
 		}
 	}
@@ -704,10 +714,7 @@ function unlrun_fast(st,iters) {
 				break;
 			} else if (c===1) {
 				//Write mem[b] to stdout.
-				var output=st.output;
-				if (output!==null && output.value.length<10000) {
-					output.value+=String.fromCharCode(meml[mb]&255);
-				}
+				unlprint(st,String.fromCharCode(meml[mb]&255));
 			}
 		}
 	}
