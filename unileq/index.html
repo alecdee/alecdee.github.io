@@ -471,7 +471,7 @@ Although the array will grow if we try to access a memory address outside of its
 for speed reasons the array will not check if it can be shrunk. Using a paged memory system may
 offer a decent balance between speed and wasted space. It would be used like so:</p>
 <br>
-<div class="codeblock">val=mem[addr&gt;&gt;48][(addr&gt;&gt;32)&0xffff][(addr&gt;&gt;16)&0xffff][addr&0xffff]</div>
+<div class="codeblock">val=mem[addr&gt;&gt;48][(addr&gt;&gt;32)&amp;0xffff][(addr&gt;&gt;16)&amp;0xffff][addr&amp;0xffff]</div>
 <br>
 <p>However, testing on large applications will need to be done.</p>
 <br>

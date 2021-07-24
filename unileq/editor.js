@@ -1,5 +1,5 @@
 //Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 17 Jul 2021
+//Modified: 24 Jul 2021
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
@@ -126,7 +126,7 @@ function init_editor() {
 	//Copy the textarea attributes to the container div.
 	//We need to do this before changing the input attributes.
 	var inputstyle=window.getComputedStyle(input);
-	var valuelist=Object.values(inputstyle);
+	var valuelist=Object.keys(inputstyle).map(function(e){return inputstyle[e];});
 	var allow=new RegExp("(background|border|margin)","i");
 	for (var i=0;i<valuelist.length;i++) {
 		var name=valuelist[i];
