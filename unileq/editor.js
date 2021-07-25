@@ -12,26 +12,6 @@ function init_editor() {
 	var unl=unlcreate(output);
 	var running=0;
 	var frametime=0;
-	function loadfile(path) {
-		var xhr=new XMLHttpRequest();
-		xhr.onreadystatechange=function(){
-			if (xhr.readyState===4) {
-				unlclear(unl);
-				running=0;
-				setTimeout(update,0);
-				if (xhr.status===200) {
-					var name=path.split("/");
-					input.value=xhr.response;
-					output.value="Loaded "+name[name.length-1];
-					update_text();
-				} else {
-					output.value="Unable to open "+path;
-				}
-			}
-		};
-		xhr.open("GET",path,true);
-		xhr.send();
-	}
 	function update() {
 		var time=performance.now();
 		var rem=frametime-time+16.666667;
@@ -85,6 +65,27 @@ function init_editor() {
 		running=0;
 		setTimeout(update,0);
 	};
+	//Helper function to load files.
+	function loadfile(path) {
+		var xhr=new XMLHttpRequest();
+		xhr.onreadystatechange=function(){
+			if (xhr.readyState===4) {
+				unlclear(unl);
+				running=0;
+				setTimeout(update,0);
+				if (xhr.status===200) {
+					var name=path.split("/");
+					input.value=xhr.response;
+					output.value="Loaded "+name[name.length-1];
+					update_text();
+				} else {
+					output.value="Unable to open "+path;
+				}
+			}
+		};
+		xhr.open("GET",path,true);
+		xhr.send();
+	}
 	//Setup the example select menu.
 	select.onchange=function() {
 		if (select.value==="") {
@@ -118,8 +119,10 @@ function init_editor() {
 	}
 	//Setup editor highlighting. We do this by creating a textarea and then displaying
 	//a colored div directly under it. Skip if Internet Explorer.
+	var update_text=function() {};
+	var update_position=function() {};
 	var useragent=window.navigator.userAgent;
-	if (useragent.match("(MSIE|Trident)")===null) {
+	if (useragent.match("(MSIE\s|Trident/)")===null) {
 		var container=document.createElement("div");
 		var highlight=document.createElement("div");
 		input.parentNode.replaceChild(container,input);
@@ -161,17 +164,17 @@ function init_editor() {
 		//Make the textarea's text invisible, except for the caret.
 		input.style.color="rgba(0,0,0,0)";
 		input.style["caret-color"]=caretcolor;
-		function update_text() {
+		update_text=function() {
 			highlight.innerHTML=unileq_highlight(input.value);
-		}
-		function update_position() {
+		};
+		update_position=function() {
 			container.style.width=input.style.width;
 			container.style.height=input.style.height;
 			highlight.style.left=(-input.scrollLeft).toString()+"px";
 			highlight.style.top=(-input.scrollTop).toString()+"px";
 			highlight.style.width=(input.clientWidth+input.scrollLeft).toString()+"px";
 			highlight.style.height=(input.clientHeight+input.scrollTop).toString()+"px";
-		}
+		};
 		input.oninput=update_text;
 		input.onscroll=update_position;
 		new ResizeObserver(update_position).observe(input);
