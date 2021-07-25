@@ -117,64 +117,67 @@ function init_editor() {
 		}
 	}
 	//Setup editor highlighting. We do this by creating a textarea and then displaying
-	//a colored div directly under it.
-	var container=document.createElement("div");
-	var highlight=document.createElement("div");
-	input.parentNode.replaceChild(container,input);
-	container.appendChild(highlight);
-	container.appendChild(input);
-	//Copy the textarea attributes to the container div.
-	//We need to do this before changing the input attributes.
-	var inputstyle=window.getComputedStyle(input);
-	var valuelist=Object.keys(inputstyle).map(function(e){return inputstyle[e];});
-	var allow=new RegExp("(background|border|margin)","i");
-	for (var i=0;i<valuelist.length;i++) {
-		var name=valuelist[i];
-		if (name.match(allow)) {
-			container.style[name]=inputstyle[name];
+	//a colored div directly under it. Skip if Internet Explorer.
+	var useragent=window.navigator.userAgent;
+	if (useragent.match("(MSIE|Trident)")===null) {
+		var container=document.createElement("div");
+		var highlight=document.createElement("div");
+		input.parentNode.replaceChild(container,input);
+		container.appendChild(highlight);
+		container.appendChild(input);
+		//Copy the textarea attributes to the container div.
+		//We need to do this before changing the input attributes.
+		var inputstyle=window.getComputedStyle(input);
+		var valuelist=Object.values(inputstyle);
+		var allow=new RegExp("(background|border|margin)","i");
+		for (var i=0;i<valuelist.length;i++) {
+			var name=valuelist[i];
+			if (name.match(allow)) {
+				container.style[name]=inputstyle[name];
+			}
 		}
-	}
-	container.style.position="relative";
-	container.style.overflow="hidden";
-	//Set the textarea to absolute positioning within the container and remove all
-	//decorations.
-	var caretcolor=inputstyle["caret-color"];
-	input.style.position="absolute";
-	input.style.left="0";
-	input.style.top="0";
-	input.style.margin="0";
-	input.style.border="none";
-	input.style.background="none";
-	//Copy the textarea attributes to the highlight div.
-	inputstyle=window.getComputedStyle(input);
-	var block=new RegExp("color","i");
-	for (var i=0;i<valuelist.length;i++) {
-		var name=valuelist[i];
-		if (name.match(allow) || !name.match(block)) {
-			highlight.style[name]=inputstyle[name];
+		container.style.position="relative";
+		container.style.overflow="hidden";
+		//Set the textarea to absolute positioning within the container and remove all
+		//decorations.
+		var caretcolor=inputstyle["caret-color"];
+		input.style.position="absolute";
+		input.style.left="0";
+		input.style.top="0";
+		input.style.margin="0";
+		input.style.border="none";
+		input.style.background="none";
+		//Copy the textarea attributes to the highlight div.
+		inputstyle=window.getComputedStyle(input);
+		var block=new RegExp("color","i");
+		for (var i=0;i<valuelist.length;i++) {
+			var name=valuelist[i];
+			if (name.match(allow) || !name.match(block)) {
+				highlight.style[name]=inputstyle[name];
+			}
 		}
+		highlight.style.resize="none";
+		highlight.style.overflow="hidden";
+		//Make the textarea's text invisible, except for the caret.
+		input.style.color="rgba(0,0,0,0)";
+		input.style["caret-color"]=caretcolor;
+		function update_text() {
+			highlight.innerHTML=unileq_highlight(input.value);
+		}
+		function update_position() {
+			container.style.width=input.style.width;
+			container.style.height=input.style.height;
+			highlight.style.left=(-input.scrollLeft).toString()+"px";
+			highlight.style.top=(-input.scrollTop).toString()+"px";
+			highlight.style.width=(input.clientWidth+input.scrollLeft).toString()+"px";
+			highlight.style.height=(input.clientHeight+input.scrollTop).toString()+"px";
+		}
+		input.oninput=update_text;
+		input.onscroll=update_position;
+		new ResizeObserver(update_position).observe(input);
+		update_text();
+		update_position();
 	}
-	highlight.style.resize="none";
-	highlight.style.overflow="hidden";
-	//Make the textarea's text invisible, except for the caret.
-	input.style.color="rgba(0,0,0,0)";
-	input.style["caret-color"]=caretcolor;
-	function update_text() {
-		highlight.innerHTML=unileq_highlight(input.value);
-	}
-	function update_position() {
-		container.style.width=input.style.width;
-		container.style.height=input.style.height;
-		highlight.style.left=(-input.scrollLeft).toString()+"px";
-		highlight.style.top=(-input.scrollTop).toString()+"px";
-		highlight.style.width=(input.clientWidth+input.scrollLeft).toString()+"px";
-		highlight.style.height=(input.clientHeight+input.scrollTop).toString()+"px";
-	}
-	input.oninput=update_text;
-	input.onscroll=update_position;
-	new ResizeObserver(update_position).observe(input);
-	update_text();
-	update_position();
 }
 
 window.addEventListener("load",init_editor,true);
