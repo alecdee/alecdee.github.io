@@ -1,5 +1,11 @@
-//Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 25 Jul 2021
+/*
+Author  : Alec Dee, akdee144@gmail.com.
+Modified: 26 Jul 2021
+
+TODO:
+Find out if Firefox fixed the textarea padding bug:
+https://bugzilla.mozilla.org/show_bug.cgi?id=748518
+*/
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
@@ -39,7 +45,7 @@ function init_editor() {
 		if (running===1) {
 			//Instructions per frame is hard to time due to browser timer inconsistencies.
 			//250k instructions per frame at 60fps seems to work well across platforms.
-			unlrun_fast(unl,250000);
+			unlrun(unl,250000);
 			setTimeout(update,0);
 		}
 	}
@@ -127,13 +133,9 @@ function init_editor() {
 	//Copy the textarea attributes to the container div. We need to do this before
 	//changing the input attributes.
 	var inputstyle=window.getComputedStyle(input);
-	var stylekeys=inputstyle;
-	try {
-		stylekeys=Object.values(inputstyle);
-	} catch (error) {}
 	var allow=new RegExp("(background|border|margin)","i");
-	for (var i=0;i<stylekeys.length;i++) {
-		var key=stylekeys[i];
+	for (var i=0;i<inputstyle.length;i++) {
+		var key=inputstyle[i];
 		if (key.match(allow)) {
 			container.style[key]=inputstyle[key];
 		}
@@ -152,8 +154,8 @@ function init_editor() {
 	//Copy the textarea attributes to the highlight div.
 	inputstyle=window.getComputedStyle(input);
 	var block=new RegExp("color","i");
-	for (var i=0;i<stylekeys.length;i++) {
-		var key=stylekeys[i];
+	for (var i=0;i<inputstyle.length;i++) {
+		var key=inputstyle[i];
 		if (key.match(allow) || !key.match(block)) {
 			highlight.style[key]=inputstyle[key];
 		}
@@ -163,24 +165,29 @@ function init_editor() {
 	//Make the textarea's text invisible, except for the caret.
 	input.style.color="rgba(0,0,0,0)";
 	input.style["caret-color"]=caretcolor;
-	function update_text() {
+	var update_text=function() {
 		highlight.innerHTML=unileq_highlight(input.value);
-	}
-	function update_position() {
+	};
+	var update_position=function() {
 		container.style.width=input.style.width;
 		container.style.height=input.style.height;
-		highlight.style.left=(-input.scrollLeft).toString()+"px";
-		highlight.style.top=(-input.scrollTop).toString()+"px";
-		highlight.style.width=(input.clientWidth+input.scrollLeft).toString()+"px";
-		highlight.style.height=(input.clientHeight+input.scrollTop).toString()+"px";
+		highlight.style.left=(-input.scrollLeft)+"px";
+		highlight.style.top=(-input.scrollTop)+"px";
+		highlight.style.width=(input.clientWidth+input.scrollLeft)+"px";
+		highlight.style.height=(input.clientHeight+input.scrollTop)+"px";
+	};
+	//If we're using IE, fix text wrapping and tab sizes. Otherwise, enable resizing.
+	if (window.navigator.userAgent.match("(MSIE\s|Trident/)")) {
+		input.wrap="off";
+		update_text=function() {
+			var text=input.value.replace(/\t/g,"        ");
+			highlight.innerHTML=unileq_highlight(text);
+		};
+	} else {
+		new ResizeObserver(update_position).observe(input);
 	}
 	input.oninput=update_text;
 	input.onscroll=update_position;
-	try {
-		new ResizeObserver(update_position).observe(input);
-	} catch(error) {
-		console.log(error);
-	}
 	update_text();
 	update_position();
 }

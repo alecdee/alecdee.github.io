@@ -8,8 +8,7 @@ Standards:
 */
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Override Default HTML ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-*
-{
+* {
 	padding:0;
 	border:0;
 	border-collapse:collapse;
@@ -19,8 +18,7 @@ Standards:
 	font-size:100%;
 	vertical-align:baseline;
 }
-body
-{
+body {
 	/*Prevent the screen from oscillating around resizing javascript because of
 	the scrollbar.*/
 	overflow-y:scroll;
@@ -29,7 +27,7 @@ body
 	background-color:#222222;
 	background-image:url("./background.png");
 	background-size:50% auto;
-	background-repeat:repeat-x repeat-y;
+	background-repeat:repeat;
 	color:#eeeeee;
 	font-family:sans-serif,sans-serif;
 	/*Prevent weird font resizing on mobile.*/
@@ -38,14 +36,23 @@ body
 	-ms-text-size-adjust:none;
 	text-size-adjust:none;
 }
-a, a:hover {color:#ffa500;}
-a:hover {text-decoration:underline;}
-sup {vertical-align:super;font-size:80%;}
-sub {vertical-align:sub;font-size:80%;}
+a, a:hover {
+	color:#ffa500;
+}
+a:hover {
+	text-decoration:underline;
+}
+sup {
+	vertical-align:super;
+	font-size:80%;
+}
+sub {
+	vertical-align:sub;
+	font-size:80%;
+}
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Main Content ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-.content, #header, #footer
-{
+.content, #header, #footer {
 	width:60rem;
 	padding:1.98rem;
 	padding-top:1.45rem;
@@ -56,8 +63,7 @@ sub {vertical-align:sub;font-size:80%;}
 	margin:auto;
 	margin-bottom:3rem;
 }
-.content h1
-{
+.content h1 {
 	display:block;
 	width:100%;
 	padding:inherit;
@@ -76,8 +82,7 @@ sub {vertical-align:sub;font-size:80%;}
 	font-weight:bold;
 	line-height:150%;
 }
-.content h2
-{
+.content h2 {
 	display:block;
 	width:100%;
 	border-bottom:0.165rem solid #8080ff;
@@ -88,16 +93,14 @@ sub {vertical-align:sub;font-size:80%;}
 	line-height:150%;
 	color:#8080ff;
 }
-.content .codeblock, .content .consoleblock, .content i, .diagram
-{
+.content .codeblock, .content .consoleblock, .content i, .diagram {
 	font-family:Consolas,monospace,monospace;
 	-moz-tab-size:5;
 	-o-tab-size:5;
 	tab-size:5;
 	white-space:pre;
 }
-.content .codeblock, .content .consoleblock
-{
+.content .codeblock, .content .consoleblock {
 	display:block;
 	width:92%;
 	padding:0.5775rem;
@@ -109,15 +112,13 @@ sub {vertical-align:sub;font-size:80%;}
 	overflow:auto;
 	color:inherit;
 }
-.content .consoleblock
-{
+.content .consoleblock {
 	background:#000000;
 	color:#cccccc;
 	word-wrap:break-word;
 	white-space:pre-wrap;
 }
-.content i
-{
+.content i {
 	display:inline-block;
 	padding-left:2pt;
 	padding-right:2pt;
@@ -125,28 +126,23 @@ sub {vertical-align:sub;font-size:80%;}
 	font-style:normal;
 	color:#cccccc;
 }
-p
-{
+p {
 	/*border:1px solid black;*/
 	display:block;
 	text-align:justify;
 }
-.listtable
-{
+.listtable {
 	margin-left:4rem;
 	margin-top:1rem;
 	margin-bottom:1rem;
 }
-.listtable td
-{
+.listtable td {
 	padding:0.2rem;
 }
-.listtable td:nth-child(1)
-{
+.listtable td:nth-child(1) {
 	padding-right:0.4rem;
 }
-.datatable
-{
+.datatable {
 	margin:auto;
 	margin-top:1rem;
 	margin-bottom:1rem;
@@ -154,8 +150,7 @@ p
 	/*border-collapse:separate;
 	border-spacing:0.2rem;*/
 }
-.datatable td
-{
+.datatable td {
 	padding:0.4rem;
 	padding-left:0.75rem;
 	padding-right:0.75rem;
@@ -164,29 +159,24 @@ p
 	vertical-align:top;
 	/*font-family:sans-serif,sans-serif;*/
 }
-.nobordercells
-{
+.nobordercells {
 	border-collapse:collapse;
 }
-.nobordercells td
-{
+.nobordercells td {
 	border:none;
 }
-.headercol td:nth-child(1)
-{
+.headercol td:nth-child(1) {
 	background-color:#666666;
 	font-weight:bold;
 }
-.headerrow tr:nth-child(1) td
-{
+.headerrow tr:nth-child(1) td {
 	/*border-bottom:1px solid #808080;
 	padding-bottom:0.3rem;*/
 	background-color:#666666;
 	font-weight:bold;
 	text-align:center;
 }
-button,select
-{
+button, select {
 	margin:0.165rem;
 	/*margin-left:0.0825rem;
 	margin-right:0.0825rem;*/
@@ -198,14 +188,12 @@ button,select
 	padding-left:0.4rem;
 	padding-right:0.4rem;
 }
-button:hover,select:hover
-{
+button:hover, select:hover {
 	background-color:#7070ff;
 }
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SVGs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-.diagram
-{
+.diagram {
 	display:block;
 	width:56rem;
 	height:auto;
@@ -231,8 +219,7 @@ button:hover,select:hover
 .diagram .dimfill    {fill:#666666;}
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header/Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-#header, #footer
-{
+#header, #footer {
 	text-align:center;
 	padding-top:0;
 	padding-bottom:0;
@@ -240,18 +227,15 @@ button:hover,select:hover
 	background:none;
 	font-family:sans-serif,sans-serif;
 }
-#header
-{
+#header {
 	margin-top:2.3rem;
 	margin-bottom:2.3rem;
 }
-#footer
-{
+#footer {
 	margin-top:-0.9rem;
 	margin-bottom:3.1rem;
 }
-#footer b
-{
+#footer b {
 	display:none;
 	user-select:none
 }
