@@ -17,15 +17,25 @@
 	<div style="text-align:center;">
 		<button id="unileq_run">&#9654;&nbsp;&nbsp;&nbsp;Run</button>
 		<button id="unileq_reset">&#8634;&nbsp;&nbsp;&nbsp;Reset</button>
+		<button id="unileq_advanced">&#9776;&nbsp;&nbsp;&nbsp;Advanced</button>
 		<label>Demos:
 			<select id="unileq_demo">
 				<option value="./libraries/helloworld_demo.unl">Hello World</option>
 				<option value="./libraries/print_demo.unl">String Printing</option>
 				<option value="./libraries/uint_demo.unl">Unsigned Math</option>
 				<option value="./libraries/random_demo.unl">Random Numbers</option>
+				<option value="./libraries/all_demo.unl">All Libraries</option>
 				<option value="">Blank</option>
 			</select>
 		</label>
+	</div>
+	<div id="unileq_menu" class="codeblock" style="display:none;font-family:sans-serif;white-space:normal;">
+		<p>Advanced Menu</p><br>
+		<input type="checkbox" id="unileq_keyboard"><label for="unileq_keyboard"> Grab Keyboard:</label>
+		<p>&bull; Enable tab key<br>
+		&bull; F6: toggle run<br>
+		&bull; F7: reset<br>
+		&bull; F8: release keyboard</p>
 	</div>
 	<textarea id="unileq_output" style="box-sizing:border-box;width:100%;height:14rem;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
 	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one   exit  #Decrement [len]. If [len]<=1, exit.
@@ -46,7 +56,7 @@ neg:  0-1
 <p>Download the interpreter here: <a href="./unileq.c">unileq.c</a></p>
 <br>
 <p>The goal of unileq is to create the functionality of a normal computer using only one computing
-instruction. This is like trying to build a working car out of legos while using only one type of
+instruction. This is like trying to build a working car out of legos while only using one type of
 lego piece. Since we only have one instruction, most modern conveniences are gone. Things like
 multiplying numbers or memory allocation need to built from scratch using unileq's instruction.</p>
 <br>
@@ -352,8 +362,8 @@ operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 unileq programs require some amount of self modification to do anything useful at all. This can most
 easily be seen in the "Hello, World!" program in the section above. Specifically, the lines</p>
 <br>
-<div class="codeblock langunileq">0-1 text 1     #Print a letter.
-?-2 neg  loop  #Increment the text pointer and restart the loop.</div>
+<div class="codeblock langunileq">0-1  text  1     #Print a letter.
+?-2  neg   loop  #Increment the text pointer and restart the loop.</div>
 <br>
 <p>Here we must modify part of an instruction where <i>text</i> is in order to print successive
 characters in a string.</p>
@@ -426,10 +436,10 @@ while doing my research. That is: how can you say that a unileq (or subleq) inst
 instruction when it does so many things? After all, it performs a subtraction and then jumps, so it
 should at least count as two instructions.</p>
 <br>
-<p>The most important thing to consider is the spirit of the architecture. Most architectures have
-a variety of instructions to perform a variety of actions. A unileq program is meant to be composed
-of one simple instruction, and the goal is to do something a normal architecture would do. If we get
-tied up by the definition of the architecture, then we'll lose the spirit of it.</p>
+<p>The most important thing to consider is the intent of the architecture. Most architectures have
+a variety of instructions to perform a variety of actions by design. A unileq program is meant to be
+composed of one simple instruction, and the goal is to build up to what a normal architecture can
+do. If we get tied up by the definition of the architecture, then we'll lose the intent of it.</p>
 <br>
 <p>That being said, we can create a formal definition of what "one instruction" actually means. The
 definition uses a simplified version of
@@ -438,9 +448,9 @@ calculation: Given a set of memory addresses, is it possible to execute more tha
 those memory addresses. For instance, consider addresses <i>A</i> and <i>B</i>. In a complex
 architecture we could execute<br>
 <br>
-<div class="codeblock">add A,B
-sub A,B
-mul A,B
+<div class="codeblock">add A, B
+sub A, B
+mul A, B
 ...
 </div>
 <br>
@@ -491,7 +501,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 27 Jul 2021<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 31 Jul 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

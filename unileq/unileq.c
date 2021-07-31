@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.29
+unileq.c - v1.30
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -25,7 +25,7 @@ The Unileq Architecture
 
 The goal of unileq is to create the functionality of a normal computer using
 only one computing instruction. This is like trying to build a working car out
-of legos while using only one type of lego piece. Since we only have one
+of legos while only using one type of lego piece. Since we only have one
 instruction, most modern conveniences are gone. Things like multiplying numbers
 or memory allocation need to built from scratch using unileq's instruction.
 

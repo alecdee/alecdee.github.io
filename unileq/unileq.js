@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.11
+unileq.js - v1.12
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -25,7 +25,7 @@ The Unileq Architecture
 
 The goal of unileq is to create the functionality of a normal computer using
 only one computing instruction. This is like trying to build a working car out
-of legos while using only one type of lego piece. Since we only have one
+of legos while only using one type of lego piece. Since we only have one
 instruction, most modern conveniences are gone. Things like multiplying numbers
 or memory allocation need to built from scratch using unileq's instruction.
 
@@ -371,6 +371,7 @@ var UNL_MAX_PARSE   =(1<<30);
 function unlcreate(output) {
 	var st={
 		output:output,
+		outbuf:"",
 		memh:[0],
 		meml:[0],
 		alloc:0,
@@ -392,18 +393,25 @@ function unlclear(st) {
 	if (st.output!==null) {
 		st.output.value="";
 	}
+	st.outbuf="";
 }
 
 function unlprint(st,str) {
-	//Print to output and autoscroll to bottom.
+	//Print to output and autoscroll to bottom. If output is null, print to console.
 	var output=st.output;
 	if (output!==null) {
-		var newtext=output.value+str;
-		if (newtext.length>4096) {
-			newtext=newtext.substring(0,4096);
+		str=output.value+str;
+		if (str.length>8192) {
+			str=str.substring(str.length-4096);
 		}
-		output.value=newtext;
+		output.value=str;
 		output.scrollTop=output.scrollHeight;
+	} else {
+		str=(st.outbuf+str).split("\n");
+		for (var i=0;i<str.length-1;i++) {
+			console.log(str[i]);
+		}
+		st.outbuf=str[str.length-1];
 	}
 }
 

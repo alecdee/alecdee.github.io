@@ -1,6 +1,6 @@
 /*
-Author  : Alec Dee, akdee144@gmail.com.
-Modified: 26 Jul 2021
+Author  : Alec Dee, akdee144@gmail.com
+Modified: 31 Jul 2021
 
 TODO:
 Find out if Firefox fixed the textarea padding bug:
@@ -15,6 +15,9 @@ function init_editor() {
 	var input=document.getElementById("unileq_editor");
 	var output=document.getElementById("unileq_output");
 	var select=document.getElementById("unileq_demo");
+	var advanced=document.getElementById("unileq_advanced");
+	var menu=document.getElementById("unileq_menu");
+	var keygrab=document.getElementById("unileq_keyboard");
 	var unl=unlcreate(output);
 	var running=0;
 	var frametime=0;
@@ -33,8 +36,8 @@ function init_editor() {
 		if (unl.state!==UNL_RUNNING) {
 			running=0;
 			text="&#9654;&nbsp;&nbsp;&nbsp;Run";
-			if (unl.state!==UNL_COMPLETE && output!==null) {
-				output.value+=unl.statestr;
+			if (unl.state!==UNL_COMPLETE) {
+				unlprint(unl,unl.statestr);
 			}
 		} else if (running===0) {
 			text="&#9654;&nbsp;&nbsp;&nbsp;Resume";
@@ -71,6 +74,42 @@ function init_editor() {
 		running=0;
 		setTimeout(update,0);
 	};
+	//Setup the advanced menu.
+	advanced.onclick=function() {
+		if (menu.style.display==="none") {
+			menu.style.display="block";
+		} else {
+			menu.style.display="none";
+		}
+	};
+	var inputgrab=function(e) {
+		var code=e.keyCode;
+		if (code===9 || (code>=117 && code<=119)) {
+			e.preventDefault();
+			if (code===9) {
+				//Tab
+				document.execCommand("insertText",false,"\t");
+			} else if (code===117) {
+				//F6
+				runbutton.onclick();
+			} else if (code===118) {
+				//F7
+				resetbutton.onclick();
+			} else if (code===119) {
+				//F8
+				keygrab.checked=false;
+				keygrab.onchange();
+			}
+		}
+	};
+	keygrab.onchange=function() {
+		if (keygrab.checked) {
+			input.onkeydown=inputgrab;
+		} else {
+			input.onkeydown=null;
+		}
+	};
+	keygrab.onchange();
 	//Helper function to load files.
 	function loadfile(path) {
 		var xhr=new XMLHttpRequest();
@@ -82,10 +121,10 @@ function init_editor() {
 				if (xhr.status===200) {
 					var name=path.split("/");
 					input.value=xhr.response;
-					output.value="Loaded "+name[name.length-1];
+					unlprint(unl,"Loaded "+name[name.length-1]+"\n");
 					update_text();
 				} else {
-					output.value="Unable to open "+path;
+					unlprint(unl,"Unable to open "+path+"\n");
 				}
 			}
 		};
@@ -119,8 +158,8 @@ function init_editor() {
 				}
 			}
 		} else if (type==="source") {
+			unlclear(unl);
 			input.value=arg;
-			output.value="";
 		}
 	}
 	//Setup editor highlighting. We do this by creating a textarea and then displaying
@@ -162,7 +201,7 @@ function init_editor() {
 	}
 	highlight.style.resize="none";
 	highlight.style.overflow="hidden";
-	//Make the textarea's text invisible, except for the caret.
+	//Make the textarea text invisible, except for the caret.
 	input.style.color="rgba(0,0,0,0)";
 	input.style["caret-color"]=caretcolor;
 	var update_text=function() {
@@ -177,10 +216,11 @@ function init_editor() {
 		highlight.style.height=(input.clientHeight+input.scrollTop)+"px";
 	};
 	//If we're using IE, fix text wrapping and tab sizes. Otherwise, enable resizing.
-	if (window.navigator.userAgent.match("(MSIE\s|Trident/)")) {
+	if (window.navigator.userAgent.match("(MSIE\\s|Trident/)")) {
 		input.wrap="off";
+		var tabs=new RegExp("\t","g");
 		update_text=function() {
-			var text=input.value.replace(/\t/g,"        ");
+			var text=input.value.replace(tabs,"        ");
 			highlight.innerHTML=unileq_highlight(text);
 		};
 	} else {
