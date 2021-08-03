@@ -366,7 +366,7 @@ function unlparsestr(st,str) {
 			if (token!==0) {
 				//Add a new value to memory.
 				if (op===43) {val=(acc+val)&mask;}
-				else if (op===45) {val=(acc-val+mod)&mask;}
+				else if (op===45) {val=(acc-val)&mask;}
 				else if (pass!==0) {unlsetmem(st,addr-1,acc);}
 				addr++;
 				acc=val;
@@ -430,7 +430,7 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (alloc>addr) {
 			try {
-				mem=new Float64Array(alloc);
+				mem=new Uint32Array(alloc);
 			} catch(error) {
 				mem=null;
 			}
@@ -456,13 +456,14 @@ function unlsetmem(st,addr,val) {
 
 function unlrun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
+	if (st.state!==UNL_RUNNING) {return;}
 	var dec=iters>=0?1:0;
 	var mod=st.mod;
 	var a,b,c,mb,dif,ip=st.ip,io=mod-4;
 	var mem=st.mem,alloc=st.alloc;
 	var start=performance.now();
 	var count=0;
-	for (;iters!==0 && st.state===UNL_RUNNING;iters-=dec) {
+	for (;iters!==0;iters-=dec) {
 		count++;
 		//Load a, b, and c.
 		if (ip+2<alloc && ip<io) {
@@ -485,9 +486,7 @@ function unlrun(st,iters) {
 			//Read stdin.
 		} else if (b===mod-4) {
 			//Read time.
-			//struct timespec ts;
-			//timespec_get(&ts,TIME_UTC);
-			//mb=(((u64)ts.tv_sec)<<32)+(((u64)ts.tv_nsec)*0xffffffffULL)/999999999ULL;
+			mb=Date.now()&(mod-1);
 		} else {
 			mb=0;
 		}
@@ -496,20 +495,18 @@ function unlrun(st,iters) {
 			//Execute a normal unileq instruction.
 			if (a<alloc) {
 				dif=mem[a]-mb;
-				if (dif<0) {
-					mem[a]=dif+mod;
-				} else {
-					mem[a]=dif;
-					if (dif!==0) {continue;}
-				}
+				mem[a]=dif;
+				if (dif>0) {continue;}
 			} else {
 				unlsetmem(st,a,-mb);
 				mem=st.mem;
 				alloc=st.alloc;
+				if (st.state!==UNL_RUNNING) {break;}
 			}
 		} else if (a===mod-1) {
 			//Exit.
 			st.state=UNL_COMPLETE;
+			break;
 		} else if (a===mod-2) {
 			//Print to stdout.
 			unlprint(st,String.fromCharCode(mb));

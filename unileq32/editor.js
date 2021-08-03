@@ -48,7 +48,7 @@ function init_editor() {
 		if (running===1) {
 			//Instructions per frame is hard to time due to browser timer inconsistencies.
 			//250k instructions per frame at 60fps seems to work well across platforms.
-			unlrun(unl,250000);
+			unlrun(unl,300000);
 			setTimeout(update,0);
 		}
 	}
