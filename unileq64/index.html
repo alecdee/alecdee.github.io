@@ -173,9 +173,9 @@ and then exit.</p>
 <br>
 <div class="codeblock langunileq">      0-2  text  ?+1</div>
 <br>
-<p>The second instruction of our loop has <i>-2</i> as the first operand, which specifies a special
-output address. When a program writes to this address, the interpreter won't execute a normal
-unileq instruction. Instead it will will print <i>[text]</i> to the screen.</p>
+<p>The second instruction of our loop has <i>-2</i> as the first operand, which is a special output
+address. When a program writes to this address, the interpreter won't execute a normal unileq
+instruction. Instead it will will print the value of <i>[text]</i> to the screen.</p>
 <br>
 <div class="codeblock langunileq">      ?-2  neg   loop</div>
 <br>
@@ -232,8 +232,7 @@ sets <i>[tmp]=0</i>.</p>
 <br>
 <div class="codeblock langunileq">tmp  tmp  dst</div>
 <br>
-<p>We can abort any unileq program by using an interpreter call with <i>0</i> as the third operand.
-A call is any instruction that has <i>-1</i> as the first operand. Note that we need to calculate
+<p>We can abort a unileq program by writing any value to <i>-1</i>. Note that we need to calculate
 <i>-1</i> as "<i>0-1</i>" due to the syntax our assembly language.</p>
 <br>
 <div class="codeblock langunileq">0-1  0  0</div>
@@ -259,15 +258,14 @@ tmp1  tmp1  ?+1  #[tmp1]=0
 tmp2  tmp1  dst  #if [tmp2]&lt;=0, then [a]=[b], so jump
 </div>
 <br>
-<p>We can print the character "A" to the screen by using an interpreter call with <i>1</i> as the
-third operand, and the address of the character as the second operand. We define <i>char</i> to be
-the ASCII code for "A".</p>
+<p>We can print the character "A" to the screen by writing it to the special address <i>-2</i>. We
+define <i>char</i> to be the ASCII code for "A".</p>
 <br>
 <div class="codeblock langunileq">0-2  char  ?+1
 char: 65
 </div>
 <br>
-<p>Increment <i>[a]</i>.</p>
+<p>Increment <i>[a]</i>. This will always jump to the jump address.</p>
 <br>
 <div class="codeblock langunileq">a  neg  ?+1  #[a]=[a]-[neg]=[a]-(-1)=[a]+1
 neg: 0-1
@@ -342,22 +340,29 @@ several reasons for this:</p>
 <table class="listtable">
 <tr><td>&bull;</td><td>We may use the entire address range, instead of only the non-negative
 addresses subleq allows.</td></tr>
-<tr><td>&bull;</td><td>When reimplementing integer and bitwise arithmetic, we can perform bit-by-bit
-comparisons much more easily with unsigned integers. In particular, with signed integers we would
-have to make a separate comparison for the high bit.</td></tr>
-<tr><td>&bull;</td><td>In unsigned arithmetic, if <i>A&gt;=B</i>, then we know that
-<i>A-B&gt;=0</i>. This does not hold in signed arithmetic.</td></tr>
-<tr><td>&bull;</td><td>Using the instruction <i>x 0 dst</i>, we can test a variable for equality
-with <i>0</i> using only one instruction and without modifying any variables. This type of
-comparison is common in software, and cannot be done in one instruction using subleq.</td></tr>
-<tr><td>&bull;</td><td>We can perform another common operation, increment and jump, using only one
-instruction, <i>x neg1 dst</i>, which is also not possible in subleq</td></tr>
+<tr><td>&bull;</td><td>Unileq offers 3 ways to guarantee a jump<br>
+<br>
+<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A A jmp</i><br>
+<span style="margin-left:2rem;"></span>2. Subtracting anything from <i>0</i>. For <i>[A]=0</i>: <i>A B jmp</i><br>
+<span style="margin-left:2rem;"></span>3. Subtracting <i>-1</i> from anything. For <i>[Z-1]=-1</i>: <i>A Z-1 jmp</i><br>
+<br>
+Subleq only has 1 way to guarantee a jump<br>
+<br>
+<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A A jmp</i><br>
+<br>
+This gives unileq more options when deciding program flow, since these are all common operations.
+</td></tr>
+<tr><td>&bull;</td><td>In unsigned arithmetic, if <i>A&gt;B</i>, then we know that <i>A-B&gt;0</i>.
+This does not hold in signed arithmetic.</td></tr>
+<tr><td>&bull;</td><td>Using the instruction <i>A Z dst</i>, we can test <i>A</i> for equality
+with <i>0</i> using only one instruction and without modifying any variables. This a common value to
+test for. Subleq, would require 1 to 2 instructions and modifying <i>A</i> for this test.</td></tr>
 </table>
 <br>
 <p>Unileq also uses a different order for operands. With unileq, for operands <i>A</i>, <i>B</i>,
 and <i>C</i>, we take <i>[A]=[A]-[B]</i>, where subleq takes <i>[B]=[B]-[A]</i>. The order of
 operands in subleq is perfectly valid, of course, but goes against the standard ordering used in
-mathematics. For example, we usually write <i>a=b+c</i> instead of <i>b+c=a</i>. In an early version
+programming. For example, we usually write <i>a=b+c</i> instead of <i>b+c=a</i>. In an early version
 of unileq, I used the subleq order of operands and found myself constantly having to reorder the
 operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 <br>
@@ -369,8 +374,8 @@ operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 unileq programs require some amount of self modification to do anything useful at all. This can most
 easily be seen in the "Hello, World!" program in the section above. Specifically, the lines</p>
 <br>
-<div class="codeblock langunileq">0-1  text  1     #Print a letter.
-?-2  neg   loop  #Increment the text pointer and restart the loop.</div>
+<div class="codeblock langunileq">0-2  text  ?+1   #Print a letter.
+?-2  neg   loop  #Increment letter pointer.</div>
 <br>
 <p>Here we must modify part of an instruction where <i>text</i> is in order to print successive
 characters in a string.</p>

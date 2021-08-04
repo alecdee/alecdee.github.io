@@ -5,6 +5,29 @@ Unsigned Integer Testing - v1.05
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
 --------------------------------------------------------------------------------
+
+Linux:
+rm unileq
+rm unileq.gcda
+gcc -fprofile-generate -march=native -O3 ../site/unileq/unileq.c -o unileq
+./unileq perftest.unl
+gcc -fprofile-use -march=native -O3 ../site/unileq/unileq.c -o unileq
+rm unileq.gcda
+time ./unileq perftest.unl
+
+Windows:
+remove-item "unileq.exe"
+remove-item "default.*"
+clang -O3 -fprofile-instr-generate -march=native unileq.c -o unileq.exe
+.\unileq.exe
+remove-item "default.*"
+.\unileq.exe perftest.unl
+llvm-profdata merge -output="default.profdata" "*.profraw"
+clang -O3 -fprofile-instr-use="default.profdata" -march=native unileq.c -o unileq.exe
+.\unileq.exe
+(measure-command {.\unileq.exe perftest.unl | Out-Default}).TotalSeconds
+
+--------------------------------------------------------------------------------
 Notes
 
 To compile the necessary files together, run
@@ -909,110 +932,6 @@ uint.sub:
 	.arg0:0
 	.ret:0
 	.tmp:0
-
-
-uint.mul1:
-#ERROR
-#|
-set hval=3, set flag if top bit needs inversion
-if hval outputs 1 bit, abort
-if hval=0, abort
-or use -6 = ...1111010 and abort when outputting 0
-|#
-	#Call  : 0 ? uint.mul high low a b
-	#Effect:
-	#     [high]=([a]*[b])/2^64
-	#     [low] =([a]*[b])%2^64
-	#Time  : 33+15*bits = 993
-	#Setup stack pointer.
-	.tmp    .tmp    ?+1
-	.tmp    .arg2   ?+1
-	0       .tmp    ?+1
-	0       .z+2    ?+1
-	.arg2   0       ?+1
-	.arg3   0       ?+1
-	.arg4   0       ?+1
-	.arg5   0       ?+1
-	.arg6   0       ?+1
-	#Get high.
-	.tmp    .tmp    ?+1
-	.tmp    .arg2:2 ?+1
-	.h0     .h0     ?+1
-	.h0     .tmp    ?+1
-	.h1     .h1     ?+1
-	.h1     .tmp    ?+1
-	#Get low.
-	.tmp    .tmp    ?+1
-	.tmp    .arg3:3 ?+1
-	.l0     .l0     ?+1
-	.l0     .tmp    ?+1
-	.l1     .l1     ?+1
-	.l1     .tmp    ?+1
-	#Get -[a]. Use -[a] for adding to [lval].
-	.tmp    .tmp    ?+1
-	.tmp    .arg4:4 ?+1
-	.a0     .a0     ?+1
-	.a0     .tmp    ?+1
-	.a      .a      ?+1
-	.a      .a0:0   ?+1
-	#Get [b].
-	.tmp    .tmp    ?+1
-	.tmp    .arg5:5 ?+1
-	.b0     .b0     ?+1
-	.b0     .tmp    ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .b0:0   ?+1
-	.b      .b      ?+1
-	.b      .tmp    ?+1
-	#Initialize lval and hval.
-	.hval   .hval   ?+1
-	.lval   .lval   ?+1
-	#Manually perform the first loop and make sure [b] is odd.
-	.tmp    .z+1    ?+1
-	.b      .tmp    ?+4
-	.lval   .a      ?+1
-	.i      .bits   ?+13
-.loop:
-	#Check loop.
-	.i      .z+1    .ret
-	#Left shift [hval] and [lval].
-	.tmp    .tmp    ?+1
-	.tmp    .hval   ?+1
-	.hval   .tmp    ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .lval   ?+1
-	.tmp    .z+1    ?+1
-	.lval   .tmp    ?+4
-	.hval   .z-1    ?+1
-	.lval   .z+1    ?+1
-	#If the highest bit of [b] is set, add [a] to [lval] and carry to [hval].
-	#Since [b] is guaranteed to be odd, we don't need to offset it.
-	.tmp    .tmp    ?+1
-	.tmp    .b      ?+1
-	.b      .tmp    .loop
-	.lval   .a      .loop
-	.hval   .z-1    .loop
-.ret:
-	#Set [high].
-	.hval   .h0:0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .hval   ?+1
-	.h1:0   .tmp    ?+1
-	#Set [low].
-	.lval   .l0:0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .lval   ?+1
-	.l1:0   .tmp    ?+1
-	0       0       .arg6:6
-	#Variables
-	0-1 .z:0 1 2
-	.tmp:0
-	.a:0
-	.b:0
-	.hval:0
-	.lval:0
-	.i:0
-	.bits:0-63
 
 
 uint.mul:

@@ -48,7 +48,7 @@ function init_editor() {
 		if (running===1) {
 			//Instructions per frame is hard to time due to browser timer inconsistencies.
 			//250k instructions per frame at 60fps seems to work well across platforms.
-			unlrun(unl,300000);
+			unlrun(unl,250000);
 			setTimeout(update,0);
 		}
 	}
@@ -230,7 +230,7 @@ function init_editor() {
 	input.onscroll=update_position;
 	update_text();
 	update_position();
-	loadfile("./test.unl");
+	loadfile("./perftest.unl");
 }
 
 window.addEventListener("load",init_editor,true);

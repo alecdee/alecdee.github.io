@@ -121,6 +121,17 @@ Audio
 Graphics
 Mouse+Keyboard
 
+Performance tests, measured in instructions per second:
+
+                 |  Phone  |  Laptop |  PC FF  |  PC Chr
+     ------------+---------+---------+---------+---------
+      32 Bit Std |  382561 |  777172 | 1628026 | 2044652
+      64 Bit Std |   68830 |   39992 |  112846 |  244952
+      64 Bit Fast|  294037 |  639020 | 1296122 | 1527884
+
+Using interleaved memory was about 35% slower than splitting into high/low
+arrays.
+
 */
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
@@ -612,8 +623,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Uint32Array(alloc);
-				meml=new Uint32Array(alloc);
+				memh=new Float64Array(alloc);
+				meml=new Float64Array(alloc);
 			} catch(error) {
 				memh=null;
 				meml=null;
@@ -644,7 +655,6 @@ function unlsetmem(st,addr,val) {
 
 function unlrun_standard(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
-	//33,000/sec
 	var dec=iters>=0?1:0;
 	var a,b,c,ma,mb,ip=st.ip;
 	var io=unlu64create(-4);
@@ -694,6 +704,7 @@ function unlrun_standard(st,iters) {
 function unlrun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
 	//This version of unlrun() unrolls several operations to speed things up.
+	//Depending on the platform, it is 4 to 10 times faster.
 	if (st.state!==UNL_RUNNING) {
 		return;
 	}
@@ -718,7 +729,7 @@ function unlrun(st,iters) {
 			chi=memh[iplo];
 			clo=meml[iplo++];
 		} else {
-			//Possible out of bounds read. Check bounds for each parameter.
+			//Possible out of bounds read. Check bounds for each operand.
 			ahi=alo=0;
 			if (iphi===0 && iplo<alloc) {ahi=memh[iplo];alo=meml[iplo];}
 			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
@@ -753,7 +764,7 @@ function unlrun(st,iters) {
 			//Execute a normal unileq instruction.
 			if (ahi===0 && alo<alloc) {
 				//Inbounds. Read and write to mem[a] directly.
-				mblo=meml[alo]-mblo;
+				/*mblo=meml[alo]-mblo;
 				if (mblo>=0) {
 					meml[alo]=mblo;
 				} else {
@@ -768,15 +779,15 @@ function unlrun(st,iters) {
 					}
 				} else {
 					memh[alo]=mbhi+0x100000000;
-				}
-				/*mblo=meml[alo]-mblo;
+				}*/
+				mblo=meml[alo]-mblo;
 				if (mblo<0) {mbhi++;}
 				meml[alo]=mblo>>>0;
 				mbhi=memh[alo]-mbhi;
 				memh[alo]=mbhi>>>0;
-				if (mbhi>0 || (mbhi>=0 && mblo!==0)) {
+				if ((mbhi>=0 && mblo!==0) || mbhi>0) {
 					continue;
-				}*/
+				}
 			} else if (mblo!==0 || mbhi!==0) {
 				//Out of bounds. Use unlsetmem to modify mem[a].
 				tmp0=unlu64create(ahi,alo);
