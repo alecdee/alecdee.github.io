@@ -25,7 +25,7 @@ demo:
 
 #|==============================================================================
 
-Random Number Generator - v1.02
+Random Number Generator - v1.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -47,6 +47,8 @@ Version History
      Added shuffling.
 1.02
      Optimized random.generate by removing offsets during shitfing.
+1.03
+     Initial seed is generate by system time.
 
 --------------------------------------------------------------------------------
 TODO
@@ -54,7 +56,6 @@ TODO
 Optimize random.jump based on uint.mul.
 Optimize random.mod and random.shuffle based on uint.div.
 Merge random.get and random.generate.
-Use time as initial random seed.
 |#
 
 random.table:
@@ -125,13 +126,25 @@ random.table:
 	0x86c8c765b04b7031 0x03edd68c2c9f6259 0xa82b24db8deaf410 0x66337c5333e8c4a5
 	0x305d36e368598b13 0xbdd8330fbb889ee3 0xc146c702c618a08a 0x377d5bd4c5c6b854
 
+
 random.generate:
 	#Call  : 0 ? random.generate
 	#Effect: Meant for internal use. Advances the PRNG state, hashes it, and stores
 	#the result in random.generate.ret.
 	#Time  : 296 instructions
+	#On first run, seed the PRNG by the current time.
+	.arg2   .arg2   .skip:?+1
+	.skip   .frdif  ?+1
+	random.seed.skip random.seed.frdif ?+1
+	.frtmp  0       ?+1
+	0       0       ?+1
+	0 ? random.seed 0-4
+	0       .frtmp  ?+1
+	.arg2   .arg2   .firstrun
+	.frdif: .skip+1-.firstrun
+	.frtmp: 0
+.firstrun:
 	#Set return address.
-	.arg2   .arg2   ?+1
 	.arg2   0       ?+1
 	.arg2   .l+6    ?+1
 	#Advance state.
@@ -166,11 +179,17 @@ random.generate:
 	.l:0-128-random.table 0-64 0-32 0-16 0-8 0-4 0-2 0-1 0-random.table
 	.z:0 1
 
+
 random.seed:
 	#Call  : 0 ? random.seed num
 	#Effect: Sets the PRNG state based on the value of [num].
+	#Disable random seeding on first run.
+	.tmp    .tmp    .skip:?+1
+	random.generate.skip random.generate.frdif  ?+1
+	.skip   .frdif  .firstrun
+	.frdif: .skip+1-.firstrun
+.firstrun:
 	#Setup the stack.
-	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
 	0       .tmp    ?+1
@@ -202,6 +221,7 @@ random.seed:
 	#Variables
 	.tmp:0
 	0-2 0-1 .z:0
+
 
 random.jump:
 	#Call  : 0 ? random.jump num
@@ -250,6 +270,7 @@ random.jump:
 	.i0:0-64
 	0-2 0-1 .z:0 1
 
+
 random.get:
 	#Call  : 0 ? random.get dst
 	#Effect: [dst]=a random 64 bit integer
@@ -279,6 +300,7 @@ random.get:
 	0       0       .arg3:3
 	#Variables
 	.z:0 1 2
+
 
 random.mod:
 	#Call  : 0 ? random.get dst mod
@@ -360,6 +382,7 @@ random.mod:
 	.i:0
 	.i0:0-64
 	0-1 .z:0 1 2
+
 
 random.shuffle:
 	#Call  : 0 ? random.shuffle arr len
@@ -530,7 +553,7 @@ print:
 	.tmp    .z+1    .numprep
 	#Print [char].
 .print:
-	0-1     .char   1
+	0-2     .char   ?+1
 	.tmp    .tmp    .loop
 .numprep:
 	#Prepare to print a number.
@@ -564,7 +587,7 @@ print:
 	.z      .z      ?+1
 	#If [show]>0, then we can print digits.
 	.show   .z      .noshow
-	0-1     .char   1
+	0-2     .char   ?+1
 .noshow:
 	.base   .z-1    .numloop
 	#Variables

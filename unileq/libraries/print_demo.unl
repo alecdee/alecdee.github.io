@@ -23,8 +23,8 @@ demo:
 	0-1 0 0
 
 	#Variables
-	.a:10
-	.b:0-1
+	.a: 10
+	.b: 0-1
 
 #|==============================================================================
 
@@ -84,7 +84,7 @@ print:
 	.tmp    .z+1    .numprep
 	#Print [char].
 .print:
-	0-1     .char   1
+	0-2     .char   ?+1
 	.tmp    .tmp    .loop
 .numprep:
 	#Prepare to print a number.
@@ -118,7 +118,7 @@ print:
 	.z      .z      ?+1
 	#If [show]>0, then we can print digits.
 	.show   .z      .noshow
-	0-1     .char   1
+	0-2     .char   ?+1
 .noshow:
 	.base   .z-1    .numloop
 	#Variables

@@ -29,15 +29,10 @@ in python, and <a href="./range_c99.zip">range_c99.zip</a> in C. Both implementa
 layout and produce identical outputs. When called from the command line, they will use an adaptive
 order-0 model to compress or decompress a file.</p>
 <br>
-<p>Python 3</p>
+<p>Python</p>
 <br>
 <div class="consoleblock">python3 RangeEncoder.py -c image.bmp compress.dat
 python3 RangeEncoder.py -d compress.dat decompress.bmp</div>
-<br>
-<p>Pypy</p>
-<br>
-<div class="consoleblock">pypy RangeEncoder.py -c image.bmp compress.dat
-pypy RangeEncoder.py -d compress.dat decompress.bmp</div>
 <br>
 <p>Binary</p>
 <br>
@@ -971,6 +966,7 @@ theoretical optimal encoding.</p>
 <br>
 <img src="accuracy.svg" alt="accuracy graph" style="width:100%">
 <br>
+<br>
 <p>Error here is measured by encoding intervals with denominators in the interval [1,2<sup>31</sup>], with the
 accurate and inaccurate encoders using varying levels of state bits. We can see that the error for
 accurate scaling is nearly 0.000175 for all values of <i>bits &gt;= 32</i>, whereas inaccurate scaling needs
@@ -1275,7 +1271,7 @@ overflow, or 'carrying'. In reality, they're both different ways of performing t
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 27 Apr 2018 - Modified on 5 Jul 2021<br>
+<div id="footer">Created on 27 Apr 2018 - Modified on 1 Aug 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.30
+unileq.c - v1.31
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -32,19 +32,26 @@ or memory allocation need to built from scratch using unileq's instruction.
 The instruction is fairly simple: Given A, B, and C, compute mem[A]-mem[B] and
 store the result in mem[A]. Then, if mem[A] was less than or equal to mem[B],
 jump to C. Otherwise, jump by 3. We use the instruction pointer (IP) to keep
-track of our place in memory. The python code below shows a unileq instruction:
+track of our place in memory. The pseudocode below shows a unileq instruction:
 
-     A, B, C = mem[IP+0], mem[IP+1], mem[IP+2]
-     IP = C if mem[A] <= mem[B] else (IP+3)
-     mem[A] = mem[A] - mem[B]
+
+     A=mem[IP+0]
+     B=mem[IP+1]
+     C=mem[IP+2]
+     if mem[A]<=mem[B]
+          IP=C
+     else
+          IP=IP+3
+     mem[A]=mem[A]-mem[B]
+
 
 The instruction pointer and memory values are all 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
 2^64-1 inclusive.
 
-If A=-1, then instead of executing a normal instruction, B and C will be used to
-interact with the interpreter. For example, if C=0, then the interpreter will
-end execution of the current unileq program.
+Interaction with the host environment is done by reading and writing from
+special memory addresses. For example, writing anything to -1 will end execution
+of the unileq program.
 
 --------------------------------------------------------------------------------
 Unileq Assembly Language
@@ -96,13 +103,14 @@ Operator +-
      There cannot be two consecutive operators, ex: "0++1". Also, the program
      cannot begin or end with an operator.
 
-Interpreter Calls
-     If A=-1, a call will be sent to the interpreter and no jump will be taken.
-     The effect of a call depends on B and C.
+Input/Output
+     Interaction with the host environment can be done by reading or writing
+     from special addresses.
 
-     C=0: End execution. B can be any value.
-     C=1: mem[B] will be written to stdout.
-     C=2: stdin will be written to mem[B].
+     A = -1: End execution.
+     A = -2: Write mem[B] to stdout.
+     B = -3: Subtract stdin from mem[A].
+     B = -4: Subtract current time from mem[A].
 
 --------------------------------------------------------------------------------
 Notes
@@ -118,6 +126,7 @@ Windows: cl /O2 unileq.c
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
 
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -487,30 +496,41 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 void unlrun(unlstate* st,u32 iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
 	u32 dec=iters!=(u32)-1;
-	u64 a,b,c,ma,mb,ip=st->ip;
+	u64 a,b,c,ma,mb,ip=st->ip,io=(u64)-4;
 	for (;iters && st->state==UNL_RUNNING;iters-=dec) {
 		//Load a, b, and c.
 		a=unlgetmem(st,ip++);
 		b=unlgetmem(st,ip++);
 		c=unlgetmem(st,ip++);
-		//Execute a normal unileq instruction.
-		mb=unlgetmem(st,b);
-		if (a!=(u64)-1) {
+		//Input
+		if (b<io) {
+			//Read mem[b].
+			mb=unlgetmem(st,b);
+		} else if (b==(u64)-3) {
+			//Read stdin.
+			mb=(uchar)getchar();
+		} else if (b==(u64)-4) {
+			//Read time.
+			struct timespec ts;
+			timespec_get(&ts,TIME_UTC);
+			mb=(((u64)ts.tv_sec)<<32)+(((u64)ts.tv_nsec)*0xffffffffULL)/999999999ULL;
+		} else {
+			mb=0;
+		}
+		//Output
+		if (a<io) {
+			//Execute a normal unileq instruction.
 			ma=unlgetmem(st,a);
 			unlsetmem(st,a,ma-mb);
-			ip=ma>mb?ip:c;
-		}
-		//Otherwise, call the interpreter.
-		else if (c==0) {
+			if (ma>mb) {continue;}
+		} else if (a==(u64)-1) {
 			//Exit.
 			st->state=UNL_COMPLETE;
-		} else if (c==1) {
-			//Write mem[b] to stdout.
+		} else if (a==(u64)-2) {
+			//Print to stdout.
 			putchar((char)mb);
-		} else if (c==2) {
-			//Read stdin to mem[b].
-			unlsetmem(st,b,(uchar)getchar());
 		}
+		ip=c;
 	}
 	st->ip=ip;
 }
@@ -524,9 +544,9 @@ int main(int argc,char** argv) {
 		//Print a usage message.
 		unlparsestr(
 			unl,
-			"loop: len  ?+4   neg   #if [len]=0, exit\n"
-			"      0-1  data  1     #print a letter\n"
-			"      ?-2  neg   loop  #increment pointer and loop\n"
+			"loop: len  ?     neg   #if [len]=0, exit\n"
+			"      0-2  data  ?+1   #print a letter\n"
+			"      ?-2  neg   loop  #increment and loop\n"
 			"data: 85 115 97 103 101 58 32 117 110 105 108 101"
 			"      113 32 102 105 108 101 46 117 110 108 10\n"
 			"neg:  0-1\n"

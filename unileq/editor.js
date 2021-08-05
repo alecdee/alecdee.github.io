@@ -84,19 +84,19 @@ function init_editor() {
 	};
 	var inputgrab=function(e) {
 		var code=e.keyCode;
-		if (code===9 || (code>=117 && code<=119)) {
+		if (code===9 || (code>=120 && code<=122)) {
 			e.preventDefault();
 			if (code===9) {
 				//Tab
 				document.execCommand("insertText",false,"\t");
-			} else if (code===117) {
-				//F6
+			} else if (code===120) {
+				//F9
 				runbutton.onclick();
-			} else if (code===118) {
-				//F7
+			} else if (code===121) {
+				//F10
 				resetbutton.onclick();
-			} else if (code===119) {
-				//F8
+			} else if (code===122) {
+				//F11
 				keygrab.checked=false;
 				keygrab.onchange();
 			}

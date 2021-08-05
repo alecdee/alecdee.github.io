@@ -29,18 +29,21 @@
 			</select>
 		</label>
 	</div>
-	<div id="unileq_menu" class="codeblock" style="display:none;font-family:sans-serif;white-space:normal;">
-		<p>Advanced Menu</p><br>
-		<input type="checkbox" id="unileq_keyboard"><label for="unileq_keyboard"> Grab Keyboard:</label>
-		<p>&bull; Enable tab key<br>
-		&bull; F6: toggle run<br>
-		&bull; F7: reset<br>
-		&bull; F8: release keyboard</p>
+	<div id="unileq_menu" class="codeblock" style="box-sizing:border-box;width:100%;display:none;font-family:sans-serif;white-space:normal;">
+		<p>Advanced Settings</p><br>
+		<input type="checkbox" id="unileq_keyboard" checked>
+		<label for="unileq_keyboard"> Grab Keyboard:<br>
+			<br>
+			<span style="padding-left:2rem;">&bull;</span> Enables tab key<br>
+			<span style="padding-left:2rem;">&bull;</span> F9: run<br>
+			<span style="padding-left:2rem;">&bull;</span> F10: reset<br>
+			<span style="padding-left:2rem;">&bull;</span> F11: release keyboard
+		</label>
 	</div>
 	<textarea id="unileq_output" style="box-sizing:border-box;width:100%;height:14rem;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
-	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one   exit  #Decrement [len]. If [len]<=1, exit.
-      0-1  text  1     #Print a letter.
-      ?-2  neg   loop  #Increment letter pointer.
+	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one   exit           #Decrement [len]. If [len]&lt;=1, exit.
+      0-2  text  ?+1            #Print a letter.
+      ?-2  neg   loop           #Increment letter pointer.
 exit: 0-1  0     0
 
 text: 72 101 108 108 111 44 32  #Hello,
@@ -63,21 +66,26 @@ multiplying numbers or memory allocation need to built from scratch using unileq
 <p>The instruction is fairly simple: Given <i>A</i>, <i>B</i>, and <i>C</i>, compute
 <i>mem[A]-mem[B]</i> and store the result in <i>mem[A]</i>. Then, if <i>mem[A]</i> was less than
 or equal to <i>mem[B]</i>, jump to <i>C</i>. Otherwise, jump by <i>3</i>. We use the instruction
-pointer (<i>IP</i>) to keep track of our place in memory. The python code below shows a unileq
+pointer (<i>IP</i>) to keep track of our place in memory. The pseudocode below shows a unileq
 instruction:</p>
 <br>
-<div class="codeblock langpython">A, B, C = mem[IP+0], mem[IP+1], mem[IP+2]
-IP = C if mem[A] &lt;= mem[B] else (IP+3)
-mem[A] = mem[A] - mem[B]
+<div class="codeblock langpython">A=mem[IP+0]
+B=mem[IP+1]
+C=mem[IP+2]
+if mem[A]&lt;=mem[B]
+     IP=C
+else
+     IP=IP+3
+mem[A]=mem[A]-mem[B]
 </div>
 <br>
 <p>The instruction pointer and memory values are all 64 bit unsigned integers. Overflow and
 underflow are handled by wrapping values around to be between <i>0</i> and <i>2^64-1</i>
 inclusive.</p>
 <br>
-<p>If <i>A=-1</i>, then instead of executing a normal instruction, <i>B</i> and <i>C</i> will be
-used to interact with the interpreter. For example, if <i>C=0</i>, then the interpreter will end
-execution of the current unileq program.</p>
+<p>Interaction with the host environment is done by reading and writing from special memory
+addresses. For example, writing anything to <i>-1</i> will end execution of the unileq
+program.</p>
 <br>
 <p>Unileq is based off of the <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>
 architecture.</p>
@@ -117,12 +125,13 @@ Parentheses are not supported. To express a negative number, use its unsigned fo
 <br>
 There cannot be two consecutive operators, ex: <i>0++1</i>. Also, the program cannot begin or end
 with an operator.</td></tr>
-<tr><td>Interpreter Calls</td><td>If <i>A=-1</i>, a call will be sent to the interpreter and no jump
-will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
+<tr><td>Input/Output</td><td>Interaction with the host environment can be done by reading or writing
+from special addresses.<br>
 <br>
-<i>C=0</i>: End execution. <i>B</i> can be any value.<br>
-<i>C=1</i>: <i>mem[B]</i> will be written to stdout.<br>
-<i>C=2</i>: stdin will be written to <i>mem[B]</i>.</td></tr>
+<i>A = -1</i>: End execution.<br>
+<i>A = -2</i>: Write <i>mem[B]</i> to stdout.<br>
+<i>B = -3</i>: Subtract stdin from <i>mem[A]</i>.<br>
+<i>B = -4</i>: Subtract current time from <i>mem[A]</i>.</td></tr>
 </table>
 </div>
 
@@ -131,9 +140,9 @@ will be taken. The effect of a call depends on <i>B</i> and <i>C</i>.<br>
 <p>We can show how the unileq assembly language and architecture work with a simple program that
 prints "Hello, World" to the screen:</p>
 <br>
-<div class="codeblock langunileq">loop: len  one   exit  #Decrement [len]. If [len]&lt;=1, exit.
-      0-1  text  1     #Print a letter.
-      ?-2  neg   loop  #Increment letter pointer.
+<div class="codeblock langunileq">loop: len  one   exit           #Decrement [len]. If [len]&lt;=1, exit.
+      0-2  text  ?+1            #Print a letter.
+      ?-2  neg   loop           #Increment letter pointer.
 exit: 0-1  0     0
 
 text: 72 101 108 108 111 44 32  #Hello,
@@ -162,13 +171,11 @@ subtracting), then we will jump to <i>exit</i> and end the program.</p>
 <p>Thus, when the program is running, we expect it to count from <i>len-text+1</i> down to <i>1</i>
 and then exit.</p>
 <br>
-<div class="codeblock langunileq">      0-1  text  1</div>
+<div class="codeblock langunileq">      0-2  text  ?+1</div>
 <br>
-<p>The second instruction of our loop has <i>-1</i> as the first operand, which specifies an
-interpreter call. When the interpreter encounters an interpreter call, it won't execute a normal
-unileq instruction. Instead it will perform some special action depending on the second and third
-operands. Since the third operand is <i>1</i>, the interpreter will print <i>[text]</i> to the
-screen.</p>
+<p>The second instruction of our loop has <i>-2</i> as the first operand, which is a special output
+address. When a program writes to this address, the interpreter won't execute a normal unileq
+instruction. Instead it will will print the value of <i>[text]</i> to the screen.</p>
 <br>
 <div class="codeblock langunileq">      ?-2  neg   loop</div>
 <br>
@@ -182,10 +189,10 @@ this instruction will always jump to <i>loop</i> and restart the loop.</p>
 <br>
 <div class="codeblock langunileq">exit: 0-1  0     0</div>
 <br>
-<p>The last instruction of our program is another interpreter call, since <i>-1</i> is the first
-operand. In this case, having <i>0</i> as the second operand will tell the interpreter to end the
-program. Note, we do not specifically need to use <i>0-1</i> as the first operand. Any expression
-that evaluates to <i>-1</i>, such as <i>2-3</i>, will also work.</p>
+<p>The last instruction of our program uses another special address. In this case, writing anything
+to <i>-1</i> will tell the interpreter to end the program. Note, we do not specifically need to use
+<i>0-1</i> as the first operand. Any expression that evaluates to <i>-1</i>, such as <i>2-3</i>,
+will also work.</p>
 <br>
 <div class="codeblock langunileq">text: 72 101 108 108 111 44 32
       87 111 114 108 100 33 10</div>
@@ -220,13 +227,12 @@ architecture works.</p>
 any value at the start of the block, so we'll usually need to zero it out. We will also continue the
 use of <i>[x]</i> as shorthand for <i>mem[x]</i>, or the value at address <i>x</i>.</p>
 <br>
-<p>Up first is one of the most common instructions, an unconditional jump to <i>dst</i>. It also
+<p>Up first is one of the most common instructions, an unconditional jump to <i>jmp</i>. It also
 sets <i>[tmp]=0</i>.</p>
 <br>
-<div class="codeblock langunileq">tmp  tmp  dst</div>
+<div class="codeblock langunileq">tmp  tmp  jmp</div>
 <br>
-<p>We can abort any unileq program by using an interpreter call with <i>0</i> as the third operand.
-A call is any instruction that has <i>-1</i> as the first operand. Note that we need to calculate
+<p>We can abort a unileq program by writing any value to <i>-1</i>. Note that we need to calculate
 <i>-1</i> as "<i>0-1</i>" due to the syntax our assembly language.</p>
 <br>
 <div class="codeblock langunileq">0-1  0  0</div>
@@ -241,7 +247,7 @@ a    a    ?+1  #[a]=0
 a    tmp  ?+1  #[a]=-(-[tmp])=[b]
 </div>
 <br>
-<p>Jump to <i>dst</i> if <i>[a]=[b]</i>.</p>
+<p>Jump to <i>jmp</i> if <i>[a]=[b]</i>.</p>
 <br>
 <div class="codeblock langunileq">tmp1  tmp1  ?+1  #[tmp1]=0
 tmp1  b     ?+1  #[tmp1]=-[b]
@@ -249,18 +255,17 @@ tmp2  tmp2  ?+1  #[tmp2]=0
 tmp2  tmp1  ?+1  #[tmp2]=-[tmp1]=[b]
 tmp2  a     ?+1  #[tmp2]=[b]-[a]
 tmp1  tmp1  ?+1  #[tmp1]=0
-tmp2  tmp1  dst  #if [tmp2]&lt;=0, then [a]=[b], so jump
+tmp2  tmp1  jmp  #if [tmp2]&lt;=0, then [a]=[b], so jump
 </div>
 <br>
-<p>We can print the character "A" to the screen by using an interpreter call with <i>1</i> as the
-third operand, and the address of the character as the second operand. We define <i>char</i> to be
-the ASCII code for "A".</p>
+<p>We can print the character "A" to the screen by writing it to the special address <i>-2</i>. We
+define <i>char</i> to be the ASCII code for "A".</p>
 <br>
-<div class="codeblock langunileq">0-1  char  1
+<div class="codeblock langunileq">0-2  char  ?+1
 char: 65
 </div>
 <br>
-<p>Increment <i>[a]</i>.</p>
+<p>Increment <i>[a]</i>. This will always jump to the jump address.</p>
 <br>
 <div class="codeblock langunileq">a  neg  ?+1  #[a]=[a]-[neg]=[a]-(-1)=[a]+1
 neg: 0-1
@@ -316,7 +321,7 @@ crit:                    #
                          #critical section
                          #
       lock+1  z+1  ?+1   #reopen spinlock
-      z       z    dst   #jump
+      z       z    jmp   #jump
       0-1 z:0 1
 </div>
 </div>
@@ -335,22 +340,29 @@ several reasons for this:</p>
 <table class="listtable">
 <tr><td>&bull;</td><td>We may use the entire address range, instead of only the non-negative
 addresses subleq allows.</td></tr>
-<tr><td>&bull;</td><td>When reimplementing integer and bitwise arithmetic, we can perform bit-by-bit
-comparisons much more easily with unsigned integers. In particular, with signed integers we would
-have to make a separate comparison for the high bit.</td></tr>
-<tr><td>&bull;</td><td>In unsigned arithmetic, if <i>A&gt;=B</i>, then we know that
-<i>A-B&gt;=0</i>. This does not hold in signed arithmetic.</td></tr>
-<tr><td>&bull;</td><td>Using the instruction <i>x 0 dst</i>, we can test a variable for equality
-with <i>0</i> using only one instruction and without modifying any variables. This type of
-comparison is common in software, and cannot be done in one instruction using subleq.</td></tr>
-<tr><td>&bull;</td><td>We can perform another common operation, increment and jump, using only one
-instruction, <i>x neg1 dst</i>, which is also not possible in subleq</td></tr>
+<tr><td>&bull;</td><td>Unileq offers 3 ways to guarantee a jump<br>
+<br>
+<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A A jmp</i><br>
+<span style="margin-left:2rem;"></span>2. Subtracting anything from <i>0</i>. For <i>[A]=0</i>: <i>A B jmp</i><br>
+<span style="margin-left:2rem;"></span>3. Subtracting <i>-1</i> from anything. For <i>[Z-1]=-1</i>: <i>A Z-1 jmp</i><br>
+<br>
+Subleq only has 1 way to guarantee a jump<br>
+<br>
+<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A A jmp</i><br>
+<br>
+This gives unileq more options when deciding program flow, since these are all common operations.
+</td></tr>
+<tr><td>&bull;</td><td>In unsigned arithmetic, if <i>A&gt;B</i>, then we know that <i>A-B&gt;0</i>.
+This does not hold in signed arithmetic.</td></tr>
+<tr><td>&bull;</td><td>Using the instruction <i>A Z jmp</i>, we can test <i>A</i> for equality
+with <i>0</i> using only one instruction and without modifying any variables. This a common value to
+test for. Subleq, would require 1 to 2 instructions and modifying <i>A</i> for this test.</td></tr>
 </table>
 <br>
 <p>Unileq also uses a different order for operands. With unileq, for operands <i>A</i>, <i>B</i>,
 and <i>C</i>, we take <i>[A]=[A]-[B]</i>, where subleq takes <i>[B]=[B]-[A]</i>. The order of
 operands in subleq is perfectly valid, of course, but goes against the standard ordering used in
-mathematics. For example, we usually write <i>a=b+c</i> instead of <i>b+c=a</i>. In an early version
+programming. For example, we usually write <i>a=b+c</i> instead of <i>b+c=a</i>. In an early version
 of unileq, I used the subleq order of operands and found myself constantly having to reorder the
 operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 <br>
@@ -362,8 +374,8 @@ operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 unileq programs require some amount of self modification to do anything useful at all. This can most
 easily be seen in the "Hello, World!" program in the section above. Specifically, the lines</p>
 <br>
-<div class="codeblock langunileq">0-1  text  1     #Print a letter.
-?-2  neg   loop  #Increment the text pointer and restart the loop.</div>
+<div class="codeblock langunileq">0-2  text  ?+1   #Print a letter.
+?-2  neg   loop  #Increment letter pointer.</div>
 <br>
 <p>Here we must modify part of an instruction where <i>text</i> is in order to print successive
 characters in a string.</p>
@@ -372,26 +384,26 @@ characters in a string.</p>
 self interpreter that counts the number of instructions used by another unileq function. However,
 symbolic self modification, like that seen in Lisp, would be difficult to perform in unileq.</p>
 <br>
-<h2>Interpreter Calls</h2>
+<h2>Special Addresses</h2>
 <br>
-<p>As part of the unileq specification, using <i>-1</i> as the first operand executes an interpreter
-call instead of a normal instruction. Without this, a unileq program would have no way to display
-its results or interact with its host computer. It would effectively be a brain in a vat. There's no
-real way around this, given our one instruction limit.</p>
+<p>As part of the unileq specification, reading and writing from special addresses can be used to
+interact with the host environment. For instance, <i>0-1 0 ?+1</i> will end the program, and
+<i>0-2 char ?+1</i> will print <i>[char]</i> to the screen. Without these addresses, a unileq
+program would have no way to display its results or interact with its host computer. It would
+effectively be a brain in a vat. There's no real way around this, given our one instruction
+limit.</p>
 <br>
-<p>Some consideration was taken as to how to interact with the interpreter. One choice was to map
-specific memory addresses to specific actions, such as writing to address <i>0x1234...</i> to
-display a pixel on the screen. Others were to set <i>A</i>, <i>B</i>, or <i>C</i> to <i>-1</i> to
-trigger some special action. Setting <i>B</i> didn't make much sense, since it's in the middle of
-the instruction. Setting <i>C</i> could lead to problems, since we might want to use <i>C</i> to
-store data if we know that a branch won't be taken. This left setting <i>A</i> to <i>-1</i> to call
-to the interpreter.</p>
+<p>Some consideration was taken as to how to interact with the host. One choice was to confine all
+host interaction to one address, such as <i>0-1 B C</i>. What this address would do would depend on
+the values of <i>B</i> and <i>C</i>. After using this method for a while, I determined that it
+doesn't work well with unileq as a whole. The ability to read and write from specific addresses
+allows them to used as if we're reading and writing from any other memory position. My opinion of
+this might change as I use unileq.</p>
 <br>
-<p>By comparison, most subleq implementations will end execution by jumping to <i>-1</i> and
-interact with stdout by writing to <i>-1</i>. In other words, using <i>-1</i> in different operands
-for different effects. Our choice to use <i>-1</i> in the first operand for all abnormal effects
-allows us to expand unileq to interact with the host in other ways, such as displaying pixels to the
-screen, without needing to define even more special memory addresses.</p>
+<p>One major difference from subleq implementations is ending execution. Whereas unileq requires
+writing to a specific address, most subleq implementations end execution by jump to any negative
+address. Since unileq allows any address to be used, we needed an explicit address to end
+execution.</p>
 <br>
 <h2>Turing Complete</h2>
 <br>
@@ -486,8 +498,8 @@ offer a decent balance between speed and wasted space. It would be used like so:
 <p>Creating an animated heat map showing memory activity would be useful in showing how the
 architecture works to casual observers.</p>
 <br>
-<p>To support multithreading, make each instruction atomic. The interpreter can spawn threads with
-a specific interpreter call. The new thread would start at <i>[B]</i>.</p>
+<p>To support multithreading, make each instruction atomic. The interpreter can spawn threads by
+writing to a special address. The new thread's instruction pointer would start at <i>[B]</i>.</p>
 <br>
 <p>Within the language, make a bitwise and integer arithmetic library. Also see if there is a self
 synchronizing sequence of instructions. That is, if the <i>IP</i> were to randomly land anywhere in
@@ -501,7 +513,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 31 Jul 2021<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 4 Aug 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

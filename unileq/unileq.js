@@ -32,19 +32,26 @@ or memory allocation need to built from scratch using unileq's instruction.
 The instruction is fairly simple: Given A, B, and C, compute mem[A]-mem[B] and
 store the result in mem[A]. Then, if mem[A] was less than or equal to mem[B],
 jump to C. Otherwise, jump by 3. We use the instruction pointer (IP) to keep
-track of our place in memory. The python code below shows a unileq instruction:
+track of our place in memory. The pseudocode below shows a unileq instruction:
 
-     A, B, C = mem[IP+0], mem[IP+1], mem[IP+2]
-     IP = C if mem[A] <= mem[B] else (IP+3)
-     mem[A] = mem[A] - mem[B]
+
+     A=mem[IP+0]
+     B=mem[IP+1]
+     C=mem[IP+2]
+     if mem[A]<=mem[B]
+          IP=C
+     else
+          IP=IP+3
+     mem[A]=mem[A]-mem[B]
+
 
 The instruction pointer and memory values are all 64 bit unsigned integers.
 Overflow and underflow are handled by wrapping values around to be between 0 and
 2^64-1 inclusive.
 
-If A=-1, then instead of executing a normal instruction, B and C will be used to
-interact with the interpreter. For example, if C=0, then the interpreter will
-end execution of the current unileq program.
+Interaction with the host environment is done by reading and writing from
+special memory addresses. For example, writing anything to -1 will end execution
+of the unileq program.
 
 --------------------------------------------------------------------------------
 Unileq Assembly Language
@@ -96,19 +103,41 @@ Operator +-
      There cannot be two consecutive operators, ex: "0++1". Also, the program
      cannot begin or end with an operator.
 
-Interpreter Calls
-     If A=-1, a call will be sent to the interpreter and no jump will be taken.
-     The effect of a call depends on B and C.
+Input/Output
+     Interaction with the host environment can be done by reading or writing
+     from special addresses.
 
-     C=0: End execution. B can be any value.
-     C=1: mem[B] will be written to stdout.
-     C=2: stdin will be written to mem[B].
+     A = -1: End execution.
+     A = -2: Write mem[B] to stdout.
+     B = -3: Subtract stdin from mem[A].
+     B = -4: Subtract current time from mem[A].
+
+--------------------------------------------------------------------------------
+Performance
+
+Performance tests, measured in instructions per second:
+
+                 |  Phone  |  Laptop |  PC FF  |  PC Chr
+     ------------+---------+---------+---------+---------
+      32 Bit Std |  382561 |  777172 | 1628026 | 2044652
+      64 Bit Std |   68830 |   39992 |  112846 |  244952
+      64 Bit Fast|  294037 |  639020 | 1296122 | 1527884
+
+Using interleaved memory was about 35% slower than splitting into high/low
+arrays.
+
+Webassembly speedup isn't that great compared to unlrun(). Wait until better
+integration with javascript.
 
 --------------------------------------------------------------------------------
 TODO
 
-Webassembly speedup isn't that great compared to unlrun(). Wait until better
-integration with javascript.
+Turn unl into an object. Use capitalization for function names.
+Format time to UTC and seconds*2^32.
+Try interleaved memory again.
+Try different data type for arrays.
+Try faster way to split 64-bit number in unlcreate?
+Try Uint32Array for unlu64 types.
 Audio
 Graphics
 Mouse+Keyboard
@@ -121,17 +150,27 @@ Mouse+Keyboard
 //64 bit unsigned integers.
 
 function unlu64create(hi,lo) {
-	//If arguments empty, initialize to 0.
 	if (hi===undefined) {
+		//If arguments are empty, initialize to 0.
 		hi=0;
 		lo=0;
 	} else if (lo===undefined) {
 		if (hi instanceof Object) {
+			//hi is another u64 object.
 			lo=hi.lo;
 			hi=hi.hi;
+		} else if (hi>=0) {
+			//hi is a positive number.
+			lo=hi>>>0;
+			hi=(hi/0x100000000)>>>0;
 		} else {
-			lo=hi;
-			hi=0;
+			//hi is a negative number.
+			lo=0x100000000-((-hi)>>>0);
+			hi=0x0ffffffff-(((-hi)/0x100000000)>>>0);
+			if (lo===0x100000000) {
+				lo=0;
+				hi++;
+			}
 		}
 	}
 	return {lo:lo,hi:hi};
@@ -196,6 +235,18 @@ function unlu64zero(n) {
 function unlu64iszero(n) {
 	//n==0
 	return n.lo===0 && n.hi===0;
+}
+
+function unlu64neg(r,a) {
+	//r=-a
+	r.lo=0x100000000-a.lo;
+	r.hi= 0xffffffff-a.hi;
+	if (r.lo>=0x100000000) {
+		r.lo=0;
+		if ((++r.hi)>=0x100000000) {
+			r.hi=0;
+		}
+	}
 }
 
 function unlu64sub(r,a,b) {
@@ -372,8 +423,8 @@ function unlcreate(output) {
 	var st={
 		output:output,
 		outbuf:"",
-		memh:[0],
-		meml:[0],
+		memh:null,
+		meml:null,
 		alloc:0,
 		ip:unlu64create(),
 		state:0,
@@ -387,8 +438,8 @@ function unlclear(st) {
 	st.state=UNL_COMPLETE;
 	st.statestr="";
 	unlu64zero(st.ip);
-	st.memh=[0];
-	st.meml=[0];
+	st.memh=null;
+	st.meml=null;
 	st.alloc=0;
 	if (st.output!==null) {
 		st.output.value="";
@@ -580,8 +631,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Uint32Array(alloc+1);
-				meml=new Uint32Array(alloc+1);
+				memh=new Float64Array(alloc);
+				meml=new Float64Array(alloc);
 			} catch(error) {
 				memh=null;
 				meml=null;
@@ -611,120 +662,144 @@ function unlsetmem(st,addr,val) {
 }
 
 function unlrun_standard(st,iters) {
-	//Run unileq for a given number of iterations. If iters=-1, run forever.
+	//Run unileq for a given number of iterations. If iters<0, run forever.
 	var dec=iters>=0?1:0;
 	var a,b,c,ma,mb,ip=st.ip;
+	var io=unlu64create(-4);
 	for (;iters!==0 && st.state===UNL_RUNNING;iters-=dec) {
 		//Load a, b, and c.
 		a=unlgetmem(st,ip);unlu64inc(ip);
 		b=unlgetmem(st,ip);unlu64inc(ip);
 		c=unlgetmem(st,ip);unlu64inc(ip);
-		mb=unlgetmem(st,b);
-		if (a.hi!==0xffffffff || a.lo!==0xffffffff) {
+		//Input
+		if (unlu64cmp(b,io)<0) {
+			mb=unlgetmem(st,b);
+		} else if (b.lo===0xfffffffc) {
+			//Read time.
+			mb=unlu64create(Date.now());
+		} else {
+			unlu64zero(mb);
+		}
+		//Output
+		if (unlu64cmp(a,io)<0) {
 			//Execute a normal unileq instruction.
 			ma=unlgetmem(st,a);
 			if (unlu64sub(ma,ma,mb)) {
 				unlu64set(ip,c);
 			}
 			unlsetmem(st,a,ma);
-		} else if (c.hi===0) {
-			//Otherwise, call the interpreter.
-			if (c.lo===0) {
-				//Exit.
-				st.state=UNL_COMPLETE;
-			} else if (c.lo===1) {
-				//Write mem[b] to stdout.
-				unlprint(st,String.fromCharCode(unlgetmem(st,mb).lo&255));
-			}
+			continue;
+		} else if (a.lo===0xffffffff) {
+			//Exit.
+			st.state=UNL_COMPLETE;
+		} else if (a.lo===0xfffffffe) {
+			//Print to stdout.
+			unlprint(st,String.fromCharCode(mb.lo));
 		}
+		unlu64set(ip,c);
 	}
 }
 
 function unlrun(st,iters) {
-	//Run unileq for a given number of iterations. If iters=-1, run forever.
+	//Run unileq for a given number of iterations. If iters<0, run forever.
 	//This version of unlrun() unrolls several operations to speed things up.
-	if (st.state!==UNL_RUNNING) {return;}
-	var a,b,c,ma,mb;
-	var pos=st.ip,tmp=unlu64create();
-	var lo,hi,iplo=pos.lo,iphi=pos.hi;
-	var memh=st.memh,meml=st.meml,alloc=st.alloc;
+	//Depending on the platform, this is 4 to 10 times faster.
+	if (st.state!==UNL_RUNNING) {
+		return;
+	}
+	var iphi=st.ip.hi,iplo=st.ip.lo;
+	var memh=st.memh,meml=st.meml;
+	var alloc=st.alloc;
+	var ahi,alo,chi,clo;
+	var bhi,blo,mbhi,mblo;
+	var tmp0,tmp1;
 	iters=iters<0?Infinity:iters;
 	for (;iters>0;iters--) {
 		//Load a, b, and c.
-		if (iphi===0 && iplo<0xfffffffd) {
-			a=iplo<alloc?iplo:alloc;iplo++;
-			b=iplo<alloc?iplo:alloc;iplo++;
-			c=iplo<alloc?iplo:alloc;iplo++;
+		if (iphi===0 && iplo+2<alloc) {
+			//Inbounds read.
+			ahi=memh[iplo];
+			alo=meml[iplo++];
+			bhi=memh[iplo];
+			blo=meml[iplo++];
+			chi=memh[iplo];
+			clo=meml[iplo++];
 		} else {
-			a=(iphi===0 && iplo<alloc)?iplo:alloc;
+			//Possible out of bounds read. Check bounds for each operand.
+			ahi=alo=0;
+			if (iphi===0 && iplo<alloc) {ahi=memh[iplo];alo=meml[iplo];}
 			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
-			b=(iphi===0 && iplo<alloc)?iplo:alloc;
+			bhi=blo=0;
+			if (iphi===0 && iplo<alloc) {bhi=memh[iplo];blo=meml[iplo];}
 			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
-			c=(iphi===0 && iplo<alloc)?iplo:alloc;
+			chi=clo=0;
+			if (iphi===0 && iplo<alloc) {chi=memh[iplo];clo=meml[iplo];}
 			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
 		}
-		//Execute a normal unileq instruction.
-		mb=meml[b];
-		mb=(memh[b]===0 && mb<alloc)?mb:alloc;
-		ma=meml[a];
-		if (memh[a]===0 && ma<alloc) {
-			//In bounds.
-			if (ma!==mb) {
-				lo=meml[ma]-meml[mb];
-				hi=memh[ma]-memh[mb];
-				if (lo<0) {
-					lo+=0x100000000;
-					hi--;
-				}
-				if (hi<0) {
-					hi+=0x100000000;
-					iplo=meml[c];
-					iphi=memh[c];
-				} else if (hi===0 && lo===0) {
-					iplo=meml[c];
-					iphi=memh[c];
-				}
-				meml[ma]=lo;
-				memh[ma]=hi;
+		//Input
+		if (bhi<0xffffffff) {
+			//Read mem[b].
+			if (bhi===0 && blo<alloc) {
+				mbhi=memh[blo];
+				mblo=meml[blo];
 			} else {
-				//Zeroing out an address (ma==mb) occurs 30% of the time.
-				iplo=meml[c];
-				iphi=memh[c];
-				meml[ma]=0;
-				memh[ma]=0;
+				mbhi=0;
+				mblo=0;
 			}
-		} else if (memh[a]!==0xffffffff || ma!==0xffffffff) {
-			//Out of bounds. Need to expand memory. Assume mem[a]=0.
-			iphi=memh[c];
-			iplo=meml[c];
-			lo=-meml[mb];
-			hi=-memh[mb];
-			if (lo<0) {
-				lo+=0x100000000;
-				hi--;
-			}
-			tmp.hi=hi<0?hi+0x100000000:hi;
-			tmp.lo=lo;
-			pos.hi=memh[a];
-			pos.lo=ma;
-			unlsetmem(st,pos,tmp);
-			if (st.state!==UNL_RUNNING) {break;}
-			memh=st.memh;
-			meml=st.meml;
-			alloc=st.alloc;
-		} else if (memh[c]===0) {
-			//Otherwise, call the interpreter.
-			c=meml[c];
-			if (c===0) {
-				//Exit.
-				st.state=UNL_COMPLETE;
-				break;
-			} else if (c===1) {
-				//Write mem[b] to stdout.
-				unlprint(st,String.fromCharCode(meml[mb]&255));
-			}
+		} else if (blo===0xfffffffc) {
+			//Read time.
+			tmp0=unlu64create(Date.now());
+			mbhi=tmp0.hi;
+			mblo=tmp0.lo;
+		} else {
+			mbhi=0;
+			mblo=0;
 		}
+		//Output
+		if (ahi<0xffffffff) {
+			//Execute a normal unileq instruction.
+			if (ahi===0 && alo<alloc) {
+				//Inbounds. Read and write to mem[a] directly.
+				mblo=meml[alo]-mblo;
+				if (mblo>=0) {
+					meml[alo]=mblo;
+				} else {
+					meml[alo]=mblo+0x100000000;
+					mbhi++;
+				}
+				mbhi=memh[alo]-mbhi;
+				if (mbhi>=0) {
+					memh[alo]=mbhi;
+					if (mblo!==0 || mbhi>0) {
+						continue;
+					}
+				} else {
+					memh[alo]=mbhi+0x100000000;
+				}
+			} else if (mblo!==0 || mbhi!==0) {
+				//Out of bounds. Use unlsetmem to modify mem[a].
+				tmp0=unlu64create(ahi,alo);
+				tmp1=unlu64create(mbhi,mblo);
+				unlu64neg(tmp1,tmp1);
+				unlsetmem(st,tmp0,tmp1);
+				if (st.state!==UNL_RUNNING) {
+					break;
+				}
+				memh=st.memh;
+				meml=st.meml;
+				alloc=st.alloc;
+			}
+		} else if (alo===0xffffffff) {
+			//Exit.
+			st.state=UNL_COMPLETE;
+			break;
+		} else if (alo===0xfffffffe) {
+			//Print to stdout.
+			unlprint(st,String.fromCharCode(mblo));
+		}
+		iphi=chi;
+		iplo=clo;
 	}
-	pos.hi=iphi;
-	pos.lo=iplo;
+	st.ip.hi=iphi;
+	st.ip.lo=iplo;
 }

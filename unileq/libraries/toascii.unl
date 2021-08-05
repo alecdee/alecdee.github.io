@@ -1,6 +1,6 @@
 #|==============================================================================
 
-ASCII Converter - v1.01
+ASCII Converter - v1.02
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -13,6 +13,31 @@ the output.
 |#
 
 0 0 toascii
+
+toascii:
+	#enter text:
+	0 ? print 101 110 116 101 114 32 116 101 120 116 58 32 0
+	#Wait for input.
+	.tmp0   0-3     ?+1
+	0 ? print 97 115 99 105 105 32 32 32 32 32 58 32 0
+	#Loop through stdin and print ascii character codes.
+.loop:
+	#If we've read the eol character, exit.
+	.tmp1   .tmp1   ?+1
+	.tmp1   .tmp0   ?+1
+	.tmp0   .eol    ?+1
+	.tmp0   0       .exit
+	0 ? print 0-1 .tmp1 32 0
+	.tmp0   .tmp0   ?+1
+	.tmp0   0-3     .loop
+.exit:
+	0-2     .tmp1   ?+1
+	0-1     0       0
+	#Variables
+	.tmp0:0
+	.tmp1:0
+	.eol:0-10
+
 
 print:
 	#Call: 0 ? print char0 char1 char2 ... 0
@@ -35,7 +60,7 @@ print:
 	.tmp    .z+1    .numprep
 	#Print [char].
 .print:
-	0-1     .char   1
+	0-2     .char   ?+1
 	.tmp    .tmp    .loop
 .numprep:
 	#Prepare to print a number.
@@ -51,7 +76,7 @@ print:
 .numloop:
 	#Store a power of 10 in [tmp].
 	.tmp    .tmp    ?+1
-	.tmp    .base:.base10+19 ?+1
+	.tmp    .base:.base0-1 ?+1
 	.char   .char   ?+1
 	.char   .char0  ?+1
 	#Subtract [tmp] from [num] to get the next digit.
@@ -69,7 +94,7 @@ print:
 	.z      .z      ?+1
 	#If [show]>0, then we can print digits.
 	.show   .z      .noshow
-	0-1     .char   1
+	0-2     .char   ?+1
 .noshow:
 	.base   .z-1    .numloop
 	#Variables
@@ -78,7 +103,6 @@ print:
 	.tmp:0
 	.show:0
 	.char0:0-48
-	.base0:19
 	.pset:.p0-.numprep-2
 	.prem:.numprep-.p0+2
 	#1-10^n
@@ -90,27 +114,5 @@ print:
 		            0-9999999             0-999999             0-99999
 		               0-9999                0-999                0-99
 		                  0-9                    0
-
-toascii:
-	#enter text:
-	0 ? print 101 110 116 101 114 32 116 101 120 116 58 32 0
-	#Wait for input.
-	0-1     .tmp0   2
-	0 ? print 97 115 99 105 105 32 32 32 32 32 58 32 0
-	#Loop through stdin and print ascii character codes.
-.loop:
-	#If we've read the eol character, exit.
-	.tmp1   .tmp0   ?+1
-	.tmp1   .eol    ?+1
-	.tmp1   0       .exit
-	0 ? print 0-1 .tmp0 32 0
-	0-1     .tmp0   2
-	.tmp1   .tmp1   .loop
-.exit:
-	0-1     .tmp0   1
-	0-1     0       0
-	#Variables
-	.tmp0:0
-	.tmp1:0
-	.eol:0-10
+	.base0:?-.base10-1
 
