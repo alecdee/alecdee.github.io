@@ -458,7 +458,7 @@ function unlrun(st,iters) {
 		return;
 	}
 	//Performance testing.
-	if (st.ip.lo===0 && st.ip.hi===0) {
+	if (st.ip===0) {
 		this.instructions=0;
 		this.time=0;
 		this.start=performance.now();
