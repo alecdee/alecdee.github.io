@@ -123,8 +123,24 @@ Performance tests, measured in instructions per second:
       64 Bit Std |   68830 |   39992 |  112846 |  244952
       64 Bit Fast|  294037 |  639020 | 1296122 | 1527884
 
+         |   Phone   |   Laptop  |   PC FF   |   PC CR
+     ----+-----------+-----------+-----------+-----------
+      11 |  22140689 |  27921342 |  59399853 |  84257690
+      12 |  22156196 |  22272534 |  59524042 |  84831966
+      13 |  17495940 |  25335688 |  58127604 |  80777644
+      14 |  17459508 |  25998480 |  55669283 |  80560861
+      15 |  17507281 |  26777580 |  58866104 |  81041708
+      21 |  18284618 |  34518597 |  93813926 |  93602098
+      22 |  18569063 |  35572416 |  93386215 |  91085495
+      23 |  19301876 |  31370996 |  83292916 |  94649537
+      24 |  19302625 |  29422721 |  84798595 |  94668341
+      25 |  19379899 |  30151955 |  84408044 |  95648075
+
 Using interleaved memory was about 35% slower than splitting into high/low
 arrays.
+
+Uint32Array is at least 5% faster than Float64Array across all hardware and
+browsers.
 
 Webassembly speedup isn't that great compared to unlrun(). Wait until better
 integration with javascript.
@@ -132,12 +148,11 @@ integration with javascript.
 --------------------------------------------------------------------------------
 TODO
 
+Speed test unlrun versions.
 Turn unl into an object. Use capitalization for function names.
 Format time to UTC and seconds*2^32.
 Try interleaved memory again.
-Try different data type for arrays.
 Try faster way to split 64-bit number in unlcreate?
-Try Uint32Array for unlu64 types.
 Audio
 Graphics
 Mouse+Keyboard
@@ -631,12 +646,8 @@ function unlsetmem(st,addr,val) {
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				//1x
-				memh=new Float64Array(alloc);
-				meml=new Float64Array(alloc);
-				//2x
-				//memh=new Uint32Array(alloc);
-				//meml=new Uint32Array(alloc);
+				memh=new Uint32Array(alloc);
+				meml=new Uint32Array(alloc);
 			} catch(error) {
 				memh=null;
 				meml=null;
@@ -715,7 +726,6 @@ function unlrun(st,iters) {
 	if (st.ip.hi===0 && st.ip.lo===0) {
 		unlrun.instructions=0;
 		unlrun.time=0;
-		unlrun.start=performance.now();
 	}
 	unlrun.instructions+=iters;
 	unlrun.time-=performance.now();
@@ -772,14 +782,12 @@ function unlrun(st,iters) {
 			//Execute a normal unileq instruction.
 			if (ahi===0 && alo<alloc) {
 				//Inbounds. Read and write to mem[a] directly.
-				//x1
 				mblo=meml[alo]-mblo;
-				if (mblo>=0) {
-					meml[alo]=mblo;
-				} else {
-					meml[alo]=mblo+0x100000000;
+				if (mblo<0) {
+					mblo+=0x100000000;
 					mbhi++;
 				}
+				meml[alo]=mblo;
 				mbhi=memh[alo]-mbhi;
 				if (mbhi>=0) {
 					memh[alo]=mbhi;
@@ -820,6 +828,5 @@ function unlrun(st,iters) {
 	if (st.state!==UNL_RUNNING) {
 		var freq=(unlrun.instructions-(iters+1))*1000.0/unlrun.time;
 		unlprint(st,"Speed: "+freq.toFixed(0)+" Hz\n");
-		unlprint(st,"Total: "+(performance.now()-unlrun.start)/1000.0+"\n");
 	}
 }
