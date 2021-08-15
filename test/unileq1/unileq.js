@@ -136,7 +136,7 @@ Performance tests, measured in instructions per second:
       24 |  19302625 |  29422721 |  84798595 |  94668341
       25 |  19379899 |  30151955 |  84408044 |  95648075
 
-Using interleaved memory was about 35% slower than splitting into high/low
+Using interleaved memory is about 35% slower than splitting into high/low
 arrays.
 
 Uint32Array is at least 5% faster than Float64Array across all hardware and
@@ -148,18 +148,29 @@ integration with javascript.
 --------------------------------------------------------------------------------
 TODO
 
-Speed test unlrun versions.
-Turn unl into an object. Use capitalization for function names.
+Speed test unlrun versions including standard and 32
+Turn unl into an object. Capitalize UnlU64Create etc.
+UnlU64ToFloat
 Format time to UTC and seconds*2^32.
 Try interleaved memory again.
 Try faster way to split 64-bit number in unlcreate?
+	faster way for instanceof()? try/catch
+	var UnlU64Norm=1.0/0x100000000;
+	if (hi>=0x100000000) {
+		lo=hi>>>0;
+		hi=(hi*norm)>>>0;
+	} else {
+		lo=hi;
+		hi=0;
+	}
 Audio
 Graphics
 Mouse+Keyboard
 
 */
 /*jshint bitwise: false*/
-/*jshint eqeqeq: true*/
+/*jshint eqeqeq: true  */
+/*jshint curly: true   */
 
 //--------------------------------------------------------------------------------
 //64 bit unsigned integers.
@@ -676,12 +687,19 @@ function unlsetmem(st,addr,val) {
 	st.meml[pos]=val.lo;
 }
 
-function unlrun_standard(st,iters) {
+function unlrun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
-	var dec=iters>=0?1:0;
+	//Performance testing.
+	if (st.ip.hi===0 && st.ip.lo===0) {
+		unlrun.instructions=0;
+		unlrun.time=0;
+	}
+	unlrun.instructions+=iters;
+	unlrun.time-=performance.now();
 	var a,b,c,ma,mb,ip=st.ip;
 	var io=unlu64create(-4);
-	for (;iters!==0 && st.state===UNL_RUNNING;iters-=dec) {
+	iters=iters<0?Infinity:iters;
+	for (;iters>0 && st.state===UNL_RUNNING;iters--) {
 		//Load a, b, and c.
 		a=unlgetmem(st,ip);unlu64inc(ip);
 		b=unlgetmem(st,ip);unlu64inc(ip);
@@ -713,116 +731,6 @@ function unlrun_standard(st,iters) {
 		}
 		unlu64set(ip,c);
 	}
-}
-
-function unlrun(st,iters) {
-	//Run unileq for a given number of iterations. If iters<0, run forever.
-	//This version of unlrun() unrolls several operations to speed things up.
-	//Depending on the platform, this is 4 to 10 times faster.
-	if (st.state!==UNL_RUNNING) {
-		return;
-	}
-	//Performance testing.
-	if (st.ip.hi===0 && st.ip.lo===0) {
-		unlrun.instructions=0;
-		unlrun.time=0;
-	}
-	unlrun.instructions+=iters;
-	unlrun.time-=performance.now();
-	var iphi=st.ip.hi,iplo=st.ip.lo;
-	var memh=st.memh,meml=st.meml;
-	var alloc=st.alloc;
-	var ahi,alo,chi,clo;
-	var bhi,blo,mbhi,mblo;
-	var tmp0=unlu64create(),tmp1=unlu64create(),tmp2;
-	var io=0xfffffffc;
-	iters=iters<0?Infinity:iters;
-	for (;iters>0;iters--) {
-		//Load a, b, and c.
-		if (iphi===0 && iplo+2<alloc) {
-			//Inbounds read.
-			ahi=memh[iplo];
-			alo=meml[iplo++];
-			bhi=memh[iplo];
-			blo=meml[iplo++];
-			chi=memh[iplo];
-			clo=meml[iplo++];
-		} else {
-			//Out of bounds read. Use unlgetmem to read a, b, and c.
-			tmp0.hi=iphi;tmp0.lo=iplo;
-			tmp1=unlgetmem(st,tmp0);ahi=tmp1.hi;alo=tmp1.lo;unlu64inc(tmp0);
-			tmp1=unlgetmem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;unlu64inc(tmp0);
-			tmp1=unlgetmem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;unlu64inc(tmp0);
-			iphi=tmp0.hi;iplo=tmp0.lo;
-		}
-		//Input
-		if (bhi===0 && blo<alloc) {
-			//Inbounds. Read mem[b] directly.
-			mbhi=memh[blo];
-			mblo=meml[blo];
-		} else if (bhi<0xffffffff || blo<io) {
-			//Out of bounds. Use unlgetmem to read mem[b].
-			tmp0.hi=bhi;tmp0.lo=blo;
-			tmp1=unlgetmem(st,tmp0);
-			mbhi=tmp1.hi;mblo=tmp1.lo;
-		} else if (blo===0xfffffffc) {
-			//Read time.
-			tmp0=unlu64create(Date.now());
-			mbhi=tmp0.hi;
-			mblo=tmp0.lo;
-		} else {
-			//We couldn't find a special address to read.
-			mbhi=0;
-			mblo=0;
-		}
-		//Output
-		if (ahi===0 && alo<alloc) {
-			//Execute a normal unileq instruction.
-			//Inbounds. Read and write to mem[a] directly.
-			mblo=meml[alo]-mblo;
-			if (mblo<0) {
-				mblo+=0x100000000;
-				mbhi++;
-			}
-			meml[alo]=mblo;
-			mbhi=memh[alo]-mbhi;
-			if (mbhi>=0) {
-				memh[alo]=mbhi;
-				if (mblo!==0 || mbhi>0) {
-					continue;
-				}
-			} else {
-				memh[alo]=mbhi+0x100000000;
-			}
-		} else if (ahi<0xffffffff || alo<io) {
-			//Out of bounds. Use unlsetmem to modify mem[a].
-			tmp0.hi=ahi;tmp0.lo=alo;
-			tmp2=unlgetmem(st,tmp0);
-			tmp1.hi=mbhi;tmp1.lo=mblo;
-			if (!unlu64sub(tmp2,tmp2,tmp1)) {
-				chi=iphi;
-				clo=iplo;
-			}
-			unlsetmem(st,tmp0,tmp2);
-			if (st.state!==UNL_RUNNING) {
-				break;
-			}
-			memh=st.memh;
-			meml=st.meml;
-			alloc=st.alloc;
-		} else if (alo===0xffffffff) {
-			//Exit.
-			st.state=UNL_COMPLETE;
-			break;
-		} else if (alo===0xfffffffe) {
-			//Print to stdout.
-			unlprint(st,String.fromCharCode(mblo&255));
-		}
-		iphi=chi;
-		iplo=clo;
-	}
-	st.ip.hi=iphi;
-	st.ip.lo=iplo;
 	//Performance testing.
 	unlrun.time+=performance.now();
 	if (st.state!==UNL_RUNNING) {

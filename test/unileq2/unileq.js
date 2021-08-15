@@ -136,7 +136,7 @@ Performance tests, measured in instructions per second:
       24 |  19302625 |  29422721 |  84798595 |  94668341
       25 |  19379899 |  30151955 |  84408044 |  95648075
 
-Using interleaved memory was about 35% slower than splitting into high/low
+Using interleaved memory is about 35% slower than splitting into high/low
 arrays.
 
 Uint32Array is at least 5% faster than Float64Array across all hardware and
@@ -148,18 +148,29 @@ integration with javascript.
 --------------------------------------------------------------------------------
 TODO
 
-Speed test unlrun versions.
-Turn unl into an object. Use capitalization for function names.
+Speed test unlrun versions including standard and 32
+Turn unl into an object. Capitalize UnlU64Create etc.
+UnlU64ToFloat
 Format time to UTC and seconds*2^32.
 Try interleaved memory again.
 Try faster way to split 64-bit number in unlcreate?
+	faster way for instanceof()? try/catch
+	var UnlU64Norm=1.0/0x100000000;
+	if (hi>=0x100000000) {
+		lo=hi>>>0;
+		hi=(hi*norm)>>>0;
+	} else {
+		lo=hi;
+		hi=0;
+	}
 Audio
 Graphics
 Mouse+Keyboard
 
 */
 /*jshint bitwise: false*/
-/*jshint eqeqeq: true*/
+/*jshint eqeqeq: true  */
+/*jshint curly: true   */
 
 //--------------------------------------------------------------------------------
 //64 bit unsigned integers.
@@ -676,45 +687,6 @@ function unlsetmem(st,addr,val) {
 	st.meml[pos]=val.lo;
 }
 
-function unlrun_standard(st,iters) {
-	//Run unileq for a given number of iterations. If iters<0, run forever.
-	var dec=iters>=0?1:0;
-	var a,b,c,ma,mb,ip=st.ip;
-	var io=unlu64create(-4);
-	for (;iters!==0 && st.state===UNL_RUNNING;iters-=dec) {
-		//Load a, b, and c.
-		a=unlgetmem(st,ip);unlu64inc(ip);
-		b=unlgetmem(st,ip);unlu64inc(ip);
-		c=unlgetmem(st,ip);unlu64inc(ip);
-		//Input
-		if (unlu64cmp(b,io)<0) {
-			mb=unlgetmem(st,b);
-		} else if (b.lo===0xfffffffc) {
-			//Read time.
-			mb=unlu64create(Date.now());
-		} else {
-			unlu64zero(mb);
-		}
-		//Output
-		if (unlu64cmp(a,io)<0) {
-			//Execute a normal unileq instruction.
-			ma=unlgetmem(st,a);
-			if (unlu64sub(ma,ma,mb)) {
-				unlu64set(ip,c);
-			}
-			unlsetmem(st,a,ma);
-			continue;
-		} else if (a.lo===0xffffffff) {
-			//Exit.
-			st.state=UNL_COMPLETE;
-		} else if (a.lo===0xfffffffe) {
-			//Print to stdout.
-			unlprint(st,String.fromCharCode(mb.lo&255));
-		}
-		unlu64set(ip,c);
-	}
-}
-
 function unlrun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
 	//This version of unlrun() unrolls several operations to speed things up.
@@ -830,3 +802,4 @@ function unlrun(st,iters) {
 		unlprint(st,"Speed: "+freq.toFixed(0)+" Hz\n");
 	}
 }
+
