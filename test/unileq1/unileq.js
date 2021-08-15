@@ -690,12 +690,13 @@ function unlsetmem(st,addr,val) {
 function unlrun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
 	//Performance testing.
-	if (st.ip.hi===0 && st.ip.lo===0) {
-		unlrun.instructions=0;
-		unlrun.time=0;
+	if (st.ip.lo===0 && st.ip.hi===0) {
+		this.instructions=0;
+		this.time=0;
+		this.start=performance.now();
 	}
-	unlrun.instructions+=iters;
-	unlrun.time-=performance.now();
+	this.instructions+=iters;
+	this.time-=performance.now();
 	var a,b,c,ma,mb,ip=st.ip;
 	var io=unlu64create(-4);
 	iters=iters<0?Infinity:iters;
@@ -732,9 +733,11 @@ function unlrun(st,iters) {
 		unlu64set(ip,c);
 	}
 	//Performance testing.
-	unlrun.time+=performance.now();
+	this.time+=performance.now();
 	if (st.state!==UNL_RUNNING) {
-		var freq=(unlrun.instructions-(iters+1))*1000.0/unlrun.time;
+		var freq=(this.instructions-(iters+1))*1000.0/this.time;
 		unlprint(st,"Speed: "+freq.toFixed(0)+" Hz\n");
+		var time=(performance.now()-this.start)/1000.0;
+		unlprint(st,"Time : "+time.toFixed(2)+" s\n");
 	}
 }
