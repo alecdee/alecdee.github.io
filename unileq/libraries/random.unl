@@ -28,6 +28,7 @@ Version History
 --------------------------------------------------------------------------------
 TODO
 
+Find a faster hashing function.
 Optimize random.jump based on uint.mul.
 Optimize random.mod and random.shuffle based on uint.div.
 Merge random.get and random.generate.
@@ -346,7 +347,7 @@ random.mod:
 	.p1:0   .tmp1   ?+1
 	0       0       .arg4:4
 .div0:
-	0-1     0       0
+	0-1     0       ?-2
 	#Variables
 	.nmod:0
 	.mod:0

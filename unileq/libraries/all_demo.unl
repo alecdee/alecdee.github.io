@@ -121,18 +121,19 @@ Version History
 3.08
      Updated comments.
 3.09
-     Changed division by 0 abort instruction.
+     Changed division-by-0 abort instruction.
      Made uint.shl bit length agnostic and lowered run time by 36%.
      Made uint.shr bit length agnostic and lowered run time by 11%.
 
 --------------------------------------------------------------------------------
 TODO
 
+Abort if shift is greater than bit length in uint.shl and uint.shr.
 Use global "uint" scope and shared variables (.z:, .tmp:, etc).
 Add effects to index section.
 Add better overview explanations for uint.and, uint.mul, and uint.div.
 Remove loop counter from uint.mul. Optimize if high=0.
-Remove loop counter from uint.div. Optimize if quot=0 or den>=num.
+Remove loop counter from uint.div. Optimize if quot=0 or den>num.
 Calculating A&B might be faster by looking at bit changes in A-B. Use the changes
 in runs of 0's and 1's to determine where bit differences are.
 |#
@@ -1030,6 +1031,7 @@ Version History
 --------------------------------------------------------------------------------
 TODO
 
+Find a faster hashing function.
 Optimize random.jump based on uint.mul.
 Optimize random.mod and random.shuffle based on uint.div.
 Merge random.get and random.generate.
@@ -1348,7 +1350,7 @@ random.mod:
 	.p1:0   .tmp1   ?+1
 	0       0       .arg4:4
 .div0:
-	0-1     0       0
+	0-1     0       ?-2
 	#Variables
 	.nmod:0
 	.mod:0

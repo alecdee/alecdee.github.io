@@ -117,45 +117,52 @@ Performance
 
 Performance tests, measured in instructions per second:
 
-                 |  Phone  |  Laptop |  PC FF  |  PC Chr
-     ------------+---------+---------+---------+---------
-      32 Bit Std |  382561 |  777172 | 1628026 | 2044652
-      64 Bit Std |   68830 |   39992 |  112846 |  244952
-      64 Bit Fast|  294037 |  639020 | 1296122 | 1527884
 
-Using interleaved memory was about 35% slower than splitting into high/low
+                  |   Phone   |   Laptop  |   PC FF   |   PC CR
+     -------------+-----------+-----------+-----------+-----------
+      64 Bit Std  |   3604299 |   2646748 |   6951947 |  17073384
+      64 Bit Fast |  19124087 |  36796100 |  97277391 |  97180701
+      32 Bit Std  |  26121436 |  45665430 | 143715565 | 125252212
+
+
+Tests should take 5 minutes or more. Tests run on a phone need to be run
+several times to see the effect of thermal throttling.
+
+Using interleaved memory is about 8% slower than splitting into high/low
 arrays.
 
-Webassembly speedup isn't that great compared to unlrun(). Wait until better
+Uint32Array is at least 5% faster than Float64Array across all hardware and
+browsers.
+
+When testing the math library, we jump 77% of the time. So, we will need to load
+mem[C] most of the time.
+
+Webassembly speedup isn't that great compared to UnlRun(). Wait until better
 integration with javascript.
 
 --------------------------------------------------------------------------------
 TODO
 
-Turn unl into an object. Use capitalization for function names.
-Format time to UTC and seconds*2^32.
-Try interleaved memory again.
-Try different data type for arrays.
-Try faster way to split 64-bit number in unlcreate?
-Try Uint32Array for unlu64 types.
+Turn unl into an object.
 Audio
 Graphics
 Mouse+Keyboard
 
 */
 /*jshint bitwise: false*/
-/*jshint eqeqeq: true*/
+/*jshint eqeqeq: true  */
+/*jshint curly: true   */
 
 //--------------------------------------------------------------------------------
 //64 bit unsigned integers.
 
-function unlu64create(hi,lo) {
+function UnlU64Create(hi,lo) {
 	if (hi===undefined) {
 		//If arguments are empty, initialize to 0.
 		hi=0;
 		lo=0;
 	} else if (lo===undefined) {
-		if (hi instanceof Object) {
+		if (hi.hi!==undefined) {
 			//hi is another u64 object.
 			lo=hi.lo;
 			hi=hi.hi;
@@ -176,7 +183,7 @@ function unlu64create(hi,lo) {
 	return {lo:lo,hi:hi};
 }
 
-function unlu64tostr(n) {
+function UnlU64ToStr(n) {
 	//Convert a 64-bit number to its base 10 representation.
 	//Powers of 10 split into high 32 bits and low 32 bits.
 	var pot=[
@@ -211,7 +218,7 @@ function unlu64tostr(n) {
 	return str===""?"0":str;
 }
 
-function unlu64cmp(a,b) {
+function UnlU64Cmp(a,b) {
 	//if a<b, return -1
 	//if a=b, return  0
 	//if a>b, return  1
@@ -220,24 +227,24 @@ function unlu64cmp(a,b) {
 	return 0;
 }
 
-function unlu64set(a,b) {
+function UnlU64Set(a,b) {
 	//a=b
 	a.lo=b.lo;
 	a.hi=b.hi;
 }
 
-function unlu64zero(n) {
+function UnlU64Zero(n) {
 	//n=0
 	n.lo=0;
 	n.hi=0;
 }
 
-function unlu64iszero(n) {
+function UnlU64IsZero(n) {
 	//n==0
 	return n.lo===0 && n.hi===0;
 }
 
-function unlu64neg(r,a) {
+function UnlU64Neg(r,a) {
 	//r=-a
 	r.lo=0x100000000-a.lo;
 	r.hi= 0xffffffff-a.hi;
@@ -249,7 +256,7 @@ function unlu64neg(r,a) {
 	}
 }
 
-function unlu64sub(r,a,b) {
+function UnlU64Sub(r,a,b) {
 	//r=a-b
 	//return true if a<=b
 	var lo,hi;
@@ -268,7 +275,7 @@ function unlu64sub(r,a,b) {
 	return hi===0 && lo===0;
 }
 
-function unlu64add(r,a,b) {
+function UnlU64Add(r,a,b) {
 	//r=a+b
 	r.lo=a.lo+b.lo;
 	r.hi=a.hi+b.hi;
@@ -281,7 +288,7 @@ function unlu64add(r,a,b) {
 	}
 }
 
-function unlu64mul(r,a,b) {
+function UnlU64Mul(r,a,b) {
 	//r=a*b
 	var a0=a.lo&0xffff,a1=a.lo>>>16;
 	var a2=a.hi&0xffff,a3=a.hi>>>16;
@@ -297,7 +304,7 @@ function unlu64mul(r,a,b) {
 	r.hi=hi>>>0;
 }
 
-function unlu64inc(n) {
+function UnlU64Inc(n) {
 	//n++
 	if ((++n.lo)>=0x100000000) {
 		n.lo=0;
@@ -307,7 +314,7 @@ function unlu64inc(n) {
 	}
 }
 
-function unlu64dec(n) {
+function UnlU64Dec(n) {
 	//n--
 	if ((--n.lo)<0) {
 		n.lo=0xffffffff;
@@ -320,7 +327,7 @@ function unlu64dec(n) {
 //--------------------------------------------------------------------------------
 //Labels.
 
-function unllabelalloc() {
+function UnlLabelAlloc() {
 	return {
 		next:null,
 		scope:null,
@@ -329,11 +336,11 @@ function unllabelalloc() {
 		len:0,
 		hash:0,
 		depth:0,
-		addr:unlu64create()
+		addr:UnlU64Create()
 	};
 }
 
-function unllabelcmp(ls,rs) {
+function UnlLabelCmp(ls,rs) {
 	//Compare two labels from their last character to their first along with any
 	//scope characters.
 	var lv=null,rv=null,lc,rc,data=ls.data;
@@ -350,7 +357,7 @@ function unllabelcmp(ls,rs) {
 	return 0;
 }
 
-function unlhashcreate() {
+function UnlHashCreate() {
 	var mask=(1<<20)-1;
 	var map=new Array(mask+1);
 	for (var i=0;i<=mask;i++) {
@@ -359,7 +366,7 @@ function unlhashcreate() {
 	return {mask:mask,map:map};
 }
 
-function unllabelinit(map,lbl,scope,data,pos,len) {
+function UnlLabelInit(map,lbl,scope,data,pos,len) {
 	//Initialize a label and return a match if we find one.
 	//Count .'s to determine what scope we should be in.
 	var s="";
@@ -390,21 +397,21 @@ function unllabelinit(map,lbl,scope,data,pos,len) {
 	lbl.hash=hash;
 	//Search for a match.
 	var match=map.map[hash&map.mask];
-	while (match!==null && unllabelcmp(match,lbl)!==0) {
+	while (match!==null && UnlLabelCmp(match,lbl)!==0) {
 		match=match.next;
 	}
 	return match;
 }
 
-function unllabeladd(map,lbl) {
-	var dst=unllabelalloc();
+function UnlLabelAdd(map,lbl) {
+	var dst=UnlLabelAlloc();
 	dst.scope=lbl.scope;
 	dst.data=lbl.data;
 	dst.pos=lbl.pos;
 	dst.len=lbl.len;
 	dst.hash=lbl.hash;
 	dst.depth=lbl.depth;
-	unlu64set(dst.addr,lbl.addr);
+	UnlU64Set(dst.addr,lbl.addr);
 	var hash=dst.hash&map.mask;
 	dst.next=map.map[hash];
 	map.map[hash]=dst;
@@ -419,25 +426,25 @@ var UNL_ERROR_PARSER=2;
 var UNL_ERROR_MEMORY=3;
 var UNL_MAX_PARSE   =(1<<30);
 
-function unlcreate(output) {
+function UnlCreate(output) {
 	var st={
 		output:output,
 		outbuf:"",
 		memh:null,
 		meml:null,
 		alloc:0,
-		ip:unlu64create(),
+		ip:UnlU64Create(),
 		state:0,
 		statestr:""
 	};
-	unlclear(st);
+	UnlClear(st);
 	return st;
 }
 
-function unlclear(st) {
+function UnlClear(st) {
 	st.state=UNL_COMPLETE;
 	st.statestr="";
-	unlu64zero(st.ip);
+	UnlU64Zero(st.ip);
 	st.memh=null;
 	st.meml=null;
 	st.alloc=0;
@@ -447,7 +454,7 @@ function unlclear(st) {
 	st.outbuf="";
 }
 
-function unlprint(st,str) {
+function UnlPrint(st,str) {
 	//Print to output and autoscroll to bottom. If output is null, print to console.
 	var output=st.output;
 	if (output!==null) {
@@ -466,9 +473,9 @@ function unlprint(st,str) {
 	}
 }
 
-function unlparsestr(st,str) {
+function UnlParseStr(st,str) {
 	//Convert unileq assembly language into a unileq program.
-	unlclear(st);
+	UnlClear(st);
 	st.state=UNL_RUNNING;
 	var i=0,j=0,len=str.length;
 	var c,op,err=null;
@@ -478,13 +485,13 @@ function unlparsestr(st,str) {
 	function   NEXT() {return (c=i++<len?str.charCodeAt(i-1):0);}
 	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
 	//Process the string in 2 passes. The first pass is needed to find label values.
-	var map=unlhashcreate();
+	var map=UnlHashCreate();
 	if (map===null) {err="Unable to allocate hash map";}
-	var lbl0=unllabelalloc();
+	var lbl0=UnlLabelAlloc();
 	for (var pass=0;pass<2 && err===null;pass++) {
 		var scope=null,lbl=null;
-		var addr=unlu64create(),val=unlu64create(),acc=unlu64create();
-		var tmp0=unlu64create(),tmp1=unlu64create();
+		var addr=UnlU64Create(),val=UnlU64Create(),acc=UnlU64Create();
+		var tmp0=UnlU64Create(),tmp1=UnlU64Create();
 		op=0;
 		i=0;
 		NEXT();
@@ -509,36 +516,36 @@ function unlparsestr(st,str) {
 				//Operator. Decrement addr since we're modifying the previous value.
 				if (op!==0 ) {err="Double operator";}
 				if (op===58) {err="Operating on declaration";}
-				if (unlu64iszero(addr)) {err="Leading operator";}
-				unlu64dec(addr);
+				if (UnlU64IsZero(addr)) {err="Leading operator";}
+				UnlU64Dec(addr);
 				op=c;
 				NEXT();
 			} else if (CNUM(c)<10) {
 				//Number. If it starts with "0x", use hexadecimal.
 				token=10;
-				unlu64zero(val);
+				UnlU64Zero(val);
 				if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
 				tmp0.lo=token;
 				while ((tmp1.lo=CNUM(c))<token) {
-					unlu64mul(val,val,tmp0);
-					unlu64add(val,val,tmp1);
+					UnlU64Mul(val,val,tmp0);
+					UnlU64Add(val,val,tmp1);
 					NEXT();
 				}
 			} else if (c===63) {
 				//Current address token.
 				token=1;
-				unlu64set(val,addr);
+				UnlU64Set(val,addr);
 				NEXT();
 			} else if (ISLBL(c)) {
 				//Label.
 				while (ISLBL(c)) {NEXT();}
-				lbl=unllabelinit(map,lbl0,scope,str,j-1,i-j);
+				lbl=UnlLabelInit(map,lbl0,scope,str,j-1,i-j);
 				if (c===58) {
 					//Label declaration.
 					if (pass===0) {
 						if (lbl!==null) {err="Duplicate label declaration";}
-						unlu64set(lbl0.addr,addr);
-						lbl=unllabeladd(map,lbl0);
+						UnlU64Set(lbl0.addr,addr);
+						lbl=UnlLabelAdd(map,lbl0);
 						if (lbl===null) {err="Unable to allocate label";}
 					}
 					scope=lbl;
@@ -547,7 +554,7 @@ function unlparsestr(st,str) {
 					NEXT();
 				} else {
 					token=1;
-					if (lbl!==null) {unlu64set(val,lbl.addr);}
+					if (lbl!==null) {UnlU64Set(val,lbl.addr);}
 					else if (pass!==0) {err="Unable to find label";}
 				}
 			} else {
@@ -556,24 +563,24 @@ function unlparsestr(st,str) {
 			}
 			if (token!==0) {
 				//Add a new value to memory.
-				if (op===43) {unlu64add(val,acc,val);}
-				else if (op===45) {unlu64sub(val,acc,val);}
+				if (op===43) {UnlU64Add(val,acc,val);}
+				else if (op===45) {UnlU64Sub(val,acc,val);}
 				else if (pass!==0) {
-					unlu64dec(addr);
-					unlsetmem(st,addr,acc);
-					unlu64inc(addr);
+					UnlU64Dec(addr);
+					UnlSetMem(st,addr,acc);
+					UnlU64Inc(addr);
 				}
-				unlu64inc(addr);
-				unlu64set(acc,val);
+				UnlU64Inc(addr);
+				UnlU64Set(acc,val);
 				op=0;
 				if (ISLBL(c) || c===63) {err="Unseparated tokens";}
 			}
 		}
 		if (err===null && ISOP(op)) {err="Trailing operator";}
 		if (pass!==0) {
-			unlu64dec(addr);
-			unlsetmem(st,addr,acc);
-			unlu64inc(addr);
+			UnlU64Dec(addr);
+			UnlSetMem(st,addr,acc);
+			UnlU64Inc(addr);
 		}
 	}
 	if (err!==null) {
@@ -608,31 +615,30 @@ function unlparsestr(st,str) {
 	}
 }
 
-function unlgetmem(st,addr) {
+function UnlGetMem(st,addr) {
 	//Return the memory value at addr.
 	var i=addr.lo;
 	if (addr.hi===0 && i<st.alloc) {
-		return unlu64create(st.memh[i],st.meml[i]);
-	} else {
-		return unlu64create();
+		return UnlU64Create(st.memh[i],st.meml[i]);
 	}
+	return UnlU64Create();
 }
 
-function unlsetmem(st,addr,val) {
+function UnlSetMem(st,addr,val) {
 	//Write val to the memory at addr.
 	var pos=addr.lo;
 	if (addr.hi!==0 || pos>=st.alloc) {
 		//If we're writing to an address outside of our memory, attempt to resize it or
 		//error out.
-		if (unlu64iszero(val)) {return;}
+		if (UnlU64IsZero(val)) {return;}
 		//Find the maximum we can allocate.
 		var alloc=1,memh=null,meml=null;
 		while (alloc<=pos) {alloc+=alloc;}
 		//Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
-				memh=new Float64Array(alloc);
-				meml=new Float64Array(alloc);
+				memh=new Uint32Array(alloc);
+				meml=new Uint32Array(alloc);
 			} catch(error) {
 				memh=null;
 				meml=null;
@@ -653,7 +659,7 @@ function unlsetmem(st,addr,val) {
 			st.alloc=alloc;
 		} else {
 			st.state=UNL_ERROR_MEMORY;
-			st.statestr="Failed to allocate memory.\nIndex: "+unlu64tostr(addr)+"\n";
+			st.statestr="Failed to allocate memory.\nIndex: "+UnlU64ToStr(addr)+"\n";
 			return;
 		}
 	}
@@ -661,62 +667,72 @@ function unlsetmem(st,addr,val) {
 	st.meml[pos]=val.lo;
 }
 
-function unlrun_standard(st,iters) {
+function UnlRunStandard(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
-	var dec=iters>=0?1:0;
 	var a,b,c,ma,mb,ip=st.ip;
-	var io=unlu64create(-4);
-	for (;iters!==0 && st.state===UNL_RUNNING;iters-=dec) {
+	var io=UnlU64Create(-4);
+	iters=iters<0?Infinity:iters;
+	for (;iters>0 && st.state===UNL_RUNNING;iters--) {
 		//Load a, b, and c.
-		a=unlgetmem(st,ip);unlu64inc(ip);
-		b=unlgetmem(st,ip);unlu64inc(ip);
-		c=unlgetmem(st,ip);unlu64inc(ip);
+		a=UnlGetMem(st,ip);UnlU64Inc(ip);
+		b=UnlGetMem(st,ip);UnlU64Inc(ip);
+		c=UnlGetMem(st,ip);UnlU64Inc(ip);
 		//Input
-		if (unlu64cmp(b,io)<0) {
-			mb=unlgetmem(st,b);
+		if (UnlU64Cmp(b,io)<0) {
+			mb=UnlGetMem(st,b);
 		} else if (b.lo===0xfffffffc) {
-			//Read time.
-			mb=unlu64create(Date.now());
+			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
+			var time=performance.timing.navigationStart+performance.now();
+			mb=UnlU64Create((time/1000)>>>0,((time%1000)*4294967.296)>>>0);
 		} else {
-			unlu64zero(mb);
+			UnlU64Zero(mb);
 		}
 		//Output
-		if (unlu64cmp(a,io)<0) {
+		if (UnlU64Cmp(a,io)<0) {
 			//Execute a normal unileq instruction.
-			ma=unlgetmem(st,a);
-			if (unlu64sub(ma,ma,mb)) {
-				unlu64set(ip,c);
+			ma=UnlGetMem(st,a);
+			if (UnlU64Sub(ma,ma,mb)) {
+				UnlU64Set(ip,c);
 			}
-			unlsetmem(st,a,ma);
+			UnlSetMem(st,a,ma);
 			continue;
 		} else if (a.lo===0xffffffff) {
 			//Exit.
 			st.state=UNL_COMPLETE;
 		} else if (a.lo===0xfffffffe) {
 			//Print to stdout.
-			unlprint(st,String.fromCharCode(mb.lo));
+			UnlPrint(st,String.fromCharCode(mb.lo&255));
 		}
-		unlu64set(ip,c);
+		UnlU64Set(ip,c);
 	}
 }
 
-function unlrun(st,iters) {
+function UnlRun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
-	//This version of unlrun() unrolls several operations to speed things up.
+	//This version of UnlRun() unrolls several operations to speed things up.
 	//Depending on the platform, this is 4 to 10 times faster.
 	if (st.state!==UNL_RUNNING) {
 		return;
 	}
+	//Performance testing.
+	if (st.ip.lo===0 && st.ip.hi===0) {
+		this.instructions=0;
+		this.time=0;
+		this.start=performance.now();
+	}
+	this.instructions+=iters;
+	this.time-=performance.now();
 	var iphi=st.ip.hi,iplo=st.ip.lo;
 	var memh=st.memh,meml=st.meml;
-	var alloc=st.alloc;
+	var alloc=st.alloc,alloc2=alloc-2;
 	var ahi,alo,chi,clo;
 	var bhi,blo,mbhi,mblo;
-	var tmp0,tmp1;
+	var tmp0=UnlU64Create(),tmp1=UnlU64Create(),tmp2;
+	var io=0xfffffffc;
 	iters=iters<0?Infinity:iters;
 	for (;iters>0;iters--) {
 		//Load a, b, and c.
-		if (iphi===0 && iplo+2<alloc) {
+		if (iphi===0 && iplo<alloc2) {
 			//Inbounds read.
 			ahi=memh[iplo];
 			alo=meml[iplo++];
@@ -725,81 +741,93 @@ function unlrun(st,iters) {
 			chi=memh[iplo];
 			clo=meml[iplo++];
 		} else {
-			//Possible out of bounds read. Check bounds for each operand.
-			ahi=alo=0;
-			if (iphi===0 && iplo<alloc) {ahi=memh[iplo];alo=meml[iplo];}
-			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
-			bhi=blo=0;
-			if (iphi===0 && iplo<alloc) {bhi=memh[iplo];blo=meml[iplo];}
-			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
-			chi=clo=0;
-			if (iphi===0 && iplo<alloc) {chi=memh[iplo];clo=meml[iplo];}
-			if ((++iplo)>=0x100000000) {iplo=0;iphi=(iphi+1)>>>0;}
+			//Out of bounds read. Use UnlGetMem to read a, b, and c.
+			tmp0.hi=iphi;tmp0.lo=iplo;
+			tmp1=UnlGetMem(st,tmp0);ahi=tmp1.hi;alo=tmp1.lo;UnlU64Inc(tmp0);
+			tmp1=UnlGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;UnlU64Inc(tmp0);
+			tmp1=UnlGetMem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;UnlU64Inc(tmp0);
+			iphi=tmp0.hi;iplo=tmp0.lo;
 		}
 		//Input
-		if (bhi<0xffffffff) {
-			//Read mem[b].
-			if (bhi===0 && blo<alloc) {
+		if (bhi===0) {
+			//Inbounds. Read mem[b] directly.
+			if (blo<alloc) {
 				mbhi=memh[blo];
 				mblo=meml[blo];
 			} else {
 				mbhi=0;
 				mblo=0;
 			}
+		} else if (bhi<0xffffffff || blo<io) {
+			//Out of bounds. Use UnlGetMem to read mem[b].
+			tmp0.hi=bhi;tmp0.lo=blo;
+			tmp2=UnlGetMem(st,tmp0);
+			mbhi=tmp2.hi;mblo=tmp2.lo;
 		} else if (blo===0xfffffffc) {
-			//Read time.
-			tmp0=unlu64create(Date.now());
-			mbhi=tmp0.hi;
-			mblo=tmp0.lo;
+			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
+			var time=performance.timing.navigationStart+performance.now();
+			mbhi=(time/1000)>>>0;
+			mblo=((time%1000)*4294967.296)>>>0;
 		} else {
+			//We couldn't find a special address to read.
 			mbhi=0;
 			mblo=0;
 		}
 		//Output
-		if (ahi<0xffffffff) {
+		if (ahi===0 && alo<alloc) {
 			//Execute a normal unileq instruction.
-			if (ahi===0 && alo<alloc) {
-				//Inbounds. Read and write to mem[a] directly.
-				mblo=meml[alo]-mblo;
-				if (mblo>=0) {
-					meml[alo]=mblo;
-				} else {
-					meml[alo]=mblo+0x100000000;
-					mbhi++;
-				}
-				mbhi=memh[alo]-mbhi;
-				if (mbhi>=0) {
-					memh[alo]=mbhi;
-					if (mblo!==0 || mbhi>0) {
-						continue;
-					}
-				} else {
-					memh[alo]=mbhi+0x100000000;
-				}
-			} else if (mblo!==0 || mbhi!==0) {
-				//Out of bounds. Use unlsetmem to modify mem[a].
-				tmp0=unlu64create(ahi,alo);
-				tmp1=unlu64create(mbhi,mblo);
-				unlu64neg(tmp1,tmp1);
-				unlsetmem(st,tmp0,tmp1);
-				if (st.state!==UNL_RUNNING) {
-					break;
-				}
-				memh=st.memh;
-				meml=st.meml;
-				alloc=st.alloc;
+			//Inbounds. Read and write to mem[a] directly.
+			mblo=meml[alo]-mblo;
+			if (mblo<0) {
+				mblo+=0x100000000;
+				mbhi++;
 			}
+			meml[alo]=mblo;
+			mbhi=memh[alo]-mbhi;
+			if (mbhi>=0) {
+				memh[alo]=mbhi;
+				if (mblo!==0 || mbhi>0) {
+					continue;
+				}
+			} else {
+				memh[alo]=mbhi+0x100000000;
+			}
+		} else if (ahi<0xffffffff || alo<io) {
+			//Out of bounds. Use UnlSetMem to modify mem[a].
+			tmp0.hi=ahi;tmp0.lo=alo;
+			tmp2=UnlGetMem(st,tmp0);
+			tmp1.hi=mbhi;tmp1.lo=mblo;
+			if (!UnlU64Sub(tmp2,tmp2,tmp1)) {
+				chi=iphi;
+				clo=iplo;
+			}
+			UnlSetMem(st,tmp0,tmp2);
+			if (st.state!==UNL_RUNNING) {
+				break;
+			}
+			memh=st.memh;
+			meml=st.meml;
+			alloc=st.alloc;
+			alloc2=alloc-2;
 		} else if (alo===0xffffffff) {
 			//Exit.
 			st.state=UNL_COMPLETE;
 			break;
 		} else if (alo===0xfffffffe) {
 			//Print to stdout.
-			unlprint(st,String.fromCharCode(mblo));
+			UnlPrint(st,String.fromCharCode(mblo&255));
 		}
 		iphi=chi;
 		iplo=clo;
 	}
 	st.ip.hi=iphi;
 	st.ip.lo=iplo;
+	//Performance testing.
+	this.time+=performance.now();
+	if (st.state!==UNL_RUNNING) {
+		var freq=(this.instructions-(iters+1))*1000.0/this.time;
+		UnlPrint(st,"Speed: "+freq.toFixed(0)+" Hz\n");
+		var time=(performance.now()-this.start)/1000.0;
+		UnlPrint(st,"Time : "+time.toFixed(2)+" s\n");
+	}
 }

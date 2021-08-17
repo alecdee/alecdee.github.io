@@ -121,9 +121,8 @@ Performance tests, measured in instructions per second:
                   |   Phone   |   Laptop  |   PC FF   |   PC CR
      -------------+-----------+-----------+-----------+-----------
       64 Bit Std  |   3604299 |   2646748 |   6951947 |  17073384
-      64 Bit Fast |  19172686 |  36350815 |  95710159 |  93422255
+      64 Bit Fast |  19124087 |  36796100 |  97277391 |  97180701
       32 Bit Std  |  26121436 |  45665430 | 143715565 | 125252212
-
 
 Tests should take 5 minutes or more. Tests run on a phone need to be run
 several times to see the effect of thermal throttling.
@@ -143,8 +142,6 @@ integration with javascript.
 --------------------------------------------------------------------------------
 TODO
 
-alloc2=alloc-2
-Test speed differences for loading ABC.
 Turn unl into an object.
 Audio
 Graphics
@@ -726,7 +723,7 @@ function UnlRun(st,iters) {
 	this.time-=performance.now();
 	var iphi=st.ip.hi,iplo=st.ip.lo;
 	var memh=st.memh,meml=st.meml;
-	var alloc=st.alloc;
+	var alloc=st.alloc,alloc2=alloc-2;
 	var ahi,alo,chi,clo;
 	var bhi,blo,mbhi,mblo;
 	var tmp0=UnlU64Create(),tmp1=UnlU64Create(),tmp2;
@@ -734,7 +731,7 @@ function UnlRun(st,iters) {
 	iters=iters<0?Infinity:iters;
 	for (;iters>0;iters--) {
 		//Load a, b, and c.
-		if (iphi===0 && iplo+2<alloc) {
+		if (iphi===0 && iplo<alloc2) {
 			//Inbounds read.
 			ahi=memh[iplo];
 			alo=meml[iplo++];
@@ -810,6 +807,7 @@ function UnlRun(st,iters) {
 			memh=st.memh;
 			meml=st.meml;
 			alloc=st.alloc;
+			alloc2=alloc-2;
 		} else if (alo===0xffffffff) {
 			//Exit.
 			st.state=UNL_COMPLETE;
