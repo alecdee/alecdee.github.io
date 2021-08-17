@@ -409,7 +409,7 @@ test.main:
 	.orops:0
 	.xorops:0
 	.trial:0
-	.trials:5000
+	.trials:22500
 	.exp0:0
 	.exp1:0
 	.ret0:0

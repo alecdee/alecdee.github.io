@@ -1,13 +1,14 @@
 /*
 Author  : Alec Dee, akdee144@gmail.com
-Modified: 31 Jul 2021
+Modified: 16 Aug 2021
 
 TODO:
 Find out if Firefox fixed the textarea padding bug:
 https://bugzilla.mozilla.org/show_bug.cgi?id=748518
 */
 /*jshint bitwise: false*/
-/*jshint eqeqeq: true*/
+/*jshint eqeqeq: true  */
+/*jshint curly: true   */
 
 function init_editor() {
 	var runbutton=document.getElementById("unileq_run");
@@ -18,7 +19,7 @@ function init_editor() {
 	var advanced=document.getElementById("unileq_advanced");
 	var menu=document.getElementById("unileq_menu");
 	var keygrab=document.getElementById("unileq_keyboard");
-	var unl=unlcreate(output);
+	var unl=UnlCreate(output);
 	var running=0;
 	var frametime=0;
 	function update() {
@@ -37,7 +38,7 @@ function init_editor() {
 			running=0;
 			text="&#9654;&nbsp;&nbsp;&nbsp;Run";
 			if (unl.state!==UNL_COMPLETE) {
-				unlprint(unl,unl.statestr);
+				UnlPrint(unl,unl.statestr);
 			}
 		} else if (running===0) {
 			text="&#9654;&nbsp;&nbsp;&nbsp;Resume";
@@ -48,7 +49,7 @@ function init_editor() {
 		if (running===1) {
 			//Instructions per frame is hard to time due to browser timer inconsistencies.
 			//250k instructions per frame at 60fps seems to work well across platforms.
-			unlrun(unl,250000);
+			UnlRun(unl,250000);
 			setTimeout(update,0);
 		}
 	}
@@ -57,7 +58,7 @@ function init_editor() {
 		if (unl.state===UNL_RUNNING) {
 			running=1-running;
 		} else {
-			unlparsestr(unl,input.value);
+			UnlParseStr(unl,input.value);
 			running=1;
 		}
 		if (running===1) {
@@ -70,7 +71,7 @@ function init_editor() {
 	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Run";
 	//Setup the reset button.
 	resetbutton.onclick=function() {
-		unlclear(unl);
+		UnlClear(unl);
 		running=0;
 		setTimeout(update,0);
 	};
@@ -115,16 +116,16 @@ function init_editor() {
 		var xhr=new XMLHttpRequest();
 		xhr.onreadystatechange=function(){
 			if (xhr.readyState===4) {
-				unlclear(unl);
+				UnlClear(unl);
 				running=0;
 				setTimeout(update,0);
 				if (xhr.status===200) {
 					var name=path.split("/");
 					input.value=xhr.response;
-					unlprint(unl,"Loaded "+name[name.length-1]+"\n");
+					UnlPrint(unl,"Loaded "+name[name.length-1]+"\n");
 					update_text();
 				} else {
-					unlprint(unl,"Unable to open "+path+"\n");
+					UnlPrint(unl,"Unable to open "+path+"\n");
 				}
 			}
 		};
@@ -134,7 +135,7 @@ function init_editor() {
 	//Setup the example select menu.
 	select.onchange=function() {
 		if (select.value==="") {
-			unlclear(unl);
+			UnlClear(unl);
 			input.value="";
 			update_text();
 		} else {
@@ -158,7 +159,7 @@ function init_editor() {
 				}
 			}
 		} else if (type==="source") {
-			unlclear(unl);
+			UnlClear(unl);
 			input.value=arg;
 		}
 	}
