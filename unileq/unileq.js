@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.12
+unileq.js - v1.13
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -715,13 +715,13 @@ function UnlRun(st,iters) {
 		return;
 	}
 	//Performance testing.
-	if (st.ip.lo===0 && st.ip.hi===0) {
+	/*if (st.ip.lo===0 && st.ip.hi===0) {
 		this.instructions=0;
 		this.time=0;
 		this.start=performance.now();
 	}
 	this.instructions+=iters;
-	this.time-=performance.now();
+	this.time-=performance.now();*/
 	var iphi=st.ip.hi,iplo=st.ip.lo;
 	var memh=st.memh,meml=st.meml;
 	var alloc=st.alloc,alloc2=alloc-2;
@@ -823,11 +823,11 @@ function UnlRun(st,iters) {
 	st.ip.hi=iphi;
 	st.ip.lo=iplo;
 	//Performance testing.
-	this.time+=performance.now();
+	/*this.time+=performance.now();
 	if (st.state!==UNL_RUNNING) {
 		var freq=(this.instructions-(iters+1))*1000.0/this.time;
 		UnlPrint(st,"Speed: "+freq.toFixed(0)+" Hz\n");
 		var time=(performance.now()-this.start)/1000.0;
 		UnlPrint(st,"Time : "+time.toFixed(2)+" s\n");
-	}
+	}*/
 }
