@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.31
+unileq.c - v1.32
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -510,7 +510,7 @@ void unlrun(unlstate* st,u32 iters) {
 			//Read stdin.
 			mb=(uchar)getchar();
 		} else if (b==(u64)-4) {
-			//Read time.
+			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			struct timespec ts;
 			timespec_get(&ts,TIME_UTC);
 			mb=(((u64)ts.tv_sec)<<32)+(((u64)ts.tv_nsec)*0xffffffffULL)/999999999ULL;

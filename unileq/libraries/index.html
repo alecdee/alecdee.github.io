@@ -19,7 +19,8 @@ one instruction into an easy to use architecture.</p>
 <br>
 <a href="#printing" style="margin-left:4rem">String Printing</a><br>
 <a href="#uint" style="margin-left:4rem">Unsigned Math</a><br>
-<a href="#random" style="margin-left:4rem">Random Number Generation</a><br></p>
+<a href="#random" style="margin-left:4rem">Random Number Generation</a><br>
+<a href="#memory" style="margin-left:4rem">Memory</a><br></p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ String Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
@@ -69,19 +70,21 @@ instructions required per function call.</p>
 <br>
 <table class="datatable insttable headerrow">
 <tr><td>Function</td><td>Time</td></tr>
-<tr><td>cmp</td><td>29</td></tr>
-<tr><td>set</td><td>24</td></tr>
-<tr><td>neg</td><td>25</td></tr>
-<tr><td>add</td><td>30</td></tr>
-<tr><td>sub</td><td>31</td></tr>
-<tr><td>mul</td><td>993</td></tr>
-<tr><td>div</td><td>1006</td></tr>
-<tr><td>shl</td><td>185</td></tr>
-<tr><td>shr</td><td>546</td></tr>
-<tr><td>not</td><td>26</td></tr>
-<tr><td>and</td><td>485</td></tr>
-<tr><td>or</td><td>486</td></tr>
-<tr><td>xor</td><td>487</td></tr>
+<tr><td>cmp</td><td>28</td></tr>
+<tr><td>min</td><td>37</td></tr>
+<tr><td>max</td><td>37</td></tr>
+<tr><td>set</td><td>23</td></tr>
+<tr><td>neg</td><td>24</td></tr>
+<tr><td>add</td><td>29</td></tr>
+<tr><td>sub</td><td>30</td></tr>
+<tr><td>mul</td><td>992</td></tr>
+<tr><td>div</td><td>1005</td></tr>
+<tr><td>shl</td><td>184</td></tr>
+<tr><td>shr</td><td>545</td></tr>
+<tr><td>not</td><td>25</td></tr>
+<tr><td>and</td><td>484</td></tr>
+<tr><td>or</td><td>485</td></tr>
+<tr><td>xor</td><td>486</td></tr>
 </table>
 <br>
 <p><a href="./uint_demo.unl">uint_demo.unl</a> shows how to use the library. It's also used in
@@ -105,15 +108,51 @@ random.shuffle arr len</div>
 <p>For instance, to get a random number mod 52 and store it in <i>rand</i>, call:</p>
 <br>
 <div class="codeblock langunileq">0 ? random.get rand mod
-rand:0
-mod:52</div>
+rand: 0
+mod:  52</div>
 <br>
 <p><a href="./random_demo.unl">random_demo.unl</a> shows how to use the library. It's also used in
 the live version linked above.</p>
 </div>
 
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Memory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="memory"><h1>Memory</h1>
+<p>Download <a href="./memory.unl">memory.unl</a> or try the live demo
+<a href="../index.html?demo=Memory">here</a>.</p>
+<br>
+<p><a href="./memory.unl">memory.unl</a> defines functions for managing and allocating memory. In
+order to allocate memory safely, it needs to be last when concatenating with other libraries.</p>
+<br>
+<div class="codeblock langunileq">mem.getargs dst0 refs0 dst1 refs1 ... 0
+
+mem.get     val a b
+mem.set     a b val
+
+mem.zero    dst len
+mem.copy    dst src len
+
+mem.alloc   mem len
+mem.realloc ret mem len
+mem.free    mem
+mem.alloc.verifyfree</div>
+<br>
+<p>For instance, to allocate a block of memory with <i>30</i> cells and set <i>mem[2]=400</i>:</p>
+<br>
+<div class="codeblock langunileq">0 ? mem.alloc mem len
+0 ? mem.set   mem idx val
+0 ? mem.free  mem
+
+mem: 0
+len: 30
+idx: 2
+val: 400</div>
+<br>
+<p><a href="./memory_demo.unl">memory_demo.unl</a> shows how to use the library. It's also used in
+the live version linked above.</p>
+</div>
+
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 6 Aug 2021<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 5 Sep 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>
