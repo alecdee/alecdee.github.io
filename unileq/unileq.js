@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.13
+unileq.js - v1.14
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -128,14 +128,13 @@ Performance tests, measured in instructions per second:
 Tests should take 5 minutes or more. Tests run on a phone need to be run
 several times to see the effect of thermal throttling.
 
-Using interleaved memory is about 8% slower than splitting into high/low
-arrays.
+Splitting into high/low arrays is about 8% faster than using interleaved memory.
 
 Uint32Array is at least 5% faster than Float64Array across all hardware and
 browsers.
 
-When testing the math library, we jump 77% of the time. So, we will need to load
-mem[C] most of the time.
+When testing the math library, we jump 77% of the time. Delaying loading mem[C]
+didn't provide a meaningful speedup.
 
 Webassembly speedup isn't that great compared to UnlRun(). Wait until better
 integration with javascript.
@@ -645,14 +644,9 @@ function UnlSetMem(st,addr,val) {
 			}
 		}
 		if (memh!==null && meml!==null) {
-			var omemh=st.memh,omeml=st.meml,oalloc=st.alloc;
-			for (var i=0;i<oalloc;i++) {
-				memh[i]=omemh[i];
-				meml[i]=omeml[i];
-			}
-			for (;i<=alloc;i++) {
-				memh[i]=0;
-				meml[i]=0;
+			if (st.alloc>0) {
+				memh.set(st.memh,0);
+				meml.set(st.meml,0);
 			}
 			st.memh=memh;
 			st.meml=meml;
@@ -710,7 +704,7 @@ function UnlRunStandard(st,iters) {
 function UnlRun(st,iters) {
 	//Run unileq for a given number of iterations. If iters<0, run forever.
 	//This version of UnlRun() unrolls several operations to speed things up.
-	//Depending on the platform, this is 4 to 10 times faster.
+	//Depending on the platform, it's 4 to 10 times faster than standard.
 	if (st.state!==UNL_RUNNING) {
 		return;
 	}

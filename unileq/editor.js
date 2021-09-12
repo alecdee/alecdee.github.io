@@ -1,6 +1,6 @@
 /*
 Author  : Alec Dee, akdee144@gmail.com
-Modified: 16 Aug 2021
+Modified: 12 Sep 2021
 
 TODO:
 Find out if Firefox fixed the textarea padding bug:
@@ -10,7 +10,7 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=748518
 /*jshint eqeqeq: true  */
 /*jshint curly: true   */
 
-function init_editor() {
+function UnlInitEditor() {
 	var runbutton=document.getElementById("unileq_run");
 	var resetbutton=document.getElementById("unileq_reset");
 	var input=document.getElementById("unileq_editor");
@@ -123,7 +123,7 @@ function init_editor() {
 					var name=path.split("/");
 					input.value=xhr.response;
 					UnlPrint(unl,"Loaded "+name[name.length-1]+"\n");
-					update_text();
+					updatetext();
 				} else {
 					UnlPrint(unl,"Unable to open "+path+"\n");
 				}
@@ -137,7 +137,7 @@ function init_editor() {
 		if (select.value==="") {
 			UnlClear(unl);
 			input.value="";
-			update_text();
+			updatetext();
 		} else {
 			loadfile(select.value);
 		}
@@ -205,10 +205,10 @@ function init_editor() {
 	//Make the textarea text invisible, except for the caret.
 	input.style.color="rgba(0,0,0,0)";
 	input.style["caret-color"]=caretcolor;
-	var update_text=function() {
-		highlight.innerHTML=unileq_highlight(input.value);
+	var updatetext=function() {
+		highlight.innerHTML=HighlightUnileq(input.value);
 	};
-	var update_position=function() {
+	var updateposition=function() {
 		container.style.width=input.style.width;
 		container.style.height=input.style.height;
 		highlight.style.left=(-input.scrollLeft)+"px";
@@ -216,21 +216,22 @@ function init_editor() {
 		highlight.style.width=(input.clientWidth+input.scrollLeft)+"px";
 		highlight.style.height=(input.clientHeight+input.scrollTop)+"px";
 	};
-	//If we're using IE, fix text wrapping and tab sizes. Otherwise, enable resizing.
 	if (window.navigator.userAgent.match("(MSIE\\s|Trident/)")) {
+		//If we're using IE, fix text wrapping and tab sizes.
 		input.wrap="off";
 		var tabs=new RegExp("\t","g");
-		update_text=function() {
+		updatetext=function() {
 			var text=input.value.replace(tabs,"        ");
-			highlight.innerHTML=unileq_highlight(text);
+			highlight.innerHTML=HighlightUnileq(text);
 		};
 	} else {
-		new ResizeObserver(update_position).observe(input);
+		//Enable resizing.
+		new ResizeObserver(updateposition).observe(input);
 	}
-	input.oninput=update_text;
-	input.onscroll=update_position;
-	update_text();
-	update_position();
+	input.oninput=updatetext;
+	input.onscroll=updateposition;
+	updatetext();
+	updateposition();
 }
 
-window.addEventListener("load",init_editor,true);
+window.addEventListener("load",UnlInitEditor,true);

@@ -1,24 +1,24 @@
 //Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 24 Jul 2021
+//Modified: 9 Sep 2021
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
-function python_highlight(text) {
+function HighlightPython(text) {
 	//Set up regular expressions to match an expression to a style.
-	var style_default   ="color:#cccccc";
-	var style_comment   ="color:#999999";
-	var style_quote     ="color:#2aa198";
-	var style_multiquote="color:#2aa198";
-	var style_number    ="color:#2aa198";
-	var style_operator  ="color:#cccccc";
-	var style_special   ="color:#2aa198";
-	var style_import    ="color:#859900"; 
-	var style_builtin   ="color:#859900"; 
-	var style_keyword   ="color:#859900";
-	var style_exception ="color:#859900";
-	var arr_special=["False","None","True"];
-	var arr_import=["as","from","import"];
-	var arr_builtin=[
+	var styledefault   ="color:#cccccc";
+	var stylecomment   ="color:#999999";
+	var stylequote     ="color:#2aa198";
+	var stylemultiquote="color:#2aa198";
+	var stylenumber    ="color:#2aa198";
+	var styleoperator  ="color:#cccccc";
+	var stylespecial   ="color:#2aa198";
+	var styleimport    ="color:#859900"; 
+	var stylebuiltin   ="color:#859900"; 
+	var stylekeyword   ="color:#859900";
+	var styleexception ="color:#859900";
+	var arrspecial=["False","None","True"];
+	var arrimport=["as","from","import"];
+	var arrbuiltin=[
 		"__build_class__","__debug__","__doc__","__import__","__loader__","__name__","__package__","__spec__",
 		"abs","all","any","ascii","bin","bool","bytearray","bytes","callable","chr","classmethod","compile",
 		"complex","copyright","credits","delattr","dict","dir","divmod","enumerate","eval","exec","exit",
@@ -27,11 +27,11 @@ function python_highlight(text) {
 		"next","object","oct","open","ord","pow","print","property","quit","range","repr","reversed","round",
 		"set","setattr","slice","sorted","staticmethod","str","sum","super","tuple","type","vars","zip"
 	];
-	var arr_keyword=[
+	var arrkeyword=[
 		"and","assert","break","class","continue","def","del","elif","else","except","exec","finally","for",
 		"global","if","in","is","lambda","not","or","pass","print","raise","return","try","while","with","yield"
 	];
-	var arr_exception=[
+	var arrexception=[
 		"ArithmeticError","AssertionError","AttributeError","BaseException","BlockingIOError","BrokenPipeError",
 		"BufferError","BytesWarning","ChildProcessError","ConnectionAbortedError","ConnectionError",
 		"ConnectionRefusedError","ConnectionResetError","DeprecationWarning","EOFError","EnvironmentError",
@@ -46,49 +46,49 @@ function python_highlight(text) {
 		"UnicodeWarning","UserWarning","ValueError","Warning","ZeroDivisionError"
 	];
 	var htmlreplace={"&":"&amp","<":"&lt;",">":"&gt;"};
-	var regex_match=[
-		["[_a-zA-Z][_a-zA-Z0-9]*",style_default],
-		[arr_special,style_special],
-		[arr_import,style_import],
-		[arr_builtin,style_builtin],
-		[arr_keyword,style_keyword],
-		[arr_exception,style_exception],
-		["(?:0|[1-9]\\d*)(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?",style_number],
-		["0[xX][0-9a-fA-F]*",style_number],
-		["[\\~\\!\\@\\$\\%\\^\\&\\*\\(\\)\\-\\+\\=\\<\\>\\/\\|\\[\\]]+",style_operator],
-		["\".*\"",style_quote],
-		["\'.*\'",style_quote],
-		["\"\"\"[\\s\\S]*?\"\"\"",style_multiquote],
-		["'''[\\s\\S]*?'''",style_multiquote],
-		["#.*",style_comment]
+	var regexmatch=[
+		["[_a-zA-Z][_a-zA-Z0-9]*",styledefault],
+		[arrspecial,stylespecial],
+		[arrimport,styleimport],
+		[arrbuiltin,stylebuiltin],
+		[arrkeyword,stylekeyword],
+		[arrexception,styleexception],
+		["(?:0|[1-9]\\d*)(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?",stylenumber],
+		["0[xX][0-9a-fA-F]*",stylenumber],
+		["[\\~\\!\\@\\$\\%\\^\\&\\*\\(\\)\\-\\+\\=\\<\\>\\/\\|\\[\\]]+",styleoperator],
+		["\".*\"",stylequote],
+		["\'.*\'",stylequote],
+		["\"\"\"[\\s\\S]*?\"\"\"",stylemultiquote],
+		["'''[\\s\\S]*?'''",stylemultiquote],
+		["#.*",stylecomment]
 	];
-	for (var i=0;i<regex_match.length;i++) {
-		var reg=regex_match[i][0];
+	for (var i=0;i<regexmatch.length;i++) {
+		var reg=regexmatch[i][0];
 		if (i>0 && i<6) {reg="("+reg.join("|")+")[^_0-9a-zA-Z]";}
-		regex_match[i][0]=new RegExp(reg);
+		regexmatch[i][0]=new RegExp(reg);
 	}
 	//Begin parsing the text.
-	var prev=style_default;
-	var ret="<span style=\""+style_default+"\">";
+	var prev=styledefault;
+	var ret="<span style=\""+styledefault+"\">";
 	while (text.length>0) {
 		var minpos=text.length;
 		var mintext="";
-		var minstyle=style_default;
+		var minstyle=styledefault;
 		//Find the regex closest to index 0. If two occur at the same index, take the
 		//latter regex.
-		for (var i=0;i<regex_match.length;i++) {
-			var match=text.match(regex_match[i][0]);
+		for (var i=0;i<regexmatch.length;i++) {
+			var match=text.match(regexmatch[i][0]);
 			if (match!==null && minpos>=match.index) {
 				minpos=match.index;
 				mintext=match[match.length-1];
-				minstyle=regex_match[i][1];
+				minstyle=regexmatch[i][1];
 			}
 		}
 		//If we skipped over text and it's not whitespace, give it the default style.
 		var prefix=text.substring(0,minpos);
-		if (prefix.trim().length>0 && prev!==style_default) {
-			ret+="</span><span style=\""+style_default+"\">";
-			prev=style_default;
+		if (prefix.trim().length>0 && prev!==styledefault) {
+			ret+="</span><span style=\""+styledefault+"\">";
+			prev=styledefault;
 		}
 		ret+=prefix;
 		//Append and style the best matched regex.
@@ -107,7 +107,7 @@ function python_highlight(text) {
 	return ret+"</span>";
 }
 
-function unileq_highlight(str) {
+function HighlightUnileq(str) {
 	//Convert unileq assembly language into a formatted HTML string.
 	//Define styles.
 	var stylearr=[
@@ -194,7 +194,7 @@ function unileq_highlight(str) {
 	return htmlret;
 }
 
-function style_highlight(classname,func) {
+function HighlightStyle(classname,func) {
 	//Replace innerHTML with highlighted text.
 	var elems=document.getElementsByClassName(classname);
 	for (var i=0;i<elems.length;i++) {
@@ -203,49 +203,23 @@ function style_highlight(classname,func) {
 	}
 }
 
-function style_footer() {
+function StyleFooter() {
 	//De-obfuscate the email address in the footer to allow the email to work with
 	//ctrl+f.
-	var foot=document.getElementById("footer");
-	var text=foot.innerHTML;
-	foot.innerHTML=text.replace(new RegExp("\\<b\\>.*?\\<\\/b\\>","g"),"");
-}
-
-function screen_reader() {
-	//Screen readers have trouble handling plaintext pages with no formatting, so
-	//mark paragraphs with <p> tags.
-	var elems=document.getElementsByClassName("content");
-	for (var e=0;e<elems.length;e++) {
-		var elem=elems[e];
-		var text=elem.innerHTML;
-		var regeol=new RegExp("((\\n\\n)|(\\r\\n\\r\\n)|$)");
-		var strdiv="\\<div[\\s\\S]*?(\\/div\\s*\\>|$)";
-		var strimg="\\<img[\\s\\S]*?(\\>|$)";
-		var strsvg="\\<svg[\\s\\S]*?(\\/svg\\s*\\>|$)";
-		var regblock=new RegExp("\\s*("+strdiv+"|"+strimg+"|"+strsvg+")");
-		var ret="<style>p {display:inline-block;width:100%;}</style>";
-		while (text.length>0) {
-			//If we can't find a block at the beginning of the text, add a paragraph.
-			var s=text.match(regblock);
-			if (s===null || s.index>0) {
-				s=text.match(regeol);
-				ret+="<p>"+text.substring(0,s.index)+"</p>";
-			}
-			ret+=s[0];
-			text=text.substring(s.index+s[0].length);
-		}
-		elem.innerHTML=ret;
+	var footer=document.getElementById("footer");
+	if (footer!==null) {
+		var text=footer.innerHTML;
+		footer.innerHTML=text.replace(new RegExp("\\<b\\>.*?\\<\\/b\\>","g"),"");
 	}
 }
 
-function style_onload() {
+function StyleOnload() {
 	//var time=performance.now();
-	//screen_reader();
-	style_footer();
-	style_highlight("langpython",python_highlight);
-	style_highlight("langunileq",unileq_highlight);
+	StyleFooter();
+	HighlightStyle("langpython",HighlightPython);
+	HighlightStyle("langunileq",HighlightUnileq);
 	//console.log("Time: "+(performance.now()-time));
 	//55 ms
 }
 
-window.addEventListener("load",style_onload,true);
+window.addEventListener("load",StyleOnload,true);

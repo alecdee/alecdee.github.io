@@ -139,7 +139,7 @@ from special addresses.<br>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Hello, World! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Hello, World!</h1>
 <p>We can show how the unileq assembly language and architecture work with a simple program that
-prints "Hello, World" to the screen:</p>
+prints "Hello, World!" to the screen:</p>
 <br>
 <div class="codeblock langunileq">loop: len  one   exit           #Decrement [len]. If [len]&lt;=1, exit.
       0-2  text  ?+1            #Print a letter.
@@ -343,15 +343,13 @@ several reasons for this:</p>
 addresses subleq allows.</td></tr>
 <tr><td>&bull;</td><td>Unileq offers 3 ways to guarantee a jump<br>
 <br>
-<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A A jmp</i><br>
-<span style="margin-left:2rem;"></span>2. Subtracting anything from <i>0</i>. For <i>[A]=0</i>: <i>A B jmp</i><br>
-<span style="margin-left:2rem;"></span>3. Subtracting <i>-1</i> from anything. For <i>[Z-1]=-1</i>: <i>A Z-1 jmp</i><br>
+<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A  A  jmp</i><br>
+<span style="margin-left:2rem;"></span>2. Subtracting anything from <i>0</i>: <i>Z  A  jmp</i><br>
+<span style="margin-left:2rem;"></span>3. Subtracting <i>-1</i> from anything:
+<i>A  Z-1  jmp</i><br>
 <br>
-Subleq only has 1 way to guarantee a jump<br>
-<br>
-<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A A jmp</i><br>
-<br>
-This gives unileq more options when deciding program flow, since these are all common operations.
+Subleq can only guarantee a jump by zeroing an address. This gives unileq more options when deciding
+program flow, since these are all common operations.
 </td></tr>
 <tr><td>&bull;</td><td>In unsigned arithmetic, if <i>A&gt;B</i>, then we know that <i>A-B&gt;0</i>.
 This does not hold in signed arithmetic.</td></tr>
@@ -514,7 +512,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 5 Sep 2021<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 10 Sep 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
