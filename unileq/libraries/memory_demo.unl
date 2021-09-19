@@ -7,12 +7,12 @@ demo:
 	0 ? print 65 108 108 111 99 97 116 105 110 103 32 0-1 .len 32 99 101 108 108 115 32 97 116 32 0-1 .mem 10 0
 
 	#Set values
-	0 ? mem.set .mem .z+0 .val+0  #mem[0]=20
-	0 ? mem.set .mem .z+1 .val+1  #mem[1]=21
-	0 ? mem.set .mem .z+2 .val+2  #mem[2]=22
+	0 ? mem.setidx .mem .z+0 .val+0  #mem[0]=20
+	0 ? mem.setidx .mem .z+1 .val+1  #mem[1]=21
+	0 ? mem.setidx .mem .z+2 .val+2  #mem[2]=22
 
 	#Get value
-	0 ? mem.get .tmp .mem .z+1    #tmp=mem[1]
+	0 ? mem.getidx .tmp .mem .z+1    #tmp=mem[1]
 	0 ? print 86 97 108 117 101 32 111 102 32 109 101 109 91 0-1 .z+1 93 32 105 115 32 0-1 .tmp 10 0
 
 	#Free memory and verify all blocks have been freed.
@@ -1248,7 +1248,7 @@ print:
 
 #|==============================================================================
 
-Memory - v1.00
+Memory - v1.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -1263,8 +1263,10 @@ Index
 
 Dereferencing
 mem.getargs dst0 refs0 dst1 refs1 ... 0
-mem.get val a b
-mem.set a b val
+mem.get    val mem
+mem.getidx val mem idx
+mem.set    mem val
+mem.setidx mem idx val
 
 Bulk Operations
 mem.zero dst len
@@ -1282,16 +1284,18 @@ Version History
 1.00
      Initial version.
      Supports referencing, zeroing, copying, and allocation.
+1.01
+     Fixed comments.
+     Renamed get/set functions.
 
 --------------------------------------------------------------------------------
 TODO
 
-mem.getcon or mem.get0.
 mem.sort
 	Have comparison function. use jumps.
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2
-Simply mem.alloc.verify using mem.get and mem.cmp.
+Simplify mem.alloc.verify using mem.get and mem.cmp.
 Optimize mem.realloc. Don't use mem.zero, just mem.copy.
 |#
 
@@ -1306,7 +1310,7 @@ mem.getargs:
 	#Call  : mem.getargs.0 ? mem.getargs dst0 refs0 dst1 refs1 ... 0
 	#Effect:
 	#     Simplifies parsing arguments from the 0 stack.
-	#     Ex: 0 ? SomeFunc arg1 arg2
+	#     For example, when calling "0 ? SomeFunc arg1 arg2".
 	#     Stops parsing arguments when dst=0. Sets [0]=0.
 	#     refs=0: [dst]=[0]
 	#     refs=1: [dst]=[[0]]
@@ -1360,8 +1364,48 @@ mem.getargs:
 
 
 mem.get:
-	#Call  : 0 ? mem.get val a b
-	#Effect: [val]=[[a]+[b]]
+	#Call  : 0 ? mem.get0 val mem
+	#Effect: [val]=[[mem]]
+	#Time  : 27
+	#Setup the stack.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .off    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	#Get val.
+	.val0   .arg2:2 ?+1
+	.val1   .val0   ?+1
+	.val2   .val0   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .val1   ?+1
+	.val0   .val0   ?+1
+	.val0   .tmp    ?+1
+	#Get -[mem].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.m0     .m0     ?+1
+	.m0     .tmp    ?+1
+	#Set [val]=[[mem]]
+	.tmp    .tmp    ?+1
+	.tmp    .m0:0   ?+1
+	.m1     .m1     ?+1
+	.m1     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .m1:0   ?+1
+	.val0:0 .val1:0 ?+1
+	.val2:0 .tmp    ?+1
+	0       0       .arg4:4
+	#Variables
+	.off:2
+	.tmp:0
+
+
+mem.getidx:
+	#Call  : 0 ? mem.getidx val mem idx
+	#Effect: [val]=[[mem]+[idx]]
 	#Time  : 33
 	#Setup the stack.
 	.tmp    .tmp    ?+1
@@ -1380,24 +1424,24 @@ mem.get:
 	.tmp    .val1   ?+1
 	.val0   .val0   ?+1
 	.val0   .tmp    ?+1
-	#Get -[a].
+	#Get -[mem].
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
-	.a0     .a0     ?+1
-	.a0     .tmp    ?+1
-	#Get -[b].
+	.m0     .m0     ?+1
+	.m0     .tmp    ?+1
+	#Get -[idx].
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
-	.b0     .b0     ?+1
-	.b0     .tmp    ?+1
-	#Set [val]=[[a]+[b]]
+	.i0     .i0     ?+1
+	.i0     .tmp    ?+1
+	#Set [val]=[[mem]+[idx]]
 	.tmp    .tmp    ?+1
-	.tmp    .a0:0   ?+1
-	.tmp    .b0:0   ?+1
-	.ab     .ab     ?+1
-	.ab     .tmp    ?+1
+	.tmp    .m0:0   ?+1
+	.tmp    .i0:0   ?+1
+	.mi     .mi     ?+1
+	.mi     .tmp    ?+1
 	.tmp    .tmp    ?+1
-	.tmp    .ab:0   ?+1
+	.tmp    .mi:0   ?+1
 	.val0:0 .val1:0 ?+1
 	.val2:0 .tmp    ?+1
 	0       0       .arg5:5
@@ -1407,8 +1451,48 @@ mem.get:
 
 
 mem.set:
-	#Call  : 0 ? mem.set a b val
-	#Effect: [[a]+[b]]=[val]
+	#Call  : 0 ? mem.set mem val
+	#Effect: [[mem]]=[val]
+	#Time  : 27
+	#Setup the stack.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .off    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	#Get -[mem].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.m0     .m0     ?+1
+	.m0     .tmp    ?+1
+	.m1     .m0:0   ?+1
+	#Get val.
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.val0   .val0   ?+1
+	.val0   .tmp    ?+1
+	#Set [[mem]]=[val]
+	.m2     .m1     ?+1
+	.m3     .m1     ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .m2     ?+1
+	.m1     .m1     ?+1
+	.m1     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .val0:0 ?+1
+	.m1:0   .m2:0   ?+1
+	.m3:0   .tmp    ?+1
+	0       0       .arg4:4
+	#Variables
+	.off:2
+	.tmp:0
+
+
+mem.setidx:
+	#Call  : 0 ? mem.setidx mem idx val
+	#Effect: [[mem]+[idx]]=[val]
 	#Time  : 33
 	#Setup the stack.
 	.tmp    .tmp    ?+1
@@ -1419,34 +1503,34 @@ mem.set:
 	.arg3   0       ?+1
 	.arg4   0       ?+1
 	.arg5   0       ?+1
-	#Get -[a].
+	#Get -[mem].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
-	.a0     .a0     ?+1
-	.a0     .tmp    ?+1
-	.ab0    .a0:0   ?+1
-	#Get -[b].
+	.m0     .m0     ?+1
+	.m0     .tmp    ?+1
+	.mi0    .m0:0   ?+1
+	#Get -[idx].
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
-	.b0     .b0     ?+1
-	.b0     .tmp    ?+1
-	.ab0    .b0:0   ?+1
+	.i0     .i0     ?+1
+	.i0     .tmp    ?+1
+	.mi0    .i0:0   ?+1
 	#Get val.
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
 	.val0   .val0   ?+1
 	.val0   .tmp    ?+1
-	#Set [[a]+[b]]=[val]
-	.ab1    .ab0    ?+1
-	.ab2    .ab0    ?+1
+	#Set [[mem]+[idx]]=[val]
+	.mi1    .mi0    ?+1
+	.mi2    .mi0    ?+1
 	.tmp    .tmp    ?+1
-	.tmp    .ab1    ?+1
-	.ab0    .ab0    ?+1
-	.ab0    .tmp    ?+1
+	.tmp    .mi1    ?+1
+	.mi0    .mi0    ?+1
+	.mi0    .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .val0:0 ?+1
-	.ab0:0  .ab1:0  ?+1
-	.ab2:0  .tmp    ?+1
+	.mi0:0  .mi1:0  ?+1
+	.mi2:0  .tmp    ?+1
 	0       0       .arg5:5
 	#Variables
 	.off:2

@@ -125,8 +125,10 @@ order to allocate memory safely, it needs to be last when concatenating with oth
 <br>
 <div class="codeblock langunileq">mem.getargs dst0 refs0 dst1 refs1 ... 0
 
-mem.get     val a b
-mem.set     a b val
+mem.get     val mem
+mem.getidx  val mem idx
+mem.set     mem val
+mem.setidx  mem idx val
 
 mem.zero    dst len
 mem.copy    dst src len
@@ -152,7 +154,7 @@ the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 5 Sep 2021<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 18 Sep 2021<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>
