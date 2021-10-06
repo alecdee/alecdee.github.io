@@ -819,34 +819,15 @@ function UnlRun(st,time) {
 			}
 			meml[alo]=mblo;
 			mbhi=memh[alo]-mbhi;
-			if (mbhi>=0) {
-				memh[alo]=mbhi;
-				if (mblo===0 && mbhi===0) {
-					iphi=chi;
-					iplo=clo;
-				}
-			} else {
-				memh[alo]=mbhi+0x100000000;
-				iphi=chi;
-				iplo=clo;
-			}
-			/*if (mbhi<0) {
+			if (mbhi<0) {
 				mbhi+=0x100000000;
 				iphi=chi;
 				iplo=clo;
-			} else if (mbhi===0 && mblo===0) {
-				iphi=chi;
-				iplo=clo;
-			}*/
-			/*if (mblo===0 && mbhi===0) {
-				iphi=chi;
-				iplo=clo;
-			} else if (mbhi<0) {
-				mbhi+=0x100000000;
+			} else if (mblo===0 && mbhi===0) {
 				iphi=chi;
 				iplo=clo;
 			}
-			memh[alo]=mbhi;*/
+			memh[alo]=mbhi;
 			continue;
 		} else if (ahi<0xffffffff || alo<io) {
 			//Out of bounds. Use UnlSetMem to modify mem[a].

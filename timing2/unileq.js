@@ -754,14 +754,14 @@ function UnlRun(st,time) {
 	var bhi,blo,mbhi,mblo;
 	var tmp0=UnlU64Create(),tmp1=UnlU64Create(),tmp2;
 	var io=0x100000000-32;
-	var timeiters=1024;
-	for (var iters=0;;iters++) {
+	var timeiters=2048;
+	while (true) {
 		//Routinely check if we're going to run too long.
-		if (iters>=timeiters) {
-			timeiters=iters+1024;
+		if (--timeiters<=0) {
 			if (performance.now()>=stoptime) {
 				break;
 			}
+			timeiters=2048;
 		}
 		//Load a, b, and c.
 		if (iphi===0 && iplo<alloc2) {
@@ -779,6 +779,7 @@ function UnlRun(st,time) {
 			tmp1=UnlGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;UnlU64Inc(tmp0);
 			tmp1=UnlGetMem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;UnlU64Inc(tmp0);
 			iphi=tmp0.hi;iplo=tmp0.lo;
+			timeiters-=2;
 		}
 		//Input
 		if (bhi===0) {
@@ -795,11 +796,13 @@ function UnlRun(st,time) {
 			tmp0.hi=bhi;tmp0.lo=blo;
 			tmp2=UnlGetMem(st,tmp0);
 			mbhi=tmp2.hi;mblo=tmp2.lo;
+			timeiters-=1;
 		} else if (blo===0xfffffffc) {
 			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			var date=performance.timing.navigationStart+performance.now();
 			mbhi=(date/1000)>>>0;
 			mblo=((date%1000)*4294967.296)>>>0;
+			timeiters-=1;
 		} else {
 			//We couldn't find a special address to read.
 			mbhi=0;
@@ -816,22 +819,24 @@ function UnlRun(st,time) {
 			}
 			meml[alo]=mblo;
 			mbhi=memh[alo]-mbhi;
-			if (mbhi>=0) {
-				memh[alo]=mbhi;
-				if (mblo!==0 || mbhi>0) {
-					continue;
-				}
-			} else {
-				memh[alo]=mbhi+0x100000000;
+			if (mblo===0 && mbhi===0) {
+				iphi=chi;
+				iplo=clo;
+			} else if (mbhi<0) {
+				mbhi+=0x100000000;
+				iphi=chi;
+				iplo=clo;
 			}
+			memh[alo]=mbhi;
+			continue;
 		} else if (ahi<0xffffffff || alo<io) {
 			//Out of bounds. Use UnlSetMem to modify mem[a].
 			tmp0.hi=ahi;tmp0.lo=alo;
 			tmp2=UnlGetMem(st,tmp0);
 			tmp1.hi=mbhi;tmp1.lo=mblo;
-			if (!UnlU64Sub(tmp2,tmp2,tmp1)) {
-				chi=iphi;
-				clo=iplo;
+			if (UnlU64Sub(tmp2,tmp2,tmp1)) {
+				iphi=chi;
+				iplo=clo;
 			}
 			UnlSetMem(st,tmp0,tmp2);
 			if (st.state!==UNL_RUNNING) {
@@ -841,26 +846,29 @@ function UnlRun(st,time) {
 			meml=st.meml;
 			alloc=st.alloc;
 			alloc2=alloc-2;
-		} else if (alo===0xffffffff) {
+			timeiters-=2;
+			continue;
+		}
+		iphi=chi;
+		iplo=clo;
+		if (alo===0xffffffff) {
 			//Exit.
 			st.state=UNL_COMPLETE;
 			break;
 		} else if (alo===0xfffffffe) {
 			//Print to stdout.
 			UnlPrint(st,String.fromCharCode(mblo&255));
+			timeiters-=1;
 		} else if (alo===0xfffffffb) {
 			//Sleep.
 			/*var sleep=mbhi+mblo*(1.0/4294967296.0);
 			//If sleeping for more than 4 ms, or longer than we have left, abort.
 			if (sleep>=4 || sleep>time) //((iters-1)/st.instperframe)*st.secperframe) {
 				st.sleep=performance.now()/1000.0+sleep;
-				iphi=chi;
-				iplo=clo;
 				break;
 			}*/
+			timeiters-=1;
 		}
-		iphi=chi;
-		iplo=clo;
 	}
 	st.ip.hi=iphi;
 	st.ip.lo=iplo;
