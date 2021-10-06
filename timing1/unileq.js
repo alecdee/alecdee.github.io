@@ -676,7 +676,7 @@ function UnlSetMem(st,addr,val) {
 	st.meml[pos]=val.lo;
 }
 
-function UnlRunStandard(st) {
+/*function UnlRunStandard(st) {
 	//Run unileq for a given number of iterations.
 	var a,b,c,ma,mb,ip=st.ip;
 	var io=UnlU64Create(-4);
@@ -713,7 +713,7 @@ function UnlRunStandard(st) {
 		}
 		UnlU64Set(ip,c);
 	}
-}
+}*/
 
 function UnlRun(st,time) {
 	//Run unileq for a given amount of seconds.
@@ -754,14 +754,14 @@ function UnlRun(st,time) {
 	var bhi,blo,mbhi,mblo;
 	var tmp0=UnlU64Create(),tmp1=UnlU64Create(),tmp2;
 	var io=0x100000000-32;
-	var timeiters=2048;
+	var timeiters=512;
 	while (true) {
 		//Routinely check if we're going to run too long.
 		if (--timeiters<=0) {
 			if (performance.now()>=stoptime) {
 				break;
 			}
-			timeiters=2048;
+			timeiters=512;
 		}
 		//Load a, b, and c.
 		if (iphi===0 && iplo<alloc2) {
@@ -779,7 +779,7 @@ function UnlRun(st,time) {
 			tmp1=UnlGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;UnlU64Inc(tmp0);
 			tmp1=UnlGetMem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;UnlU64Inc(tmp0);
 			iphi=tmp0.hi;iplo=tmp0.lo;
-			timeiters-=2;
+			timeiters-=3;
 		}
 		//Input
 		if (bhi===0) {
@@ -819,34 +819,15 @@ function UnlRun(st,time) {
 			}
 			meml[alo]=mblo;
 			mbhi=memh[alo]-mbhi;
-			if (mbhi>=0) {
-				memh[alo]=mbhi;
-				if (mblo===0 && mbhi===0) {
-					iphi=chi;
-					iplo=clo;
-				}
-			} else {
-				memh[alo]=mbhi+0x100000000;
-				iphi=chi;
-				iplo=clo;
-			}
-			/*if (mbhi<0) {
+			if (mbhi<0) {
 				mbhi+=0x100000000;
 				iphi=chi;
 				iplo=clo;
 			} else if (mbhi===0 && mblo===0) {
 				iphi=chi;
 				iplo=clo;
-			}*/
-			/*if (mblo===0 && mbhi===0) {
-				iphi=chi;
-				iplo=clo;
-			} else if (mbhi<0) {
-				mbhi+=0x100000000;
-				iphi=chi;
-				iplo=clo;
 			}
-			memh[alo]=mbhi;*/
+			memh[alo]=mbhi;
 			continue;
 		} else if (ahi<0xffffffff || alo<io) {
 			//Out of bounds. Use UnlSetMem to modify mem[a].
@@ -885,8 +866,8 @@ function UnlRun(st,time) {
 			if (sleep>=4 || sleep>time) //((iters-1)/st.instperframe)*st.secperframe) {
 				st.sleep=performance.now()/1000.0+sleep;
 				break;
-			}*/
-			timeiters-=1;
+			}
+			timeiters=0;*/
 		}
 	}
 	st.ip.hi=iphi;
@@ -912,7 +893,7 @@ function UnlRun(st,time) {
 		}
 		avgtime/=len;
 		avgstart/=len-1;
-		UnlPrint(st,"timing 2\n");
+		UnlPrint(st,"timing 512\n");
 		UnlPrint(st,"min start: "+minstart+"\n");
 		UnlPrint(st,"max start: "+maxstart+"\n");
 		UnlPrint(st,"avg start: "+avgstart+"\n");
