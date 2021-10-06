@@ -22,6 +22,7 @@ function UnlInitEditor() {
 	var unl=UnlCreate(output);
 	var running=0;
 	var frametime=0;
+	var firsttime=performance.now();
 	function update() {
 		var time=performance.now();
 		var rem=frametime-time+16.666667;
@@ -40,6 +41,7 @@ function UnlInitEditor() {
 			if (unl.state!==UNL_COMPLETE) {
 				unl.Print(unl.statestr);
 			}
+			unl.Print("Total    : "+(performance.now()-firsttime)+"\n");
 		} else if (running===0) {
 			text="&#9654;&nbsp;&nbsp;&nbsp;Resume";
 		}
@@ -63,6 +65,7 @@ function UnlInitEditor() {
 		}
 		if (running===1) {
 			frametime=performance.now()-17;
+			firsttime=performance.now();
 			setTimeout(update,0);
 		}
 	};

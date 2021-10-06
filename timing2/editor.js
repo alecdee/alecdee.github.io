@@ -21,11 +21,8 @@ function UnlInitEditor() {
 	var keygrab=document.getElementById("unileq_keyboard");
 	var unl=UnlCreate(output);
 	var running=0;
-	var frametime=0;
+	var firsttime=performance.now();
 	function update() {
-		if (running===1) {
-			setTimeout(update,16);
-		}
 		//There's no good unicode character for a pause button, so use 2 vertical bars
 		//instead.
 		var text="<span style='font-size:60%;vertical-align:middle'>&#9616;&#9616;</span>&nbsp;&nbsp;&nbsp;Pause";
@@ -35,6 +32,7 @@ function UnlInitEditor() {
 			if (unl.state!==UNL_COMPLETE) {
 				unl.Print(unl.statestr);
 			}
+			unl.Print("Total    : "+(performance.now()-firsttime)+"\n");
 		} else if (running===0) {
 			text="&#9654;&nbsp;&nbsp;&nbsp;Resume";
 		}
@@ -44,6 +42,7 @@ function UnlInitEditor() {
 		if (running===1) {
 			//Instructions per frame is hard to time due to browser timer inconsistencies.
 			//250k instructions per frame at 60fps seems to work well across platforms.
+			setTimeout(update,12);
 			unl.Run(0.015);
 		}
 	}
@@ -57,6 +56,7 @@ function UnlInitEditor() {
 		}
 		if (running===1) {
 			frametime=performance.now()-17;
+			firsttime=performance.now();
 			setTimeout(update,0);
 		}
 	};
