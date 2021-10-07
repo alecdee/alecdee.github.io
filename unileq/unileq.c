@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.32
+unileq.c - v1.33
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -127,6 +127,7 @@ Windows: cl /O2 unileq.c
 #include <string.h>
 #include <inttypes.h>
 #include <time.h>
+#include <threads.h>
 
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -496,7 +497,7 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 void unlrun(unlstate* st,u32 iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever.
 	u32 dec=iters!=(u32)-1;
-	u64 a,b,c,ma,mb,ip=st->ip,io=(u64)-4;
+	u64 a,b,c,ma,mb,ip=st->ip,io=(u64)-6;
 	for (;iters && st->state==UNL_RUNNING;iters-=dec) {
 		//Load a, b, and c.
 		a=unlgetmem(st,ip++);
@@ -513,7 +514,7 @@ void unlrun(unlstate* st,u32 iters) {
 			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			struct timespec ts;
 			timespec_get(&ts,TIME_UTC);
-			mb=(((u64)ts.tv_sec)<<32)+(((u64)ts.tv_nsec)*0xffffffffULL)/999999999ULL;
+			mb=(((u64)ts.tv_sec)<<32)+(((u64)ts.tv_nsec)*0x100000000ULL)/1000000000ULL;
 		} else {
 			mb=0;
 		}
@@ -529,6 +530,13 @@ void unlrun(unlstate* st,u32 iters) {
 		} else if (a==(u64)-2) {
 			//Print to stdout.
 			putchar((char)mb);
+		} else if (a==(u64)-5) {
+			//Sleep.
+			struct timespec ts={
+				(long)(mb>>32),
+				(long)((mb&0xffffffffULL)*1000000000ULL/0x100000000ULL)
+			};
+			thrd_sleep(&ts,0);
 		}
 		ip=c;
 	}

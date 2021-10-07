@@ -1,6 +1,6 @@
 /*
 Author  : Alec Dee, akdee144@gmail.com
-Modified: 12 Sep 2021
+Modified: 6 Oct 2021
 
 TODO:
 Find out if Firefox fixed the textarea padding bug:
@@ -21,36 +21,31 @@ function UnlInitEditor() {
 	var keygrab=document.getElementById("unileq_keyboard");
 	var unl=UnlCreate(output);
 	var running=0;
-	var frametime=0;
 	function update() {
-		var time=performance.now();
-		var rem=frametime-time+16.666667;
-		if (rem>1.0) {
-			setTimeout(update,1);
-			return;
-		}
-		rem=rem>-16.0?rem:-16.0;
-		frametime=time+rem;
-		//There's no good unicode character for a pause button, so use 2 vertical bars
-		//instead.
-		var text="<span style='font-size:60%;vertical-align:middle'>&#9616;&#9616;</span>&nbsp;&nbsp;&nbsp;Pause";
+		//Our main event loop. Run the main unileq loop for 15ms and queue the next
+		//update for 12ms in the future. This will give the browser time to handle events
+		//and spend most of our time executing unileq instructions.
+		var runtext;
 		if (unl.state!==UNL_RUNNING) {
 			running=0;
-			text="&#9654;&nbsp;&nbsp;&nbsp;Run";
+			runtext="&#9654;&nbsp;&nbsp;&nbsp;Run";
 			if (unl.state!==UNL_COMPLETE) {
-				UnlPrint(unl,unl.statestr);
+				unl.Print(unl.statestr);
 			}
-		} else if (running===0) {
-			text="&#9654;&nbsp;&nbsp;&nbsp;Resume";
+		} else if (running===1) {
+			//There's no good unicode character for a pause button, so use 2 vertical bars
+			//instead.
+			runtext="<span style='font-size:60%;vertical-align:middle'>&#9616;&#9616;</span>&nbsp;&nbsp;&nbsp;Pause";
+		} else {
+			runtext="&#9654;&nbsp;&nbsp;&nbsp;Resume";
 		}
-		if (runbutton.innerHTML!==text) {
-			runbutton.innerHTML=text;
+		if (runbutton.innerHTML!==runtext) {
+			runbutton.innerHTML=runtext;
 		}
 		if (running===1) {
-			//Instructions per frame is hard to time due to browser timer inconsistencies.
-			//250k instructions per frame at 60fps seems to work well across platforms.
-			UnlRun(unl,250000);
-			setTimeout(update,0);
+			//Put the next update on the event queue before running our main loop.
+			setTimeout(update,12);
+			unl.Run(performance.now()+15);
 		}
 	}
 	//Setup the run button.
@@ -58,11 +53,10 @@ function UnlInitEditor() {
 		if (unl.state===UNL_RUNNING) {
 			running=1-running;
 		} else {
-			UnlParseStr(unl,input.value);
+			unl.ParseStr(input.value);
 			running=1;
 		}
 		if (running===1) {
-			frametime=performance.now()-17;
 			setTimeout(update,0);
 		}
 	};
@@ -71,7 +65,7 @@ function UnlInitEditor() {
 	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Run";
 	//Setup the reset button.
 	resetbutton.onclick=function() {
-		UnlClear(unl);
+		unl.Clear();
 		running=0;
 		setTimeout(update,0);
 	};
@@ -116,16 +110,16 @@ function UnlInitEditor() {
 		var xhr=new XMLHttpRequest();
 		xhr.onreadystatechange=function(){
 			if (xhr.readyState===4) {
-				UnlClear(unl);
+				unl.Clear();
 				running=0;
 				setTimeout(update,0);
 				if (xhr.status===200) {
 					var name=path.split("/");
 					input.value=xhr.response;
-					UnlPrint(unl,"Loaded "+name[name.length-1]+"\n");
+					unl.Print("Loaded "+name[name.length-1]+"\n");
 					updatetext();
 				} else {
-					UnlPrint(unl,"Unable to open "+path+"\n");
+					unl.Print("Unable to open "+path+"\n");
 				}
 			}
 		};
@@ -135,7 +129,7 @@ function UnlInitEditor() {
 	//Setup the example select menu.
 	select.onchange=function() {
 		if (select.value==="") {
-			UnlClear(unl);
+			unl.Clear();
 			input.value="";
 			updatetext();
 		} else {
@@ -159,7 +153,7 @@ function UnlInitEditor() {
 				}
 			}
 		} else if (type==="source") {
-			UnlClear(unl);
+			unl.Clear();
 			input.value=arg;
 		}
 	}

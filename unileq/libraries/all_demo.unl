@@ -137,7 +137,7 @@ Version History
      Made uint.shr bit length agnostic and lowered run time by 11%.
 3.10
      Added uint.min and uint.max.
-     Updated to not count calling instruction.
+     Updated timing measurements to not count calling instruction.
 
 --------------------------------------------------------------------------------
 TODO
