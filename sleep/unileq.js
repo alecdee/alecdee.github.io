@@ -449,16 +449,14 @@ function UnlCreate(textout,graphics) {
 		sleeptest:0,
 		sleepcon:[
 			[0.0,0.0],
-			[0.5,0.0],[0.5,0.5],
-			[1.0,0.0],[1.0,0.5],[1.0,1.0],
-			[1.5,0.0],[1.5,0.5],[1.5,1.0],[1.5,1.5],
-			[2.0,0.0],[2.0,0.5],[2.0,1.0],[2.0,1.5],[2.0,2.0],
-			[2.5,0.0],[2.5,0.5],[2.5,1.0],[2.5,1.5],[2.5,2.0],
-			[3.0,0.0],[3.0,0.5],[3.0,1.0],[3.0,1.5],[3.0,2.0],
-			[3.5,0.0],[3.5,0.5],[3.5,1.0],[3.5,1.5],[3.5,2.0],
-			[4.0,0.0],[4.0,0.5],[4.0,1.0],[4.0,1.5],[4.0,2.0],
-			[4.5,0.0],[4.5,0.5],[4.5,1.0],[4.5,1.5],[4.5,2.0],
-			[5.0,0.0],[5.0,0.5],[5.0,1.0],[5.0,1.5],[5.0,2.0]
+			[1.0,0.0],
+			[2.0,0.0],[2.0,1.0],
+			[3.0,0.0],[3.0,1.0],[3.0,2.0],
+			[4.0,0.0],[4.0,1.0],[4.0,2.0],
+			[5.0,0.0],[5.0,1.0],[5.0,2.0],
+			[6.0,0.0],[6.0,1.0],[6.0,2.0],
+			[7.0,0.0],[7.0,1.0],[7.0,2.0],
+			[8.0,0.0],[8.0,1.0],[8.0,2.0]
 		]
 	};
 	UnlClear(st);
@@ -880,9 +878,11 @@ function UnlRun(st,stoptime) {
 			var sleep=mbhi*1000+mblo*(1000.0/4294967296.0);
 			var sleeptill=performance.now()+sleep;
 			//If sleeping for longer than the time we have or more than 1ms, abort.
-			if (sleep>sleepwait || sleeptill>stoptime) {
+			if (sleep>sleepwait || sleeptill>=stoptime) {
 				st.sleep=sleeptill;
-				setTimeout(UnlRun,sleep-sleepoff,st,stoptime);
+				if (sleeptill<stoptime) {
+					setTimeout(UnlRun,sleep-sleepoff,st,stoptime);
+				}
 				break;
 			}
 			//Busy wait.
