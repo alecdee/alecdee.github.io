@@ -1,6 +1,6 @@
 /*
 Author  : Alec Dee, akdee144@gmail.com
-Modified: 6 Oct 2021
+Modified: 8 Oct 2021
 
 TODO:
 Find out if Firefox fixed the textarea padding bug:
@@ -136,7 +136,7 @@ function UnlInitEditor() {
 			loadfile(select.value);
 		}
 	};
-	//Parse arguments.
+	//Parse URL arguments.
 	var regex=new RegExp(".*?\\?(file|demo|source)=(.*)","g");
 	var match=regex.exec(decodeURI(window.location.href));
 	if (match!==null) {

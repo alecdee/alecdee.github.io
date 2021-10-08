@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.15
+unileq.js - v1.16
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -111,6 +111,7 @@ Input/Output
      A = -2: Write mem[B] to stdout.
      B = -3: Subtract stdin from mem[A].
      B = -4: Subtract current time from mem[A].
+     A = -5: Sleep for mem[B]/2^32 seconds.
 
 --------------------------------------------------------------------------------
 Performance
@@ -138,6 +139,9 @@ didn't provide a meaningful speedup.
 
 Webassembly speedup isn't that great compared to UnlRun(). Wait until better
 integration with javascript.
+
+We busy wait if sleeping for less than 4ms. This is because the HTML5 standard
+enforces a minimum setTimeout time of 4ms.
 
 --------------------------------------------------------------------------------
 TODO
@@ -427,36 +431,38 @@ var UNL_MAX_PARSE   =(1<<30);
 function UnlCreate(textout,graphics) {
 	var st={
 		//State variables
-		memh:null,
-		meml:null,
-		alloc:0,
-		ip:UnlU64Create(),
-		state:0,
+		state:   0,
 		statestr:"",
-		sleep:null,
+		ip:      UnlU64Create(),
+		memh:    null,
+		meml:    null,
+		alloc:   0,
+		sleep:   null,
 		//Input/Output
-		output:textout,
-		outbuf:"",
+		output:  textout,
+		outbuf:  "",
 		graphics:graphics,
 		//Functions
-		Clear:function(){return UnlClear(st);},
-		Print:function(str){return UnlPrint(st,str);},
+		Clear:   function(){return UnlClear(st);},
+		Print:   function(str){return UnlPrint(st,str);},
 		ParseStr:function(str){return UnlParseStr(st,str);},
-		GetMem:function(addr){return UnlGetMem(st,addr);},
-		SetMem:function(addr,val){return UnlSetMem(st,addr,val);},
-		Run:function(stoptime){return UnlRun(st,stoptime);}
+		GetMem:  function(addr){return UnlGetMem(st,addr);},
+		SetMem:  function(addr,val){return UnlSetMem(st,addr,val);},
+		Run:     function(stoptime){return UnlRun(st,stoptime);}
 	};
 	UnlClear(st);
 	return st;
 }
 
 function UnlClear(st) {
+	//Clear the interpreter state.
 	st.state=UNL_COMPLETE;
 	st.statestr="";
 	UnlU64Zero(st.ip);
 	st.memh=null;
 	st.meml=null;
 	st.alloc=0;
+	st.sleep=null;
 	if (st.output!==null) {
 		st.output.value="";
 	}
@@ -711,8 +717,7 @@ function UnlSetMem(st,addr,val) {
 }*/
 
 function UnlRun(st,stoptime) {
-	//Run unileq for a given amount of time. stoptime is based off of
-	//performance.now().
+	//Run unileq while performance.now()<stoptime.
 	//
 	//This version of UnlRun() unrolls several operations to speed things up.
 	//Depending on the platform, it's 4 to 10 times faster than standard.
@@ -724,10 +729,10 @@ function UnlRun(st,stoptime) {
 		if (st.sleep>=stoptime) {
 			return;
 		}
-		//If we're sleeping for more than 1ms, defer until later.
+		//If we're sleeping for more than 4ms, defer until later.
 		var sleep=st.sleep-performance.now();
-		if (sleep>1.0) {
-			setTimeout(UnlRun,sleep,st,stoptime);
+		if (sleep>4) {
+			setTimeout(UnlRun,sleep-2,st,stoptime);
 			return;
 		}
 		//Busy wait.
@@ -735,13 +740,9 @@ function UnlRun(st,stoptime) {
 		st.sleep=null;
 	}
 	//Performance testing.
-	/*if (st.ip.lo===0 && st.ip.hi===0) {
-		this.instructions=0;
-		this.time=0;
-		this.start=performance.now();
-	}
-	this.instructions+=iters;
-	this.time-=performance.now();*/
+	/*if (st.ip.hi===0 && st.ip.lo===0) {
+		this.time=performance.now();
+	}*/
 	var iphi=st.ip.hi,iplo=st.ip.lo;
 	var memh=st.memh,meml=st.meml;
 	var alloc=st.alloc,alloc2=alloc-2;
@@ -751,7 +752,7 @@ function UnlRun(st,stoptime) {
 	var io=0x100000000-32;
 	var timeiters=0;
 	while (true) {
-		//Routinely check if we've run for too long.
+		//Periodically check if we've run for too long.
 		if (--timeiters<=0) {
 			if (performance.now()>=stoptime) {
 				break;
@@ -859,10 +860,12 @@ function UnlRun(st,stoptime) {
 			//Sleep.
 			var sleep=mbhi*1000+mblo*(1000.0/4294967296.0);
 			var sleeptill=performance.now()+sleep;
-			//If sleeping for longer than the time we have or more than 1ms, abort.
-			if (sleep>1.0 || sleeptill>stoptime) {
+			//If sleeping for longer than the time we have or more than 4ms, abort.
+			if (sleep>4 || sleeptill>=stoptime) {
 				st.sleep=sleeptill;
-				setTimeout(UnlRun,sleep,st,stoptime);
+				if (sleeptill<stoptime) {
+					setTimeout(UnlRun,sleep-2,st,stoptime);
+				}
 				break;
 			}
 			//Busy wait.
@@ -873,11 +876,8 @@ function UnlRun(st,stoptime) {
 	st.ip.hi=iphi;
 	st.ip.lo=iplo;
 	//Performance testing.
-	/*this.time+=performance.now();
-	if (st.state!==UNL_RUNNING) {
-		var freq=(this.instructions-(iters+1))*1000.0/this.time;
-		UnlPrint(st,"Speed: "+freq.toFixed(0)+" Hz\n");
-		var time=(performance.now()-this.start)/1000.0;
-		UnlPrint(st,"Time : "+time.toFixed(2)+" s\n");
+	/*if (st.state!==UNL_RUNNING) {
+		var time=performance.now()-this.time;
+		UnlPrint(st,"time: "+time);
 	}*/
 }
