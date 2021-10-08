@@ -448,7 +448,7 @@ function UnlCreate(textout,graphics) {
 		sleepstart:null,
 		sleeptest:0,
 		sleepcon:[
-			[0.0,0.0],
+			/*[0.0,0.0],
 			[1.0,0.0],
 			[2.0,0.0],[2.0,1.0],
 			[3.0,0.0],[3.0,1.0],[3.0,2.0],
@@ -456,7 +456,14 @@ function UnlCreate(textout,graphics) {
 			[5.0,0.0],[5.0,1.0],[5.0,2.0],
 			[6.0,0.0],[6.0,1.0],[6.0,2.0],
 			[7.0,0.0],[7.0,1.0],[7.0,2.0],
-			[8.0,0.0],[8.0,1.0],[8.0,2.0]
+			[8.0,0.0],[8.0,1.0],[8.0,2.0]*/
+			[1.5,15],[1.5,16],
+			[1.6,15],[1.6,16],
+			[1.7,15],[1.7,16],
+			[1.8,15],[1.8,16],
+			[1.9,15],[1.9,16],
+			[2.0,15],[2.0,16],
+			[2.1,15],[2.1,16]
 		]
 	};
 	UnlClear(st);
@@ -732,10 +739,11 @@ function UnlRun(st,stoptime) {
 	if (st.state!==UNL_RUNNING) {
 		return;
 	}
-	var sleepwait=st.sleepcon[st.sleeptest][0];
-	var sleepoff =st.sleepcon[st.sleeptest][1];
+	var sleepwait=4;//st.sleepcon[st.sleeptest][0];
+	var sleepoff =st.sleepcon[st.sleeptest][0];
 	if (st.sleepstart===null) {
 		st.sleepstart=performance.now();
+		st.sleepbusy=0;
 	}
 	if (st.sleep!==null) {
 		//If sleeping for longer than the time we have, abort.
@@ -749,7 +757,9 @@ function UnlRun(st,stoptime) {
 			return;
 		}
 		//Busy wait.
-		while (performance.now()<st.sleep) {}
+		var busy=0;
+		while (performance.now()<st.sleep) {busy++;}
+		st.sleepbusy+=busy;
 		st.sleep=null;
 	}
 	//Performance testing.
@@ -886,7 +896,9 @@ function UnlRun(st,stoptime) {
 				break;
 			}
 			//Busy wait.
-			while (performance.now()<sleeptill) {}
+			var busy=0;
+			while (performance.now()<sleeptill) {busy++;}
+			st.sleepbusy+=busy;
 			timeiters=0;
 		}
 	}
@@ -894,7 +906,8 @@ function UnlRun(st,stoptime) {
 	st.ip.lo=iplo;
 	if (st.state!==UNL_RUNNING) {
 		var time=(performance.now()-st.sleepstart)/3600.0;
-		UnlPrint(st,sleepwait.toFixed(1)+", "+sleepoff.toFixed(1)+": "+time.toFixed(4)+"\n");
+		var framedelay=st.sleepcon[st.sleeptest][1];
+		UnlPrint(st,sleepoff.toFixed(1)+", "+framedelay+": "+time.toFixed(4)+", "+st.sleepbusy+"\n");
 		st.sleeptest++;
 		if (st.sleeptest<st.sleepcon.length) {
 			st.sleepstart=null;

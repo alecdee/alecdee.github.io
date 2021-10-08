@@ -45,7 +45,7 @@ function UnlInitEditor() {
 		if (running===1) {
 			//Put the next update on the event queue before running our main loop.
 			setTimeout(update,12);
-			unl.Run(performance.now()+15);
+			unl.Run(performance.now()+unl.sleepcon[unl.sleeptest][1]);
 		}
 	}
 	//Setup the run button.
