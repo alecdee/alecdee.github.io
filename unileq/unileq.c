@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.33
+unileq.c - v1.34
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -495,18 +495,25 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 }
 
 void unlrun(unlstate* st,u32 iters) {
-	//Run unileq for a given number of iterations. If iters=-1, run forever.
+	//Run unileq for a given number of iterations. If iters=-1, run forever. We will
+	//spend 99% of our time in this function.
+	if (st->state!=UNL_RUNNING) {
+		return;
+	}
 	u32 dec=iters!=(u32)-1;
-	u64 a,b,c,ma,mb,ip=st->ip,io=(u64)-6;
-	for (;iters && st->state==UNL_RUNNING;iters-=dec) {
-		//Load a, b, and c.
-		a=unlgetmem(st,ip++);
-		b=unlgetmem(st,ip++);
-		c=unlgetmem(st,ip++);
+	u64 a,b,ma,mb,ip=st->ip,io=(u64)-32;
+	u64 *mem=st->mem,alloc=st->alloc;
+	for (;iters;iters-=dec) {
+		//Load a and b. c is loaded only if we jump.
+		a=ip<alloc?mem[ip]:0;ip++;
+		b=ip<alloc?mem[ip]:0;ip++;
 		//Input
-		if (b<io) {
+		if (b<alloc) {
 			//Read mem[b].
-			mb=unlgetmem(st,b);
+			mb=mem[b];
+		} else if (b<io) {
+			//b is out of bounds.
+			mb=0;
 		} else if (b==(u64)-3) {
 			//Read stdin.
 			mb=(uchar)getchar();
@@ -519,14 +526,31 @@ void unlrun(unlstate* st,u32 iters) {
 			mb=0;
 		}
 		//Output
+		if (a<alloc) {
+			//Execute a normal unileq instruction.
+			ma=mem[a];
+			if (ma<=mb) {
+				ip=ip<alloc?mem[ip]:0;
+			} else {
+				ip++;
+			}
+			mem[a]=ma-mb;
+			continue;
+		}
+		//a is out of bounds or a special address.
+		ip=ip<alloc?mem[ip]:0;
 		if (a<io) {
 			//Execute a normal unileq instruction.
-			ma=unlgetmem(st,a);
-			unlsetmem(st,a,ma-mb);
-			if (ma>mb) {continue;}
+			unlsetmem(st,a,-mb);
+			if (st->state!=UNL_RUNNING) {
+				break;
+			}
+			mem=st->mem;
+			alloc=st->alloc;
 		} else if (a==(u64)-1) {
 			//Exit.
 			st->state=UNL_COMPLETE;
+			break;
 		} else if (a==(u64)-2) {
 			//Print to stdout.
 			putchar((char)mb);
@@ -538,7 +562,6 @@ void unlrun(unlstate* st,u32 iters) {
 			};
 			thrd_sleep(&ts,0);
 		}
-		ip=c;
 	}
 	st->ip=ip;
 }

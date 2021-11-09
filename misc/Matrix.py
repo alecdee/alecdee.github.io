@@ -1,5 +1,5 @@
 """
-Matrix.py - v1.07
+Matrix.py - v1.08
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -850,4 +850,39 @@ class Vector(object):
 
 	def angle(u,v):
 		return math.acos((u*v)/(abs(u)*abs(v)))
+
+	def randomangle(ret,norm,ang):
+		#Generate a random vector R such that acos(R*N)<=ang.
+		#
+		#We do this by generating a random unit vector on the dim-1 sphere that's
+		#perpendicular to N. We then rotate the random vector towards N along the
+		#plane between the two unit vectors.
+		#
+		#Given
+		#
+		#     R=rand vec
+		#     C=cos(rand()*ang)
+		#     P=(N+(R-N)*u)/|N+(R-N)*u|
+		#
+		#We want u such that N*P=C.
+		dim=len(ret)
+		if dim<2:
+			for i in range(dim): ret[i]=norm[i]
+			return
+		#Generate a random vector that's not colinear with norm.
+		while True:
+			ret.randomize()
+			dot=ret*norm
+			if dot>-0.9999 and dot<0.9999: break
+		#Make ret perpendicular to norm. ret=ret-norm*(ret*norm).
+		ret=ret-norm*dot
+		ret.normalize()
+		#Randomly rotate towards norm. ret=norm+(ret-norm)*u.
+		while True:
+			cs =cos(random.random()*ang)
+			sn2=1.0-cs*cs
+			u  =(sn2-cs*math.sqrt(sn2))/(sn2*2-1)
+			if u>-1e-10 and u<=1.0: break
+		ret=norm+(ret-norm)*u
+		ret.normalize()
 

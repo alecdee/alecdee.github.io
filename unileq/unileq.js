@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.16
+unileq.js - v1.17
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -146,9 +146,8 @@ enforces a minimum setTimeout time of 4ms.
 --------------------------------------------------------------------------------
 TODO
 
-Graphics
-Audio
 Mouse+Keyboard
+Audio
 
 */
 /*jshint bitwise: false*/
@@ -428,7 +427,7 @@ var UNL_ERROR_PARSER=2;
 var UNL_ERROR_MEMORY=3;
 var UNL_MAX_PARSE   =(1<<30);
 
-function UnlCreate(textout,graphics) {
+function UnlCreate(textout,canvas) {
 	var st={
 		//State variables
 		state:   0,
@@ -441,7 +440,9 @@ function UnlCreate(textout,graphics) {
 		//Input/Output
 		output:  textout,
 		outbuf:  "",
-		graphics:graphics,
+		canvas:  canvas,
+		canvctx :null,
+		canvdata:null,
 		//Functions
 		Clear:   function(){return UnlClear(st);},
 		Print:   function(str){return UnlPrint(st,str);},
@@ -467,6 +468,12 @@ function UnlClear(st) {
 		st.output.value="";
 	}
 	st.outbuf="";
+	if (st.canvctx!==null) {
+		st.canvctx.clearRect(0,0,st.canvas.width,st.canvas.height);
+	}
+	if (st.canvas!==null) {
+		st.canvas.style.display="none";
+	}
 }
 
 function UnlPrint(st,str) {
@@ -677,6 +684,53 @@ function UnlSetMem(st,addr,val) {
 	st.meml[pos]=val.lo;
 }
 
+function UnlDrawImage(st,imghi,imglo) {
+	var canvas=st.canvas;
+	if (canvas===null || canvas===undefined) {
+		return;
+	}
+	//Get the image data.
+	if (imghi>0 || imglo>0xffffffff) {
+		return;
+	}
+	var memh=st.memh,meml=st.meml;
+	var alloc=st.alloc;
+	var width=imglo<alloc?meml[imglo]:0;
+	imglo++;
+	var height=imglo<alloc?meml[imglo]:0;
+	imglo++;
+	var srcdata=imglo<alloc?meml[imglo]:0;
+	if (width>65536 || height>65536) {
+		return;
+	}
+	//Resize the canvas.
+	if (canvas.width!==width || canvas.height!==height || st.canvdata===null) {
+		canvas.width=width;
+		canvas.height=height;
+		st.canvctx=canvas.getContext("2d");
+		st.canvdata=st.canvctx.createImageData(width,height);
+	}
+	if (canvas.style.display==="none") {
+		canvas.style.display="block";
+	}
+	//Copy the ARGB data to the RGBA canvas.
+	var pixels=width*height*4;
+	var dstdata=st.canvdata.data;
+	var hi,lo;
+	for (var i=0;i<pixels;i+=4) {
+		if (srcdata<alloc) {
+			hi=memh[srcdata];
+			lo=meml[srcdata];
+			srcdata++;
+		}
+		dstdata[i  ]=(hi&0xffff)>>>8;
+		dstdata[i+1]=lo>>>24;
+		dstdata[i+2]=(lo&0xffff)>>>8;
+		dstdata[i+3]=hi>>>24;
+	}
+	st.canvctx.putImageData(st.canvdata,0,0);
+}
+
 /*function UnlRunStandard(st) {
 	//Run unileq for a given number of iterations.
 	var a,b,c,ma,mb,ip=st.ip;
@@ -871,6 +925,9 @@ function UnlRun(st,stoptime) {
 			//Busy wait.
 			while (performance.now()<sleeptill) {}
 			timeiters=0;
+		} else if (alo===0xfffffffa) {
+			//Draw an image.
+			UnlDrawImage(st,mbhi,mblo);
 		}
 	}
 	st.ip.hi=iphi;

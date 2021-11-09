@@ -15,11 +15,12 @@ function UnlInitEditor() {
 	var resetbutton=document.getElementById("unileq_reset");
 	var input=document.getElementById("unileq_editor");
 	var output=document.getElementById("unileq_output");
+	var graphics=document.getElementById("unileq_canvas");
 	var select=document.getElementById("unileq_demo");
 	var advanced=document.getElementById("unileq_advanced");
 	var menu=document.getElementById("unileq_menu");
 	var keygrab=document.getElementById("unileq_keyboard");
-	var unl=UnlCreate(output);
+	var unl=UnlCreate(output,graphics);
 	var running=0;
 	function update() {
 		//Our main event loop. Run the main unileq loop for 15ms and queue the next
