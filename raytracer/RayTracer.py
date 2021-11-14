@@ -1,5 +1,5 @@
 """
-RayTracer.py - v1.20
+RayTracer.py - v1.22
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -31,9 +31,6 @@ Notes:
 * Wavefront OBJ mesh files are supported. Textures are not.
 * Special effects can be done by manipulating how light behaves. Ex: materials
   with negative luminance will emit shadows.
-* When testing effects, only render the portion of the image that will
-  demonstrate the effect.
-* Trust the math. Intuition can be misleading in higher dimensions.
 * Coordinate system for the 3D camera:
 
          +y
@@ -48,21 +45,19 @@ Notes:
 --------------------------------------------------------------------------------
 TODO
 
-Add a quick, 1 pass rendering mode.
-Put gamma in bmp header.
 Add recalcnorm() and applytransform() to mesh.
 Add vert/face unique id tracking. Add delete/get.
 Add text primitives.
-Check if BVH AABB should change. If so, remake BVH.
-Spectral rendering. Double slit experiment.
 """
 
 import math,random,sys
+
 
 #--------------------------------------------------------------------------------
 #Algebra
 #--------------------------------------------------------------------------------
 #Helper classes for matrix/vector linear algebra.
+
 
 class Matrix(object):
 	def __init__(self,rows=None,cols=None,copy=True):
@@ -83,6 +78,7 @@ class Matrix(object):
 		self.elem,self.elems=elem,rows*cols
 		self.rows,self.cols=rows,cols
 
+
 	@staticmethod
 	def getinverse(x):
 		y=abs(x)
@@ -90,11 +86,13 @@ class Matrix(object):
 			return None
 		return 1.0/x
 
+
 	def replace(a,b):
 		assert(isinstance(b,Matrix))
 		a.elem,a.elems=b.elem,b.elems
 		a.rows,a.cols=b.rows,b.cols
 		return a
+
 
 	def one(a):
 		"""Make A the identity matrix."""
@@ -105,6 +103,7 @@ class Matrix(object):
 			elem[i*cols+i]=1.0
 		return a
 
+
 	def zero(a):
 		"""Zeroize matrix A."""
 		elem=a.elem
@@ -112,8 +111,10 @@ class Matrix(object):
 			elem[i]=0.0
 		return a
 
+
 	def __neg__(a):
 		return Matrix([-e for e in a.elem],(a.rows,a.cols),False)
+
 
 	def __mul__(a,b):
 		if isinstance(b,Vector):
@@ -148,8 +149,10 @@ class Matrix(object):
 			else: aval-=brows
 		return m
 
+
 	def __imul__(a,b):
 		return a.replace(a*b)
+
 
 	def inv(a):
 		"""Returns the multiplicative inverse of A."""
@@ -202,6 +205,7 @@ class Matrix(object):
 				elem[dval+perm[i]]=tmp[i]
 		return ret
 
+
 	def __abs__(a):
 		"""Returns the determinant of A."""
 		cols=a.cols
@@ -240,6 +244,7 @@ class Matrix(object):
 			det=det*elem[i*cols+i]
 		return -det if sign else det
 
+
 	def rotate(a,angs):
 		"""Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles. In 3D,
 		angles are expected in ZYX order."""
@@ -270,6 +275,7 @@ class Matrix(object):
 					jval+=dim
 		return ret
 
+
 class Vector(object):
 	def __init__(self,x,copy=True):
 		if isinstance(x,int):
@@ -279,16 +285,21 @@ class Vector(object):
 		self.elem=elem
 		self.elems=len(elem)
 
+
 	def __len__(self):
 		return self.elems
+
 
 	def __getitem__(self,i):
 		return self.elem[i]
 
+
 	def __setitem__(self,i,v):
 		self.elem[i]=v
 
+
 	def __iter__(self): return iter(self.elem)
+
 
 	def randomize(u):
 		#Turn u into a random unit vector.
@@ -306,31 +317,38 @@ class Vector(object):
 		for i in range(n): ue[i]*=mag
 		return u
 
+
 	def zero(u):
 		ue=u.elem
 		for i in range(u.elems): ue[i]=0.0
 		return u
 
+
 	def __add__(u,v):
 		ue,ve=u.elem,v.elem
 		return Vector([ue[i]+ve[i] for i in range(u.elems)],False)
+
 
 	def __iadd__(u,v):
 		ue,ve=u.elem,v.elem
 		for i in range(u.elems): ue[i]+=ve[i]
 		return u
 
+
 	def __sub__(u,v):
 		ue,ve=u.elem,v.elem
 		return Vector([ue[i]-ve[i] for i in range(u.elems)],False)
+
 
 	def __isub__(u,v):
 		ue,ve=u.elem,v.elem
 		for i in range(u.elems): ue[i]-=ve[i]
 		return u
 
+
 	def __neg__(u):
 		return Vector([-x for x in u.elem],False)
+
 
 	def __mul__(u,v):
 		#Return the dot product if v is a vector, or the scalar product otherwise.
@@ -344,14 +362,17 @@ class Vector(object):
 		#Elementwise scalar product u*s.
 		return Vector([x*v for x in ue],False)
 
+
 	def __rmul__(u,v):
 		#Make sure to use the scalar on the left side (s*u instead of u*s).
 		return Vector([v*x for x in u.elem],False)
+
 
 	def __imul__(u,s):
 		ue=u.elem
 		for i in range(u.elems): ue[i]*=s
 		return u
+
 
 	@staticmethod
 	def cross(vecarr):
@@ -368,15 +389,19 @@ class Vector(object):
 			ret[i]=abs(m)*(1,-1)[i&1]
 		return ret
 
+
 	def sqr(u):
 		s=0.0
 		for x in u.elem: s+=x*x
 		return s
 
+
 	def __abs__(u):
 		return math.sqrt(u.sqr())
 
+
 	def norm(u): return Vector(u).normalize()
+
 
 	def normalize(u):
 		mag=abs(u)
@@ -384,8 +409,10 @@ class Vector(object):
 		else: u*=1.0/mag
 		return u
 
+
 class Transform(object):
 	#A class to easily hold spatial transformation information.
+
 
 	def __init__(self,off,angs=None,scale=1.0):
 		if isinstance(off,Transform):
@@ -397,6 +424,7 @@ class Transform(object):
 			if angs is None: angs=[0]*(dim*(dim-1)//2)
 			self.mat=Matrix(dim,dim).one().rotate(angs)*scale
 
+
 	def apply(self,v):
 		#Transform a vector or another transform.
 		if isinstance(v,Vector):
@@ -406,8 +434,10 @@ class Transform(object):
 		t.off=self.mat*t.off+self.off
 		return t
 
+
 	def rotate(self,v):
 		return self.mat*v
+
 
 	def inv(self):
 		#Return the inverse transform.
@@ -415,14 +445,17 @@ class Transform(object):
 		#     A*x+b=y
 		#     A^-1*(y-b)=x
 		#     (A^-1)*y+(-A^-1*b)=x
+		#
 		inv=Transform(len(self.off))
 		inv.mat=self.mat.inv()
 		inv.off=-(inv.mat*self.off)
 		return inv
 
+
 #--------------------------------------------------------------------------------
 #Meshes
 #--------------------------------------------------------------------------------
+
 
 class Ray(object):
 	def __init__(self,pos,dir):
@@ -438,24 +471,28 @@ class Ray(object):
 		self.facenorm=None
 		self.facemat=None
 
+
 	def precalc(self):
+		#Setup the ray for raytracing.
 		self.face=None
 		self.facenorm=None
 		self.facemat=None
-		#For AABB collision detection. If the ray direction is negative along a node's
-		#dividing axis, then the node will want to swap its children.
+		#If the ray direction is negative along a BVH node's dividing axis,
+		#then the node will want to swap its children.
 		inv,dir,swap=self.inv,self.dir,0
 		for i in range(len(dir)):
 			d=dir[i]
-			swap|=(d<0.0)<<i
+			swap|=(d>0.0)<<i
 			if abs(d)>1e-10: inv[i]=1.0/d
 			else: inv[i]=float("inf")
 		self.swap=swap
 		self.dot=float("inf")
 
+
 class MeshMaterial(object):
 	#All that a material needs to tell us is what direction to go next and what color
 	#to apply.
+
 
 	def __init__(self,color,luminosity=0.0,reflectprob=1.0,diffusion=1.0,refractprob=0.0,refractindex=1.0,scatterlen=float("inf")):
 		self.color=list(color)
@@ -467,10 +504,12 @@ class MeshMaterial(object):
 		self.scatterlen=scatterlen
 		self.absorbprob=0.01
 
+
 class MeshVertex(object):
 	def __init__(self,pos,id):
 		self.pos=pos
 		self.id=id
+
 
 class MeshFace(object):
 	def __init__(self,vertarr,mat):
@@ -487,6 +526,7 @@ class MeshFace(object):
 		#     u1*v1+u2*v2=p
 		#     u1*(v1*v1)+u2*(v1*v2)=(v1*p)
 		#     u1*(v1*v2)+u2*(v2*v2)=(v2*p)
+		#
 		dim=verts-(verts>0)
 		a=Matrix(dim,dim)
 		for r in range(dim):
@@ -498,6 +538,7 @@ class MeshFace(object):
 			self.bary=(a.inv()*Vector(arr,False)).elem
 		except ZeroDivisionError:
 			self.bary=[Vector(dim+1) for i in range(dim)]
+
 
 	def intersect(self,ray):
 		#Return the distance from the ray origin to the face. Return false if the ray
@@ -527,6 +568,7 @@ class MeshFace(object):
 		ray.facemat=self.mat
 		return True
 
+
 class Mesh(object):
 	def __init__(self,dim,mat=None,transform=None):
 		self.dim=dim
@@ -537,9 +579,10 @@ class Mesh(object):
 		self.instarr=[None]
 		self.insts=0
 		self.updated=1
-		self.bvh=None
+		self.bvh=BVH(self)
 		if isinstance(dim,str):
 			self.load(dim,mat,transform)
+
 
 	def load(self,path,mat=None,transform=None):
 		#Load from a Wavefront OBJ file.
@@ -558,6 +601,7 @@ class Mesh(object):
 				faces=[verts+int(x) for x in line.split()[1:]]
 				self.addface(faces,mat)
 
+
 	def save(self,path):
 		#Save to a Wavefront OBJ file.
 		with open(path,"w") as f:
@@ -571,12 +615,14 @@ class Mesh(object):
 				arr=[idmap[v.id] for v in self.facearr[i].vertarr]
 				f.write("f "+" ".join(arr)+"\r\n")
 
+
 	def clear(self):
 		self.verts=0
 		self.faces=0
 		self.insts=0
 		self.updated=1
 		self.bvh=None
+
 
 	def addmesh(self,mesh,mat=None,transform=None,instanced=True):
 		#Copy the faces from another mesh into this one. If instanced=True, only create a
@@ -597,6 +643,7 @@ class Mesh(object):
 				arr=[vmap[v.id] for v in face.vertarr]
 				self.addface(arr,mat)
 
+
 	def addvertex(self,coord,transform=None):
 		#Add a vertex and return it.
 		coord=Vector(coord)
@@ -607,6 +654,7 @@ class Mesh(object):
 		self.verts+=1
 		return arr[verts]
 
+
 	def addface(self,vertarr,mat):
 		#Add a face and return it.
 		assert(len(vertarr)<=self.dim)
@@ -616,6 +664,7 @@ class Mesh(object):
 		arr[faces]=MeshFace(varr,mat)
 		self.faces+=1
 		return arr[faces]
+
 
 	def addcube(self,sidearr,mat,transform=None):
 		#Create an N-dimensional cube.
@@ -655,6 +704,7 @@ class Mesh(object):
 				if dim>1 and inv==0: vertarr[0],vertarr[1]=vertarr[1],vertarr[0]
 				face=self.addface(vertarr,mat)
 				if dim==1 and inv==0: face.norm=-face.norm
+
 
 	def addsphere(self,pos,rad,maxfaces,mat,transform=None):
 		#Generates a sphere with at most maxfaces number of faces. Begin with a line and
@@ -730,10 +780,12 @@ class Mesh(object):
 				varr[0],varr[inv]=varr[inv],varr[0]
 				if facevalid(varr): self.addface(varr,mat)
 
+
 	def buildbvh(self):
 		if self.updated:
 			self.updated=0
-			self.bvh=BVH(self)
+			self.bvh.build()
+
 
 	def raypick(self,ray):
 		#Finds the nearest surface that the ray intersects. Surface information is
@@ -741,9 +793,11 @@ class Mesh(object):
 		if self.updated: self.buildbvh()
 		return self.bvh.raypick(ray)
 
+
 class MeshInstance(object):
 	#A mesh instance serves as a pointer to a mesh instead of a direct copy. This
 	#saves on time and memory.
+
 
 	def __init__(self,mesh,transform=None,mat=None):
 		self.mesh=mesh
@@ -752,6 +806,7 @@ class MeshInstance(object):
 			transform=Transform(mesh.dim)
 		self.transform=Transform(transform)
 		self.inv=transform.inv()
+
 
 	def intersect(self,ray):
 		#Apply the inverse instance transform to put the ray in the mesh's local space.
@@ -765,25 +820,26 @@ class MeshInstance(object):
 			ray.facenorm=self.transform.rotate(nray.facenorm).normalize()
 			if self.mat: ray.facemat=self.mat
 
+
 #--------------------------------------------------------------------------------
 #Bounding Volume Hierarchy
 #--------------------------------------------------------------------------------
 
+
 class BVHNode(object):
-	DIVIDE,FACE,INST=0,1,2
+	DIVIDE,FACE,INSTANCE=0,1,2
+
 
 	def __init__(self,dim):
 		self.parent=None
 		self.left=None
 		self.right=None
-		self.next=[None]*(1<<dim)
 		self.bbmin=Vector(dim)
 		self.bbmax=Vector(dim)
 		self.type=BVHNode.DIVIDE
 		self.cost=0.0
-		self.area=0.0
 		self.axis=0
-		self.testray=True
+
 
 	def intersect(self,ray):
 		#Project the box onto the ray. The intersection of all projections will give us
@@ -818,15 +874,18 @@ class BVHNode(object):
 			if u0>u1: return False
 		return True
 
+
 	def aabbinit(self):
 		#Initialize the node's bounding box, area, and cost.
+		#
+		#Worst case complexity for a face intersection test is n^2, and for a box is n.
+		#Thus, consider a box collision test to take n/n^2~=1/(n+1) relative operations.
 		b0,b1=self.bbmin,self.bbmax
 		dim=len(b0)
 		for i in range(dim):
 			b0[i]=float("inf")
 			b1[i]=-float("inf")
-		self.area=0.0
-		self.cost=self.testray/(dim*dim+1.0)
+		self.cost=1.0/(dim*dim+1.0)
 		if self.type==BVHNode.DIVIDE:
 			#If the node has children, merge them into the node's bounding box.
 			l,r=self.left,self.right
@@ -838,7 +897,7 @@ class BVHNode(object):
 			self.cost+=1.0
 			face=self.left
 			varr=[v.pos for v in face.vertarr]
-		elif self.type==BVHNode.INST:
+		elif self.type==BVHNode.INSTANCE:
 			#The node contains a mesh instance. Transform the bounding box of the mesh to
 			#find the instance's bounding box.
 			inst=self.left
@@ -857,7 +916,7 @@ class BVHNode(object):
 				x=v[i]
 				if b0[i]>x: b0[i]=x
 				if b1[i]<x: b1[i]=x
-		self.aabbarea()
+
 
 	def aabbmerge(self,other):
 		b0,b1=self.bbmin.elem,self.bbmax.elem
@@ -865,25 +924,40 @@ class BVHNode(object):
 		for i in range(len(b0)):
 			if b0[i]>o0[i]: b0[i]=o0[i]
 			if b1[i]<o1[i]: b1[i]=o1[i]
-		self.aabbarea()
 		self.cost+=other.cost
+
 
 	def aabbarea(self):
 		#The probability of a ray intersecting a volume inside another volume is
 		#surface_area_inside/surface_area_outside. Surface area is an n-1 dimensional
 		#volume in n dimensional space. That is, fix one axis as constant, and compute
 		#the volume of the non-fixed axis.
+		#
+		#For 2D, we'll mostly be doing point tests, so return the volume.
 		b0,b1=self.bbmin.elem,self.bbmax.elem
-		dim,area=len(b0),0.0
-		for i in range(dim):
-			tmp=1.0
-			for j in range(dim):
-				if j!=i: tmp*=b1[j]-b0[j]
-			area+=tmp
-		self.area=area
+		dim,area=len(b0),1.0
+		if dim==2:
+			return (b1[1]-b0[1])*(b1[0]-b0[0])
+		elif dim>=3:
+			vol=b1[0]-b0[0];
+			for i in range(1,dim):
+				dif=b1[i]-b0[i]
+				area=area*dif+vol
+				vol*=dif
+		return area
+
 
 class BVH(object):
 	def __init__(self,mesh):
+		self.mesh=mesh
+		self.root=None
+		self.nodes=0
+		self.nodearr=[]
+		self.sortarr=[]
+		self.tmparr=[]
+
+
+	def build(self):
 		#Create a bounding volume hierarchy for a given mesh. The BVH works by dividing
 		#up the mesh faces into different axis-aligned boxes. The BVH is built so that if
 		#a ray misses a node's box, we know that the ray will miss all of the node's
@@ -897,19 +971,20 @@ class BVH(object):
 		#     | +----+             |
 		#     +--------------------+
 		#
-		#Worst case complexity for a face intersection test is n^2, and for a box is n.
-		#Thus, consider a box collision test to take n/n^2~=1/(n+1) relative operations.
+		mesh=self.mesh
 		dim=mesh.dim
 		facearr,faces=mesh.facearr,mesh.faces
 		instarr,insts=mesh.instarr,mesh.insts
 		objects=faces+insts
-		self.dim=dim
-		self.nodes=0
-		self.nodearr=[]
 		self.root=None
+		self.nodes=0
 		if objects==0: return
 		#Create an array of all active faces and instances.
-		nodearr=[BVHNode(dim) for i in range(objects*2-1)]
+		if objects>len(self.tmparr):
+			self.nodearr=[BVHNode(dim) for i in range(objects*2-1)]
+			self.sortarr=[[None]*objects for j in range(dim)]
+			self.tmparr=[None]*objects
+		nodearr=self.nodearr
 		nodes=0
 		for i in range(objects):
 			node=nodearr[nodes]
@@ -921,102 +996,104 @@ class BVH(object):
 				inst.mesh.buildbvh()
 				if inst.mesh.bvh.root is None: continue
 				node.left=inst
-				node.type=BVHNode.INST
+				node.type=BVHNode.INSTANCE
 			node.aabbinit()
 			nodes+=1
 		if nodes==0: return
-		nodearr=nodearr[-nodes+1:]+nodearr[:nodes]
 		self.nodes=nodes*2-1
-		self.nodearr=nodearr
-		#Make the first node the root. If it's not the only node, set up its parition.
+		#Sort the nodes along each axis by their AABB centers.
+		for i in range(dim):
+			arr=self.sortarr[i]
+			for j in range(nodes):
+				node=nodearr[j]
+				node.axis=node.bbmin[i]+node.bbmax[i]
+				arr[j]=node
+			arr.sort(key=lambda x: x.axis)
+		#Move the child nodes to the end of the array.
+		for i in range(nodes):
+			j=nodes*2-2-i
+			nodearr[i],nodearr[j]=nodearr[j],nodearr[i]
+		#Make the first node the root. If it's not the only node, set up its partition.
 		node=nodearr[0]
 		self.root=node
+		node.parent=None
 		if nodes>1:
-			node.left=nodes-1
-			node.right=self.nodes
+			node.left=0
+			node.right=nodes
 		#Begin dividing nodes.
-		ltcost=[0.0]*self.nodes
 		newpos=1
 		for npos in range(nodes-1):
 			node=nodearr[npos]
 			left,right=node.left,node.right
-			lchild=BVHNode(dim)
-			rchild=BVHNode(dim)
 			#Try and find an axis to divide the nodes along.
-			mincost,minhalf,minaxis=float("inf"),left+1,0
+			node.type=BVHNode.DIVIDE
+			node.left=None
+			node.right=None
+			#Find the axis that best divides the nodes.
+			minaxis,minhalf,mincost=0,left+1,float("inf")
 			for axis in range(dim):
-				cost,half=self.divideaxis(ltcost,left,right,lchild,rchild,axis)
-				if mincost>cost and half>left and half<right:
-					mincost,minhalf,minaxis=cost,half,axis
+				sortarr=self.sortarr[axis]
+				node.aabbinit()
+				for i in range(left+1,right):
+					node.aabbmerge(sortarr[i-1])
+					prob=node.aabbarea()*node.cost
+					if prob>=mincost: break
+					sortarr[i].axis=prob
+				node.aabbinit()
+				for j in range(right-1,left,-1):
+					node.aabbmerge(sortarr[j])
+					prob=node.aabbarea()*node.cost
+					if prob>=mincost: break
+					cost=sortarr[j].axis+prob
+					if mincost>cost and j<i:
+						mincost=cost
+						minhalf=j
+						minaxis=axis
+			#For each axis, parition the nodes based on whether they're in the left half or
+			#right half or the splitting axis.
 			node.axis=1<<minaxis
-			self.divideaxis(ltcost,left,right,lchild,rchild,minaxis,minhalf)
+			tmp=self.tmparr
+			sortarr=self.sortarr[minaxis]
+			for i in range(left,right):
+				sortarr[i].axis=i<minhalf
+			for axis in range(dim):
+				if axis==minaxis: continue
+				sortarr=self.sortarr[axis]
+				lpos,rpos=left,minhalf
+				for i in range(left,right):
+					m=sortarr[i]
+					if m.axis:
+						tmp[lpos]=m
+						lpos+=1
+					else:
+						tmp[rpos]=m
+						rpos+=1
+				for i in range(left,right):
+					sortarr[i]=tmp[i]
 			#If the left side has multiple nodes, queue it for further dividing.
 			if minhalf-left==1:
-				lchild=nodearr[left]
+				work=sortarr[left]
 			else:
-				nodearr[newpos]=lchild
+				work=nodearr[newpos]
 				newpos+=1
-				lchild.left=left
-				lchild.right=minhalf
-			lchild.parent=node
-			node.left=lchild
+				work.left=left
+				work.right=minhalf
+			work.parent=node
+			node.left=work
 			#If the right side has multiple nodes, queue it for further dividing.
 			if right-minhalf==1:
-				rchild=nodearr[minhalf]
+				work=sortarr[minhalf]
 			else:
-				nodearr[newpos]=rchild
+				work=nodearr[newpos]
 				newpos+=1
-				rchild.left=minhalf
-				rchild.right=right
-			rchild.parent=node
-			node.right=rchild
-		if nodes: self.root.aabbinit()
-		self.optimizetree()
+				work.left=minhalf
+				work.right=right
+			work.parent=node
+			node.right=work
+		#Rebuild the AABBs from the bottom up.
+		for i in range(nodes-2,-1,-1):
+			nodearr[i].aabbinit()
 
-	def divideaxis(self,ltcost,left,right,lchild,rchild,axis,stop=None):
-		#Sort the nodes in [left,right) along a given axis. Then, determine the optimal
-		#number of nodes to give to the left and right children so as to minimize cost
-		#and area.
-		#If we don't know the optimal count to split at.
-		if stop is None:
-			lstop,rstop=right,left
-		else:
-			lstop,rstop=stop,stop
-		#Sort nodes.
-		nodearr=self.nodearr
-		sarr=nodearr[left:right]
-		sarr.sort(key=lambda x: x.bbmin[axis]+x.bbmax[axis])
-		nodearr[left:right]=sarr
-		mincost,minhalf=float("inf"),left
-		#Find the total cost and area for nodes to the left of index i.
-		lchild.aabbinit()
-		for i in range(left,lstop):
-			ltcost[i]=lchild.area*lchild.cost
-			lchild.aabbmerge(nodearr[i])
-		#Find the total cost and area for the nodes to the right of i (including i). Then
-		#find the cost if we divided the nodes into [left,i) and [i,right).
-		rchild.aabbinit()
-		for i in range(right-1,rstop-1,-1):
-			rchild.aabbmerge(nodearr[i])
-			cost=ltcost[i]+rchild.area*rchild.cost
-			if mincost>cost: mincost,minhalf=cost,i
-		return (mincost,minhalf)
-
-	def optimizetree(self):
-		nodearr=self.nodearr
-		testthres=0.9
-		for i in range(1,self.nodes):
-			node=nodearr[i]
-			parent=node.parent
-			#Establish shortcuts for traversing the tree.
-			node.next[:]=parent.next[:]
-			for swap in range(len(node.next)):
-				l,r=parent.left,parent.right
-				if swap&parent.axis: l,r=r,l
-				if node is l: node.next[swap]=r
-			#If the node's area is close to its parent's area, don't do a ray test.
-			while parent.testray==0: parent=parent.parent
-			node.testray=node.area<parent.area*testthres
 
 	def raypick(self,ray):
 		#Finds the nearest surface that the ray intersects. If (swap&axis)!=0, then the
@@ -1024,22 +1101,34 @@ class BVH(object):
 		ray.precalc()
 		swap=ray.swap
 		node=self.root
+		prev=None
 		while node:
-			next=node.next[swap]
-			if node.testray==0 or node.intersect(ray):
-				left=node.left
+			next=node.parent
+			if not (prev is next) or node.intersect(ray):
 				if node.type==BVHNode.DIVIDE:
 					#This is a dividing node. Determine which child to visit first using the dividing
 					#axis and sign of the ray.
-					next=node.right if (swap&node.axis) else left
+					if swap&node.axis:
+						l=node.left
+						r=node.right
+					else:
+						l=node.right
+						r=node.left
+					if prev is next:
+						next=l
+					elif prev is l:
+						next=r
 				else:
 					#We are intersecting a mesh instance or a face.
-					left.intersect(ray)
+					node.left.intersect(ray)
+			prev=node
 			node=next
+
 
 #--------------------------------------------------------------------------------
 #Scenes
 #--------------------------------------------------------------------------------
+
 
 class Scene(object):
 	def __init__(self,dim,width,height):
@@ -1055,9 +1144,11 @@ class Scene(object):
 		angs=dim*(dim-1)//2
 		self.setcamera([0.0]*dim,[0.0]*angs)
 
+
 	def __getattr__(self,name):
 		#Pass any unknown commands to the mesh.
 		return getattr(self.mesh,name)
+
 
 	def raytrace(self,ray,rgb):
 		#Shoot a ray into the scene, and follow it as it bounces around. Track what
@@ -1067,6 +1158,7 @@ class Scene(object):
 		#     Coplanar faces will be fairly common.
 		#     Rays may start inside a mesh.
 		#     Inside-out geometry will define an infinitely large space.
+		#
 		rand=Vector(self.dim)
 		uniform=random.random
 		ambient=None
@@ -1137,6 +1229,7 @@ class Scene(object):
 			dir.normalize()
 		for i in range(3): rgb[i]+=ret[i]
 
+
 	def setcamera(self,pos,angs,fov=90.0):
 		#Set up the camera based on the number of dimensions.
 		#
@@ -1167,6 +1260,7 @@ class Scene(object):
 		self.camu=(rot*x)*(2.0/self.imgwidth)
 		self.camv=(rot*y)*(2.0/self.imgheight)
 
+
 	def render(self,progress=False):
 		#Render the scene to a series of RGB values.
 		#Divide the camera space into a grid of pixels. Then, shoot several rays into
@@ -1191,6 +1285,7 @@ class Scene(object):
 				raytrace(ray,rgb)
 			for j in range(3): imgrgb[i*3+j]=rgb[j]*norm
 		if progress: print("\rprogress: 100.00%")
+
 
 	def savebmp(self,path):
 		#Save the scene to a bitmap image file. Perform gamma correction.
@@ -1219,9 +1314,11 @@ class Scene(object):
 			f.write(pad)
 		f.close()
 
+
 #--------------------------------------------------------------------------------
 #Example Scene
 #--------------------------------------------------------------------------------
+
 
 if __name__=="__main__":
 	#Render a quick, low quality scene demonstrating glass, mirrors, and subsurface
