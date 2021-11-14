@@ -1,5 +1,5 @@
 """
-RayTracer.py - v1.22
+RayTracer.py - v1.23
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -45,6 +45,7 @@ Notes:
 --------------------------------------------------------------------------------
 TODO
 
+Reorganize how scatter length is used to limit ray traversal.
 Add recalcnorm() and applytransform() to mesh.
 Add vert/face unique id tracking. Add delete/get.
 Add text primitives.
@@ -1261,15 +1262,17 @@ class Scene(object):
 		self.camv=(rot*y)*(2.0/self.imgheight)
 
 
-	def render(self,progress=False):
+	def render(self,fast=False,progress=False):
 		#Render the scene to a series of RGB values.
 		#Divide the camera space into a grid of pixels. Then, shoot several rays into
 		#each pixel and use the average value as the pixel's color.
-		rpp,raytrace=self.raysperpixel,self.raytrace
-		norm,uniform=0.0 if rpp<1 else 1.0/rpp,random.random
+		uniform=random.random
 		cambl,camu,camv=self.cambl,self.camu,self.camv
 		campos,imgwidth=self.campos,self.imgwidth
 		imgrgb,pixels=self.imgrgb,imgwidth*self.imgheight
+		ray=Ray(campos,cambl)
+		rpp=self.raysperpixel
+		norm=1.0 if rpp<1 or fast else 1.0/rpp
 		if progress: progress=(pixels+9999)//10000
 		for i in range(pixels):
 			#Print progress every pixel if we've been asked to.
@@ -1277,12 +1280,21 @@ class Scene(object):
 				sys.stdout.write("\rprogress: {0:.2f}%".format(i*100.0/pixels))
 				sys.stdout.flush()
 			x,y,rgb=i%imgwidth,i//imgwidth,[0.0]*3
-			ray=Ray(cambl,cambl)
-			for r in range(rpp):
-				u,v=x+uniform(),y+uniform()
-				ray.dir=(cambl+camu*u+camv*v).normalize()
+			if fast:
+				#Fast render. Use the color of the first face we intersect.
+				u,v=x+0.5,y+0.5
 				ray.pos=Vector(campos)
-				raytrace(ray,rgb)
+				ray.dir=(cambl+camu*u+camv*v).normalize()
+				ray.max=float("inf")
+				self.mesh.raypick(ray)
+				if ray.facemat: rgb=ray.facemat.color
+			else:
+				#High quality render. Let the light bound around the scene.
+				for r in range(rpp):
+					u,v=x+uniform(),y+uniform()
+					ray.pos=Vector(campos)
+					ray.dir=(cambl+camu*u+camv*v).normalize()
+					self.raytrace(ray,rgb)
 			for j in range(3): imgrgb[i*3+j]=rgb[j]*norm
 		if progress: print("\rprogress: 100.00%")
 
@@ -1351,7 +1363,7 @@ if __name__=="__main__":
 	sc.addsphere((250,280,-370),100,sphere,mirmat)
 	sc.addsphere((135,125,-125),80,sphere,glassmat)
 	print("rendering {0} triangles".format(sc.faces))
-	sc.render(True)
+	sc.render(False,True)
 	print("saving image to "+path)
 	sc.savebmp(path)
 	print("time: {0:.6f}".format(time.time()-start))
