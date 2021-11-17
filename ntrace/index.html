@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Hyperdimensional Ray Tracing</title>
+	<title>N-Dimensional Ray Tracing</title>
 	<link rel="stylesheet" href="../style/style.css" type="text/css">
 	<script type="text/javascript" src="../style/style.js"></script>
 </head>
@@ -43,19 +43,14 @@ BVH
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Introduction ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Introduction</h1>
-<p><a href="https://en.wikipedia.org/wiki/Ray_tracing_(graphics)">Ray tracing</a> is a rendering
-technique that simulates rays of light bouncing around a scene. It produces extremely realistic
-images compared to traditional forms of rendering, but it can take hundreds of times longer to
-render a given scene.</p>
-<br>
-<p>In this article, we will present a ray tracer written in pure python (without numpy or GPU
-acceleration) that can work in arbitrary dimensional space, and describe how it works. Specifically,
-we will present an unbiased, monte carlo ray tracer, otherwise called a
-<a href="https://en.wikipedia.org/wiki/Path_tracing">path tracer</a>.</p>
+<p><a href="./NTrace.py">NTrace.py</a> is a ray tracer written in pure python (without numpy or GPU
+acceleration) that can work in n-dimensional space. NTrace produces extremely realistic images
+compared to traditional forms of rendering, at the cost of taking hundreds of times longer to render
+a given scene.</p>
 <br>
 <p>Contents:<br>
 <br>
-<a href="#content_implementation" style="margin-left:4rem">Implementation</a><br>
+<a href="#content_examples" style="margin-left:4rem">Examples</a><br>
 <a href="#content_overview" style="margin-left:4rem">Overview</a><br>
 <a href="#content_meshes" style="margin-left:4rem">Meshes</a><br>
 <a href="#content_primitives" style="margin-left:4rem">Primitives</a><br>
@@ -64,10 +59,8 @@ we will present an unbiased, monte carlo ray tracer, otherwise called a
 <a href="#content_notes" style="margin-left:4rem">Notes</a></p>
 </div>
 
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Implementation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="content_implementation"><h1>Implementation</h1>
-<p>The full ray tracer can be downloaded here: <a href="./RayTracer.py">RayTracer.py</a></p>
-<br>
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Examples ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="content_examples"><h1>Examples</h1>
 <p>By default, the ray tracer will render a quick, low quality version of the scene below. On a
 low-end CPU, the render will take 20 minutes using <a href="https://pypy.org">PyPy</a>, and 2 hours
 using regular python.</p>
@@ -78,7 +71,7 @@ using regular python.</p>
 <br>
 <p>The high quality render above is 600x600 pixels, has 1M triangles (500K per sphere), and uses
 64K rays per pixel. It took 124 hours to render using PyPy and a separate, multithreaded version of
-the ray tracer (<a href="./raytracer_extra.zip">here</a>).</p>
+the ray tracer (<a href="./ntrace_extra.zip">here</a>).</p>
 <br>
 <p>The left sphere exhibits glass refraction, the middle sphere exhibits reflection, and the cube
 exhibits subsurface scattering.</p>
@@ -87,7 +80,7 @@ exhibits subsurface scattering.</p>
 <img src="./render4d.png" style="display:block;width:66%;margin:auto" alt="Ray Traced 4D Scene.">
 <br>
 <br>
-<p>The 4D scene above was rendered using render4d.py in <a href="./raytracer_extra.zip">raytracer_extra.zip</a>.
+<p>The 4D scene above was rendered using render4d.py in <a href="./ntrace_extra.zip">ntrace_extra.zip</a>.
 It shows a rotated, blue hypercube floating above another hypercube acting as a floor. Both hypercubes
 have the same material properties, however, the floor hypercube shows volumetric effects while the
 blue hypercube is sharply defined. This difference could be caused by an error in collision
@@ -1975,14 +1968,14 @@ node's AABB.</p>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Notes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="content_notes"><h1>Notes</h1>
-<p>We have covered the overall implementation of a hyperdimensional ray tracer. In general, most of the
+<p>We have covered the overall implementation of a n-dimensional ray tracer. In general, most of the
 concepts are the same as a 3 dimensional ray tracer. The biggest difference manifests itself in the
 matrix algebra we have to use. For a traditional ray tracer, most of the calculations, such as cross
 products, can be explicitly written in a compact form. In arbitrary dimensioned space, we have to
 resort to the general matrix formulas. Creating high dimension primitives, such as cubes, is also
 unnecessarily complex.</p>
 <br>
-<p>I made this ray tracer hyperdimensional because I had trouble thinking about 3D geometry. So, I
+<p>I made this ray tracer n-dimensional because I had trouble thinking about 3D geometry. So, I
 decided that writing a renderer that was dimension agnostic would allow me to rely on the math
 instead of mental visualization.</p>
 <br>

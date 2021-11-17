@@ -1,5 +1,5 @@
 """
-RayTracer.py - v1.23
+NTrace.py - v1.23
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -21,7 +21,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
-A hyper-dimensional ray tracer
+A N-Dimensional Ray Tracer
 
 Notes:
 * The scene can have any number of spatial dimensions.
@@ -45,6 +45,7 @@ Notes:
 --------------------------------------------------------------------------------
 TODO
 
+Render 2D scenes by using the nearest point we're inside.
 Reorganize how scatter length is used to limit ray traversal.
 Add recalcnorm() and applytransform() to mesh.
 Add vert/face unique id tracking. Add delete/get.
@@ -514,9 +515,14 @@ class MeshVertex(object):
 
 class MeshFace(object):
 	def __init__(self,vertarr,mat):
-		#Set up the face, including calculating its normal and barycentric vectors.
+		#Set up the face and its normal.
 		self.mat=mat
 		self.vertarr=vertarr
+		self.calcnorm()
+
+	def calcnorm(self):
+		#Calculate the face's normal and barycentric vectors.
+		vertarr=self.vertarr
 		verts=len(vertarr)
 		arr=[vertarr[i].pos-vertarr[0].pos for i in range(1,verts)]
 		if verts==0: self.norm=Vector(verts)
@@ -539,7 +545,6 @@ class MeshFace(object):
 			self.bary=(a.inv()*Vector(arr,False)).elem
 		except ZeroDivisionError:
 			self.bary=[Vector(dim+1) for i in range(dim)]
-
 
 	def intersect(self,ray):
 		#Return the distance from the ray origin to the face. Return false if the ray
@@ -661,7 +666,7 @@ class Mesh(object):
 		assert(len(vertarr)<=self.dim)
 		arr,faces=self.facearr,self.faces
 		if faces>=len(arr): arr+=[None]*faces
-		varr=[self.vertarr[v] for v in vertarr]
+		varr=[(v if isinstance(v,MeshVertex) else self.vertarr[v]) for v in vertarr]
 		arr[faces]=MeshFace(varr,mat)
 		self.faces+=1
 		return arr[faces]
