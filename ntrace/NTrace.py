@@ -1,5 +1,5 @@
 """
-NTrace.py - v1.23
+NTrace.py - v1.24
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -627,7 +627,7 @@ class Mesh(object):
 		self.faces=0
 		self.insts=0
 		self.updated=1
-		self.bvh=None
+		self.bvh=BVH(self)
 
 
 	def addmesh(self,mesh,mat=None,transform=None,instanced=True):
