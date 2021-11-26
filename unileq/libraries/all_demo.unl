@@ -53,7 +53,7 @@ Worst case time complexity:
 
        Function  |  Time  |     O(n)
      ------------+--------+--------------
-          cmp    |    28  |  28
+          cmp    |    29  |  29
           min    |    38  |  38
           max    |    38  |  38
           set    |    24  |  24
@@ -162,7 +162,7 @@ uint.cmp:
 	#Effect: if [a]<[b]: goto lt
 	#      : if [a]=[b]: goto eq
 	#      : if [a]>[b]: goto gt
-	#Time  : 28
+	#Time  : 29
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
