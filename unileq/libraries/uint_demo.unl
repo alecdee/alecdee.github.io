@@ -36,7 +36,7 @@ demo:
 
 #|==============================================================================
 
-Unsigned Integer Operations - v4.00
+Unsigned Integer Operations - v4.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -59,15 +59,15 @@ Worst case time complexity:
 
        Function  |  Time  |     O(n)
      ------------+--------+--------------
-          cmp    |    29  |  29
+          cmp    |    28  |  28
           min    |    38  |  38
           max    |    38  |  38
           set    |    24  |  24
           neg    |    25  |  25
           add    |    30  |  30
           sub    |    31  |  31
-          mul    |   937  |  41+14*bits
-          div    |   941  |  45+14*bits
+          mul    |   885  |  53+13*bits
+          div    |   885  |  53+13*bits
           shl    |   179  |  51+2*bits
           shr    |   546  |  34+8*bits
           not    |    26  |  26
@@ -150,6 +150,10 @@ Version History
      Made uint.mul bit length agnostic and lowered run time by 5%.
      Made uint.div bit length agnostic and lowered run time by 6%.
      All functions are now bit length agnostic.
+4.01
+     Simplified loop termination in mul and div, and lowered run times by 5%.
+     mul will skip calculating the high value if high=0. This is 44% faster.
+     div will skip calculating the quotient if quot=0. This is 29% faster.
 
 --------------------------------------------------------------------------------
 TODO
@@ -168,7 +172,7 @@ uint.cmp:
 	#Effect: if [a]<[b]: goto lt
 	#      : if [a]=[b]: goto eq
 	#      : if [a]>[b]: goto gt
-	#Time  : 29
+	#Time  : 28
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
@@ -499,7 +503,8 @@ uint.mul:
 	#Call  : 0 ? uint.mul high low a b
 	#Effect: [high]=([a]*[b])/2^64
 	#      : [low] =([a]*[b])%2^64
-	#Time  : 41+14*bits = 937
+	#Time  : 53+13*bits = 885
+	#Time  : 41+ 7*bits = 489 if high=0
 	#Use [hval] and [lval] to store the high and low values of [a]*[b]. During each
 	#loop, shift [hval], [lval], and [b] to the left by 1. If the top bit of [b] is
 	#set, add [a] to [lval].
@@ -513,16 +518,9 @@ uint.mul:
 	.arg4   0       ?+1
 	.arg5   0       ?+1
 	.arg6   0       ?+1
-	#Initialize lval and hval.
-	.hval   .hval   ?+1
-	.lval   .lval   ?+1
-	#Get high.
-	.tmp    .tmp    ?+1
-	.tmp    .arg2:2 ?+1
-	.h0     .h0     ?+1
-	.h0     .tmp    ?+1
-	.h1     .h1     ?+1
-	.h1     .tmp    ?+1
+	#Get high. Only set if [hret]!=0.
+	.hret   .hret   ?+1
+	.hret   .arg2:2 ?+1
 	#Get low.
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
@@ -537,7 +535,6 @@ uint.mul:
 	.a0     .tmp    ?+1
 	.a      .a      ?+1
 	.a      .a0:0   ?+1
-	.a      .z-1    ?+1
 	#Get [b].
 	.tmp    .tmp    ?+1
 	.tmp    .arg5:5 ?+1
@@ -545,62 +542,90 @@ uint.mul:
 	.b0     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .b0:0   ?+1
-	#If -[a]=1, we have to manually set [lval]=[b].
-	.a      .z      .ret+6
 	.b      .b      ?+1
 	.b      .tmp    ?+1
 	#Offset [tmp] by 1 to force [b] to be odd.
 	.tmp    .z+1    ?+1
-	.hval   .z-2    ?+1
-	.lval   .z-1    .loop+3
-.loop:
+	.lval   .lval   ?+1
+	.hret   .z      .looplow
+	#If -[a]=1, we have to manually set [low]=[b].
+	.a      .z-1    ?+1
+	.a      .z      .rethigh+3
+	.hval   .hval   ?+1
+	.lval   .z-1    .loophigh+3
+.loophigh:
 	#If the highest bit of [b] is set, add [a] to [lval] and carry to [hval].
 	.tmp    .b      ?+1
 	.b      .tmp    ?+7
-	.lval   .a      ?+7
-	.hval   .z-1    ?+4
+	.lval   .a      ?+10
+	.hval   .z-1    ?+7
+	#If [b]=0, we are done.
+	.b      .z      .rethigh
 	.lval   .z+1    ?+1
-	#Left shift [hval] and [lval].
-	.tmp    .tmp    .last:.last+1
-	.tmp    .hval   ?+1
-	.hval   .tmp    ?+4
-	#If this is the next-to-last loop, modify [last] to abort.
-	.last   .last0  ?+4
-	.hval   .z      ?-5
-	.tmp    .tmp    ?+1
-	.tmp    .lval   ?+1
-	.tmp    .z+1    ?+1
-	.lval   .tmp    ?+4
+	#Left shift [hval].
+	.htmp   .htmp   ?+1
+	.htmp   .hval   ?+1
+	.hval   .htmp   ?+1
+	#Left shift [lval] and carry into [hval].
+	.ltmp   .ltmp   ?+1
+	.ltmp   .lval   ?+1
+	.ltmp   .z+1    ?+1
+	.lval   .ltmp   ?+4
 	.hval   .z-1    ?+1
-	.tmp    .tmp    .loop
-.ret:
-	.last   .last1  ?+1
-	.a      .a      ?+1
+	.tmp    .tmp    .loophigh
+	#If high=0, then we only need to calculate [lval].
+.looplow:
+	#If the highest bit of [b] is set, add [a] to [lval].
+	.b      .tmp    ?+7
+	.lval   .a      ?+1
+	.tmp    .tmp    ?+7
+	#If [b]=0, we are done.
+	.b      .z      .retlow
+	.tmp    .tmp    ?+1
+	#Left shift [lval].
+	.ltmp   .ltmp   ?+1
+	.ltmp   .lval   ?+1
+	.lval   .ltmp   ?+1
+	.tmp    .b      .looplow
+.rethigh:
+	#Because we terminate 1 iteration late, return [htmp] and [ltmp] instead of
+	#[hval] and [lval].
+	.ltmp   .z-1    ?+7
+	.ltmp   .ltmp   ?+1
+	.htmp   .htmp   ?+1
 	#Set [high].
-	.hval   .h0:0   ?+1
-	.a      .hval   ?+1
-	.h1:0   .a      ?+1
+	.h0     .h0     ?+1
+	.h0     .hret   ?+1
+	.h1     .h1     ?+1
+	.h1     .hret   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .h0:0   ?+1
+	.htmp   .tmp    ?+1
+	.h1:0   .htmp   ?+1
+.retlow:
 	#Set [low].
-	.lval   .l0:0   ?+1
-	.tmp    .lval   ?+1
-	.l1:0   .tmp    ?+1
+	.b      .l0:0   ?+1
+	.ltmp   .b      ?+1
+	.l1:0   .ltmp   ?+1
 	0       0       .arg6:6
 	#Variables
 	0-2 0-1 .z:0 1
-	.last0:.last+1-.ret
-	.last1:.ret-.last-1
 	.tmp:0
 	.a:0
 	.b:0
+	.hret:0
 	.hval:0
+	.htmp:0
 	.lval:0
+	.ltmp:0
 
 
 uint.div:
 	#Call  : 0 ? uint.div quot rem num den
 	#Effect: [quot]=[num]/[den], rounded down
 	#      : [rem] =[num]%[den]
-	#Time  : 45+14*bits = 941
+	#Time  : 53+13*bits = 885
+	#      : 45+ 9*bits = 621 if quot=0
 	#Every loop, shift [quot], [rem], and [num] left by 1. If the top bit of [num] is
 	#set, add 1 to [rem]. Then, if [rem]>=[den], add 1 to [quot] and subtract [den]
 	#from [rem].
@@ -614,13 +639,9 @@ uint.div:
 	.arg4   0       ?+1
 	.arg5   0       ?+1
 	.arg6   0       ?+1
-	#Get quotient.
-	.tmp    .tmp    ?+1
-	.tmp    .arg2:2 ?+1
-	.r0     .r0     ?+1
-	.r0     .tmp    ?+1
-	.r1     .r1     ?+1
-	.r1     .tmp    ?+1
+	#Get quotient. Only set if quot!=0.
+	.qret   .qret   ?+1
+	.qret   .arg2:2 ?+1
 	#Get remainder.
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
@@ -651,56 +672,77 @@ uint.div:
 	.num    .tmp    ?+1
 	#Offset [tmp] by 1 to force [num] to be odd.
 	.tmp    .z+1    ?+1
-	#Start loop.
-	.quot   .quot   ?+1
-	.quot   .z-2    ?+1
-	.rem    .rem    .loop+6
-.loop:
+	.rem    .rem    ?+1
+	.qret   .z      .looprem
+.loopquot:
 	#[rem]+=[num]>>63, [num]<<=1
-	.tmp    .tmp    ?+1
-	.tmp    .num    ?+1
 	.num    .tmp    ?+4
-	.rem    .z-1    ?+1
+	.rem    .z-1    ?+4
+	.num    .z      .retquot
 	#if [rem]>=[den], [quot]+=1
 	.rem    .den    ?+7
 	.rem    .z+1    ?+1
 	.quot   .z-1    ?+4
 	.rem    .nden   ?+1
 	#[quot]<<=1. If this is the last loop, prepare to abort.
-	.tmp    .tmp    .last:.last+1
-	.tmp    .quot   ?+1
-	.quot   .tmp    ?+4
-	.last   .last0  ?+4
-	.quot   .z      ?-5
+	.qtmp   .qtmp   ?+1
+	.qtmp   .quot   ?+1
+	.quot   .qtmp   ?+1
 	#[rem]<<=1
+	.rtmp   .rtmp   ?+1
+	.rtmp   .rem    ?+1
+	.rem    .rtmp   ?+1
 	.tmp    .tmp    ?+1
-	.tmp    .rem    ?+1
-	.rem    .tmp    .loop
-.ret:
-	.last   .last1  ?+1
+	.tmp    .num    .loopquot
+	#If quot=0, then we only need to calculate [rem].
+.looprem:
+	#[rem]+=[num]>>63, [num]<<=1
+	.num    .tmp    ?+4
+	.rem    .z-1    ?+4
+	.num    .z      .retrem
+	#if [rem]>=[den], [quot]+=1
+	.rem    .den    ?+7
+	.rem    .z+1    ?+1
+	.rtmp   .rtmp   ?+7
+	.rem    .nden   ?+1
+	.rtmp   .rtmp   ?+1
+	#[rem]<<=1
+	.rtmp   .rem    ?+1
+	.rem    .rtmp   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .num    .looprem
+.retquot:
+	#Because we terminate 1 iteration late, return [qtmp] and [rtmp] instead of
+	#[quot] and [rem].
 	#Set quotient.
-	.quot   .r0:0   ?+1
-	.tmp    .quot   ?+1
-	.r1:0   .tmp    ?+1
-	#Set remainder.
-	.rem    .r2:0   ?+1
+	.r0     .r0     ?+1
+	.r0     .qret   ?+1
+	.r1     .r1     ?+1
+	.r1     .qret   ?+1
 	.tmp    .tmp    ?+1
-	.tmp    .rem    ?+1
-	.r3:0   .tmp    ?+1
+	.tmp    .r0:0   ?+1
+	.qtmp   .tmp    ?+1
+	.r1:0   .qtmp   ?+1
+.retrem:
+	#Set remainder.
+	.num    .r2:0   ?+1
+	.rtmp   .num    ?+1
+	.r3:0   .rtmp   ?+1
 	0       0       .arg6:6
 .divz:
 	#Abort.
 	0-1     0       ?-2
 	#Variables
 	0-2 0-1 .z:0 1
-	.last0:.last+1-.ret
-	.last1:.ret-.last-1
+	.tmp:0
 	.num:0
 	.den:0
 	.nden:0
+	.qret:0
 	.quot:0
+	.qtmp:0
 	.rem:0
-	.tmp:0
+	.rtmp:0
 
 
 #--------------------------------------------------------------------------------
