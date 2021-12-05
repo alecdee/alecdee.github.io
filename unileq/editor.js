@@ -54,7 +54,7 @@ function UnlInitEditor() {
 		if (unl.state===UNL_RUNNING) {
 			running=1-running;
 		} else {
-			unl.ParseStr(input.value);
+			unl.ParseAssembly(input.value);
 			running=1;
 		}
 		if (running===1) {

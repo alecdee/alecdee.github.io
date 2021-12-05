@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.17
+unileq.js - v1.18
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -446,7 +446,7 @@ function UnlCreate(textout,canvas) {
 		//Functions
 		Clear:   function(){return UnlClear(st);},
 		Print:   function(str){return UnlPrint(st,str);},
-		ParseStr:function(str){return UnlParseStr(st,str);},
+		ParseAssembly:function(str){return UnlParseAssembly(st,str);},
 		GetMem:  function(addr){return UnlGetMem(st,addr);},
 		SetMem:  function(addr,val){return UnlSetMem(st,addr,val);},
 		Run:     function(stoptime){return UnlRun(st,stoptime);}
@@ -495,7 +495,7 @@ function UnlPrint(st,str) {
 	}
 }
 
-function UnlParseStr(st,str) {
+function UnlParseAssembly(st,str) {
 	//Convert unileq assembly language into a unileq program.
 	UnlClear(st);
 	st.state=UNL_RUNNING;

@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.34
+unileq.c - v1.35
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -127,7 +127,15 @@ Windows: cl /O2 unileq.c
 #include <string.h>
 #include <inttypes.h>
 #include <time.h>
-#include <threads.h>
+#ifdef _MSC_VER
+	#include <windows.h>
+	void thrd_sleep(struct timespec* ts,void* zone) {
+		((void)zone);
+		Sleep((DWORD)(ts->tv_sec*1000+ts->tv_nsec/1000000));
+	}
+#else
+	#include <threads.h>
+#endif
 
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -136,17 +144,17 @@ typedef unsigned char uchar;
 //--------------------------------------------------------------------------------
 //Hash map for labels.
 
-typedef struct unllabel {
-	struct unllabel *next,*scope;
+typedef struct UnlLabel {
+	struct UnlLabel *next,*scope;
 	const uchar* data;
 	u64 addr;
 	u32 hash,len,depth;
-} unllabel;
+} UnlLabel;
 
-u32 unllabelcmp(unllabel* l,unllabel* r) {
+u32 UnlLabelCmp(UnlLabel* l,UnlLabel* r) {
 	//Compare two labels from their last character to their first along with any
 	//scope characters. Return 0 if they're equal.
-	unllabel *lv=0,*rv=0;
+	UnlLabel *lv=0,*rv=0;
 	if (l->len!=r->len || l->hash!=r->hash) {return 1;}
 	for (u32 i=l->len-1;i!=(u32)-1;i--) {
 		if (l && i<l->len) {lv=l;l=l->scope;}
@@ -157,16 +165,16 @@ u32 unllabelcmp(unllabel* l,unllabel* r) {
 	return 0;
 }
 
-typedef struct unlhashmap {
-	unllabel** map;
+typedef struct UnlHashMap {
+	UnlLabel** map;
 	u32 mask;
-} unlhashmap;
+} UnlHashMap;
 
-unlhashmap* unlhashcreate(void) {
-	unlhashmap* map=(unlhashmap*)malloc(sizeof(unlhashmap));
+UnlHashMap* UnlHashCreate(void) {
+	UnlHashMap* map=(UnlHashMap*)malloc(sizeof(UnlHashMap));
 	if (map) {
 		map->mask=(1<<20)-1;
-		map->map=(unllabel**)malloc((map->mask+1)*sizeof(unllabel*));
+		map->map=(UnlLabel**)malloc((map->mask+1)*sizeof(UnlLabel*));
 		if (map->map) {
 			for (u32 i=0;i<=map->mask;i++) {map->map[i]=0;}
 			return map;
@@ -176,10 +184,10 @@ unlhashmap* unlhashcreate(void) {
 	return 0;
 }
 
-void unlhashfree(unlhashmap* map) {
+void UnlHashFree(UnlHashMap* map) {
 	if (map) {
 		for (u32 i=0;i<=map->mask;i++) {
-			unllabel *lbl,*next=map->map[i];
+			UnlLabel *lbl,*next=map->map[i];
 			while ((lbl=next)) {
 				next=lbl->next;
 				free(lbl);
@@ -190,7 +198,7 @@ void unlhashfree(unlhashmap* map) {
 	}
 }
 
-unllabel* unllabelinit(unlhashmap* map,unllabel* lbl,unllabel* scope,const uchar* data,u32 len) {
+UnlLabel* UnlLabelInit(UnlHashMap* map,UnlLabel* lbl,UnlLabel* scope,const uchar* data,u32 len) {
 	//Initialize a label and return a match if we find one.
 	//Count .'s to determine what scope we should be in.
 	u32 depth=0;
@@ -221,15 +229,15 @@ unllabel* unllabelinit(unlhashmap* map,unllabel* lbl,unllabel* scope,const uchar
 	}
 	lbl->hash=hash;
 	//Search for a match.
-	unllabel* match=map->map[hash&map->mask];
-	while (match && unllabelcmp(match,lbl)) {match=match->next;}
+	UnlLabel* match=map->map[hash&map->mask];
+	while (match && UnlLabelCmp(match,lbl)) {match=match->next;}
 	return match;
 }
 
-unllabel* unllabeladd(unlhashmap* map,unllabel* lbl) {
-	unllabel* dst=(unllabel*)malloc(sizeof(unllabel));
+UnlLabel* UnlLabelAdd(UnlHashMap* map,UnlLabel* lbl) {
+	UnlLabel* dst=(UnlLabel*)malloc(sizeof(UnlLabel));
 	if (dst) {
-		memcpy(dst,lbl,sizeof(unllabel));
+		memcpy(dst,lbl,sizeof(UnlLabel));
 		u32 hash=dst->hash&map->mask;
 		dst->next=map->map[hash];
 		map->map[hash]=dst;
@@ -246,39 +254,39 @@ unllabel* unllabeladd(unlhashmap* map,unllabel* lbl) {
 #define UNL_ERROR_MEMORY 3
 #define UNL_MAX_PARSE    (1<<30)
 
-typedef struct unlstate {
+typedef struct UnlState {
 	u64 *mem,alloc,ip;
 	u32 state;
 	char statestr[256];
-} unlstate;
+} UnlState;
 
-void unlclear(unlstate* st);
-void unlsetmem(unlstate* st,u64 addr,u64 val);
+void UnlClear(UnlState* st);
+void UnlSetMem(UnlState* st,u64 addr,u64 val);
 
-unlstate* unlcreate(void) {
+UnlState* UnlCreate(void) {
 	//Allocate a unileq interpreter.
-	unlstate* st=(unlstate*)malloc(sizeof(unlstate));
+	UnlState* st=(UnlState*)malloc(sizeof(UnlState));
 	if (st) {
 		st->mem=0;
-		unlclear(st);
+		UnlClear(st);
 	}
 	return st;
 }
 
-void unlfree(unlstate* st) {
+void UnlFree(UnlState* st) {
 	if (st) {
-		unlclear(st);
+		UnlClear(st);
 		free(st);
 	}
 }
 
-void unlparsestr(unlstate* st,const char* str) {
+void UnlParseAssembly(UnlState* st,const char* str) {
 	//Convert unileq assembly language into a unileq program.
 	#define  CNUM(c) ((uchar)(c<='9'?c-'0':((c-'A')&~32)+10))
 	#define ISLBL(c) (CNUM(c)<36 || c=='_' || c=='.' || c>127)
 	#define  ISOP(c) (c=='+' || c=='-')
 	#define     NEXT (c=i++<len?ustr[i-1]:0)
-	unlclear(st);
+	UnlClear(st);
 	u32 i=0,j=0,len=0;
 	const uchar* ustr=(const uchar*)str;
 	uchar c,op;
@@ -289,10 +297,10 @@ void unlparsestr(unlstate* st,const char* str) {
 	}
 	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
 	//Process the string in 2 passes. The first pass is needed to find label values.
-	unlhashmap* map=unlhashcreate();
+	UnlHashMap* map=UnlHashCreate();
 	if (map==0) {err="Unable to allocate hash map";}
 	for (u32 pass=0;pass<2 && err==0;pass++) {
-		unllabel *scope=0,*lbl,lbl0;
+		UnlLabel *scope=0,*lbl,lbl0;
 		u64 addr=0,val=0,acc=0;
 		op=0;
 		i=0;
@@ -335,13 +343,13 @@ void unlparsestr(unlstate* st,const char* str) {
 			} else if (ISLBL(c)) {
 				//Label.
 				while (ISLBL(c)) {NEXT;}
-				lbl=unllabelinit(map,&lbl0,scope,ustr+(j-1),i-j);
+				lbl=UnlLabelInit(map,&lbl0,scope,ustr+(j-1),i-j);
 				if (c==':') {
 					//Label declaration.
 					if (pass==0) {
 						if (lbl) {err="Duplicate label declaration";}
 						lbl0.addr=addr;
-						lbl=unllabeladd(map,&lbl0);
+						lbl=UnlLabelAdd(map,&lbl0);
 						if (lbl==0) {err="Unable to allocate label";}
 					}
 					scope=lbl;
@@ -361,7 +369,7 @@ void unlparsestr(unlstate* st,const char* str) {
 				//Add a new value to memory.
 				if (op=='+') {val=acc+val;}
 				else if (op=='-') {val=acc-val;}
-				else if (pass) {unlsetmem(st,addr-1,acc);}
+				else if (pass) {UnlSetMem(st,addr-1,acc);}
 				addr++;
 				acc=val;
 				op=0;
@@ -369,7 +377,7 @@ void unlparsestr(unlstate* st,const char* str) {
 			}
 		}
 		if (err==0 && ISOP(op)) {err="Trailing operator";}
-		if (pass) {unlsetmem(st,addr-1,acc);}
+		if (pass) {UnlSetMem(st,addr-1,acc);}
 	}
 	if (err) {
 		//We've encountered a parsing error.
@@ -403,12 +411,12 @@ void unlparsestr(unlstate* st,const char* str) {
 		}
 		snprintf(st->statestr,sizeof(st->statestr),fmt,err,line,window,under);
 	}
-	unlhashfree(map);
+	UnlHashFree(map);
 }
 
-void unlparsefile(unlstate* st,const char* path) {
+void UnlParseFile(UnlState* st,const char* path) {
 	//Load and parse a source file.
-	unlclear(st);
+	UnlClear(st);
 	st->state=UNL_ERROR_PARSER;
 	FILE* in=fopen(path,"rb");
 	//Check if the file exists.
@@ -429,13 +437,13 @@ void unlparsefile(unlstate* st,const char* path) {
 		fseek(in,0,SEEK_SET);
 		for (size_t i=0;i<size;i++) {str[i]=(char)getc(in);}
 		str[size]=0;
-		unlparsestr(st,str);
+		UnlParseAssembly(st,str);
 		free(str);
 	}
 	fclose(in);
 }
 
-void unlclear(unlstate* st) {
+void UnlClear(UnlState* st) {
 	st->state=UNL_RUNNING;
 	st->statestr[0]=0;
 	st->ip=0;
@@ -444,26 +452,26 @@ void unlclear(unlstate* st) {
 	st->alloc=0;
 }
 
-void unlprintstate(unlstate* st) {
+void UnlPrintState(UnlState* st) {
 	const char* str=st->statestr;
 	if (str[0]==0 && st->state==UNL_RUNNING) {str="Running\n";}
 	printf("Unileq state: %08x\n%s",st->state,str);
 }
 
-u64 unlgetip(unlstate* st) {
+u64 UnlGetIP(UnlState* st) {
 	return st->ip;
 }
 
-void unlsetip(unlstate* st,u64 ip) {
+void UnlSetIP(UnlState* st,u64 ip) {
 	st->ip=ip;
 }
 
-u64 unlgetmem(unlstate* st,u64 addr) {
+u64 UnlGetMem(UnlState* st,u64 addr) {
 	//Return the memory value at addr.
 	return addr<st->alloc?st->mem[addr]:0;
 }
 
-void unlsetmem(unlstate* st,u64 addr,u64 val) {
+void UnlSetMem(UnlState* st,u64 addr,u64 val) {
 	//Write val to the memory at addr.
 	if (addr>=st->alloc) {
 		//If we're writing to an address outside of our memory, attempt to resize it or
@@ -494,7 +502,7 @@ void unlsetmem(unlstate* st,u64 addr,u64 val) {
 	st->mem[addr]=val;
 }
 
-void unlrun(unlstate* st,u32 iters) {
+void UnlRun(UnlState* st,u32 iters) {
 	//Run unileq for a given number of iterations. If iters=-1, run forever. We will
 	//spend 99% of our time in this function.
 	if (st->state!=UNL_RUNNING) {
@@ -541,7 +549,7 @@ void unlrun(unlstate* st,u32 iters) {
 		ip=ip<alloc?mem[ip]:0;
 		if (a<io) {
 			//Execute a normal unileq instruction.
-			unlsetmem(st,a,-mb);
+			UnlSetMem(st,a,-mb);
 			if (st->state!=UNL_RUNNING) {
 				break;
 			}
@@ -570,10 +578,10 @@ void unlrun(unlstate* st,u32 iters) {
 //Example usage. Call "unileq file.unl" to run a file.
 
 int main(int argc,char** argv) {
-	unlstate* unl=unlcreate();
+	UnlState* unl=UnlCreate();
 	if (argc<=1) {
 		//Print a usage message.
-		unlparsestr(
+		UnlParseAssembly(
 			unl,
 			"loop: len  ?     neg   #if [len]=0, exit\n"
 			"      0-2  data  ?+1   #print a letter\n"
@@ -585,14 +593,14 @@ int main(int argc,char** argv) {
 		);
 	} else {
 		//Load a file.
-		unlparsefile(unl,argv[1]);
+		UnlParseFile(unl,argv[1]);
 	}
 	//Main loop.
-	unlrun(unl,(u32)-1);
+	UnlRun(unl,(u32)-1);
 	//Exit and print status if there was an error.
 	u32 ret=unl->state;
-	if (ret!=UNL_COMPLETE) {unlprintstate(unl);}
-	unlfree(unl);
+	if (ret!=UNL_COMPLETE) {UnlPrintState(unl);}
+	UnlFree(unl);
 	return (int)ret;
 }
 
