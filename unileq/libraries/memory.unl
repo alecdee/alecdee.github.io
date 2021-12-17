@@ -43,11 +43,12 @@ Version History
 --------------------------------------------------------------------------------
 TODO
 
+Replace alloc hash table with AVL tree.
+Simplify mem.alloc.verify using mem.get and mem.cmp.
 mem.sort
 	Have comparison function. use jumps.
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2
-Simplify mem.alloc.verify using mem.get and mem.cmp.
 Optimize mem.realloc. Don't use mem.zero, just mem.copy.
 |#
 
