@@ -1,11 +1,14 @@
 #|==============================================================================
 
-Unsigned Integer Operations - v4.03
+
+Unsigned Integer Operations - v4.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
+
 --------------------------------------------------------------------------------
 Notes
+
 
 This library provides functions for performing most of the common unsigned
 integer operations. In particular, it handles: comparisons, arithmetic, and
@@ -21,8 +24,10 @@ This library does not depend on any other libraries.
 
 Worst case time complexity:
 
+
        Function  |  Time  |      O(n)
      ------------+--------+----------------
+         print   |     -  |   -
           cmp    |    28  |  28
           min    |    38  |  38
           max    |    38  |  38
@@ -39,8 +44,13 @@ Worst case time complexity:
            or    |   486  |  45 +  7*bits
           xor    |   487  |  46 +  7*bits
 
+
 --------------------------------------------------------------------------------
 Index
+
+
+Strings
+uint.print num base padding padchar
 
 Comparisons
 uint.cmp a b lt eq gt
@@ -63,8 +73,10 @@ uint.and ret a b
 uint.or  ret a b
 uint.xor ret a b
 
+
 --------------------------------------------------------------------------------
 Version History
+
 
 1.00
      Initial version. Used uint.cmp, mem.get, and mem.set for proof of concept.
@@ -124,16 +136,173 @@ Version History
 4.03
      Removed a testing function for uint.shl that was included by accident.
      Cleaned up function descriptions.
+4.04
+     Added uint.print for string printing.
+
 
 --------------------------------------------------------------------------------
 TODO
+
 
 uint.shr
 	Remove bit counting.
 	Use the relation (n<<<k) - (n<<k) = n>>(64-k).
 Use global "uint" scope and shared variables (.z:, .tmp:, etc).
+See if fibonacci multiplication is faster than uint.mul.
+See if there's a way to perform functions for non 2^n mods.
 
 |#
+
+
+#--------------------------------------------------------------------------------
+#Strings
+
+
+uint.print:
+	#Call  : 0 ? uint.print num base padding padchar
+	#Effect: Prints a number in an arbitrary base.
+	#This function works even if unileq's underlying integers are not a power of two.
+	#Setup stack pointer.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	.tmp    .z-2    ?+1
+	0       .tmp    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	.arg6   0       ?+1
+	#Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .p0:0   ?+1
+	.num    .num    ?+1
+	.num    .nnum   ?+1
+	#Get [pad].
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.p2     .p2     ?+1
+	.p2     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p2:0   ?+1
+	.pad    .pad    ?+1
+	.pad    .tmp    ?+1
+	#Get [padchr].
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.p3     .p3     ?+1
+	.p3     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p3:0   ?+1
+	.padchr .padchr ?+1
+	.padchr .tmp    ?+1
+	#Get [base].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p1     .p1     ?+1
+	.p1     .tmp    ?+1
+	.nbase  .nbase  ?+1
+	.nbase  .p1:0   ?+1
+	.base   .base   ?+1
+	.base   .nbase  ?+1
+	.nbase  .base   ?+1
+	#Make sure 1 <= [base] <= 16.
+	.base   .z      ?+7
+	.base   .z+1    .unary
+	.base   .maxbas .notunary
+	0-1     0       ?-2
+.unary:
+	#[base] = 1. Print 1's like hash marks.
+	#Pad while [pad] > [num].
+	.pad    .num    .unarypaddone
+	0-2     .padchr ?+1
+	.pad    .z+1    .unarypaddone
+	0-2     .padchr ?-5
+.unarypaddone:
+	#Print 1's while [num] > 0.
+	.num    .z      .ret
+	0-2     .hex+2  ?+1
+	.num    .z+1    .ret
+	0-2     .hex+2  ?-5
+.notunary:
+	#Calculate the most significant digit and how many digits are in [num].
+	.den    .den    ?+1
+	.lden   .lden   ?+1
+	.base   .base   ?+1
+	.base   .nbase  ?+1
+	.chr    .chr    ?+1
+	.chr    .z-1    ?+1
+.firstloop:
+	.digits .z-1    ?+1
+	#num-=den
+	.chr    .base   ?+1
+	.num    .den   .firstdone
+	.num    .z+1    ?+1
+	.chr    .z-2    ?-8
+	#den=base*lden-1
+	.lden   .lden   ?+1
+	.lden   .den    ?+1
+	.den    .den    ?+1
+	.den    .nnum   ?+1
+	.den    .num    ?+1
+	.den    .z+1    ?+1
+	.num    .num    ?+1
+	.num    .nnum   .firstloop
+.firstdone:
+	#Print padding.
+	.pad    .digits ?+10
+	0-2     .padchr ?+1
+	.pad    .z+1    ?+4
+	0-2     .padchr ?-5
+	#Correct [num], [base], and [den].
+	.chr    .nbase  ?+1
+	.base   .z+2    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .den    ?+1
+	.num    .tmp    ?+1
+	.den    .den    ?+1
+	.den    .lden   .printdigit
+.nextloop:
+	#num=num*base
+	.z+1    .base   ?+1
+	.num    .lden   ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .num    ?+1
+	.num    .nnum   ?+1
+	.z+1    .z-2    ?-5
+.printdigit:
+	#Print a digit.
+	.chr    .nhex   ?+1
+	0-2     .chr:0  ?+1
+	.digits .z+1    .ret
+	#digit=num/den
+	.chr    .chr    ?+1
+	.num    .den    .nextloop
+	.num    .z+1    ?+1
+	.chr    .z-2    ?-8
+.ret:
+	0       0       .arg6:6
+	#Variables
+	0-2 0-1 .z:0 1 2
+	.nnum:0
+	.num:0
+	.maxbas:16-1
+	.nbase:0
+	.base:0
+	.pad:0
+	.padchr:32
+	.digits:0
+	.tmp:0
+	.den:0
+	.lden:0
+	.hex:
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
+		56 56 57 57 65 65 66 66 67 67 68 68 69 69 70 70
+	.nhex:0-.hex
+
 
 #--------------------------------------------------------------------------------
 #Comparisons
@@ -1229,4 +1398,5 @@ uint.xor:
 	.a:0 .atmp:0
 	.b:0 .btmp:0
 	.off:0
+
 

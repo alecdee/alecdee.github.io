@@ -1,34 +1,3 @@
-0 0 demo
-
-demo:
-
-	#Division
-	0 ? uint.div .ret0 .ret1 .num .den
-	0 ? print string.uint .num 32 47 32 string.uint .den 32 61 32 string.uint .ret0 32 114 101 109 97 105 110 100 101 114 32 string.uint .ret1 10 0
-
-	#Random mod
-	0 ? random.mod .ret0 .mod
-	0 ? print 109 111 100 32 string.uint .mod 58 32 string.uint .ret0 10 0
-
-	#Allocation
-	0 ? mem.alloc .mem .len
-	0 ? mem.free .mem
-
-	0-1 0 0
-
-	#Variables
-	.ret0: 0
-	.ret1: 0
-
-	.num:  933
-	.den:  51
-
-	.mod:  20
-
-	.mem:  0
-	.len:  100
-
-
 #|==============================================================================
 
 

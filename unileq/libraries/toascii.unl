@@ -1,6 +1,6 @@
 #|==============================================================================
 
-ASCII Converter - v1.02
+ASCII Converter - v1.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -27,7 +27,8 @@ toascii:
 	.tmp1   .tmp0   ?+1
 	.tmp0   .eol    ?+1
 	.tmp0   0       .exit
-	0 ? print 0-1 .tmp1 32 0
+	0 ? uint.print .tmp1
+	0 ? print 32 0
 	.tmp0   .tmp0   ?+1
 	.tmp0   0-3     .loop
 .exit:
@@ -40,9 +41,8 @@ toascii:
 
 
 print:
-	#Call: 0 ? print char0 char1 char2 ... 0
-	#Print function. Prints a zero terminated ASCII string. If -1 is used as a
-	#character value, then treat the next character as a pointer to a number.
+	#Call  : 0 ? print char0 char1 char2 ... 0
+	#Effect: Prints a string.
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1
@@ -53,66 +53,104 @@ print:
 	.tmp    .ptr:0  ?+1
 	.ptr    .z-1    ?+1
 	.char   .char   ?+1
-	.char   .tmp    .p0:?+1
+	.char   .tmp    ?+1
 	#If [char]=0, we've reached the end of the string.
 	.char   .z      .ret
-	#If [char]>0, and [tmp]<=1, then [char]=-1.
-	.tmp    .z+1    .numprep
 	#Print [char].
-.print:
 	0-2     .char   ?+1
 	.tmp    .tmp    .loop
-.numprep:
-	#Prepare to print a number.
-	#First entry. Jump back to beginning of loop to get the number's pointer.
-	.p0     .pset   .loop
-	#Second entry. Get the number from [char].
-	.p0     .prem   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .char:0 ?+1
-	.num    .tmp    ?+1
-	.show   .show   ?+1
-	.base   .base0  ?+1
-.numloop:
-	#Store a power of 10 in [tmp].
-	.tmp    .tmp    ?+1
-	.tmp    .base:.base0-1 ?+1
-	.char   .char   ?+1
-	.char   .char0  ?+1
-	#Subtract [tmp] from [num] to get the next digit.
-.digitloop:
-	.num    .tmp    .digitdone
-	.num    .z+1    ?+1
-	.show   .z-1    ?+1
-	.char   .z-1    .digitloop
-.digitdone:
-	#If [tmp]=0 then return to the main loop and print the last digit.
-	.tmp    .z      .print
-	#Add [num]+=[tmp] to correct for the last [num]-[tmp] operation.
-	.z      .tmp    ?+1
-	.num    .z      ?+1
-	.z      .z      ?+1
-	#If [show]>0, then we can print digits.
-	.show   .z      .noshow
-	0-2     .char   ?+1
-.noshow:
-	.base   .z-1    .numloop
 	#Variables
 	0-2 0-1 .z:0 1
 	.num:0
 	.tmp:0
-	.show:0
-	.char0:0-48
-	.pset:.p0-.numprep-2
-	.prem:.numprep-.p0+2
-	#1-10^n
-	.base10:
-		0-9999999999999999999 0-999999999999999999 0-99999999999999999
-		   0-9999999999999999    0-999999999999999    0-99999999999999
-		      0-9999999999999       0-999999999999       0-99999999999
-		         0-9999999999          0-999999999          0-99999999
-		            0-9999999             0-999999             0-99999
-		               0-9999                0-999                0-99
-		                  0-9                    0
-	.base0:?-.base10-1
+	.char:0
+
+
+uint.print:
+	#Call  : 0 ? uint.print num
+	#Effect: Prints a number in an arbitrary base.
+	#This function works even if unileq's underlying integers are not a power of two.
+	#Setup stack pointer.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	.tmp    .z-2    ?+1
+	0       .tmp    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	#Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .p0:0   ?+1
+	.num    .num    ?+1
+	.num    .nnum   ?+1
+.notunary:
+	#Calculate the most significant digit and how many digits are in [num].
+	.den    .den    ?+1
+	.lden   .lden   ?+1
+	.base   .base   ?+1
+	.base   .nbase  ?+1
+	.chr    .chr    ?+1
+	.chr    .z-1    ?+1
+.firstloop:
+	.digits .z-1    ?+1
+	#num-=den
+	.chr    .base   ?+1
+	.num    .den   .firstdone
+	.num    .z+1    ?+1
+	.chr    .z-2    ?-8
+	#den=base*lden-1
+	.lden   .lden   ?+1
+	.lden   .den    ?+1
+	.den    .den    ?+1
+	.den    .nnum   ?+1
+	.den    .num    ?+1
+	.den    .z+1    ?+1
+	.num    .num    ?+1
+	.num    .nnum   .firstloop
+.firstdone:
+	#Correct [num], [base], and [den].
+	.chr    .nbase  ?+1
+	.base   .z+2    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .den    ?+1
+	.num    .tmp    ?+1
+	.den    .den    ?+1
+	.den    .lden   .printdigit
+.nextloop:
+	#num=num*base
+	.z+1    .base   ?+1
+	.num    .lden   ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .num    ?+1
+	.num    .nnum   ?+1
+	.z+1    .z-2    ?-5
+.printdigit:
+	#Print a digit.
+	.chr    .nhex   ?+1
+	0-2     .chr:0  ?+1
+	.digits .z+1    .ret
+	#digit=num/den
+	.chr    .chr    ?+1
+	.num    .den    .nextloop
+	.num    .z+1    ?+1
+	.chr    .z-2    ?-8
+.ret:
+	0       0       .arg3:3
+	#Variables
+	0-2 0-1 .z:0 1 2
+	.nnum:0
+	.num:0
+	.nbase:0-20
+	.base:0
+	.digits:0
+	.tmp:0
+	.den:0
+	.lden:0
+	.hex:
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
+		56 56 57 57
+	.nhex:0-.hex
 

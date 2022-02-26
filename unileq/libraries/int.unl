@@ -1,0 +1,285 @@
+#|==============================================================================
+
+
+Signed Integer Operations - v1.00
+
+Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+
+
+--------------------------------------------------------------------------------
+Notes
+
+
+This library provides functions for performing the signed integer operations
+that uint.unl doesn't cover. If unileq's underlying integers are mod N, then we
+consider an integer to be negative if x >= floor((N+1)/2).
+
+All functions are bit length agnostic. They don't need to be modified even if
+unileq uses a something other than 64 bit integers.
+
+The 0 address will always be 0 upon function return, even if one of the return
+value addresses is 0.
+
+This library does not depend on any other libraries.
+
+Worst case time complexity:
+
+
+       Function  |  Time  |      O(n)
+     ------------+--------+----------------
+         print   |     -  |   -
+          cmp    |     -  |   -
+          min    |     -  |   -
+          max    |     -  |   -
+          mul    |     -  |   -
+          div    |     -  |   -
+          shr    |     -  |   -
+
+
+--------------------------------------------------------------------------------
+Index
+
+
+Strings
+int.print num base padding padchar sign
+
+Comparisons
+int.cmp a b lt eq gt
+int.min ret a b
+int.max ret a b
+
+Integer Arithmetic
+int.mul high low a b
+int.div quot rem num den
+
+Bitwise Arithmetic
+int.shr ret num shift
+
+
+--------------------------------------------------------------------------------
+Version History
+
+
+1.00
+     Initial version.
+     Most functions are based off of their unsigned equivalents.
+
+
+--------------------------------------------------------------------------------
+TODO
+
+cmp
+min
+max
+mul
+div
+shr
+|#
+
+
+#--------------------------------------------------------------------------------
+#Strings
+
+
+int.print:
+	#Call  : 0 ? int.print num base padding padchar sign
+	#Effect: Prints a number in an arbitrary base. If the padding character is
+	#whitespace, print the sign after padding.
+	#This function works even if unileq's underlying integers are not a power of two.
+	#Setup stack pointer.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	.tmp    .z-2    ?+1
+	0       .tmp    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	.arg6   0       ?+1
+	.arg7   0       ?+1
+	#Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .p0:0   ?+1
+	.num    .num    ?+1
+	.num    .nnum   ?+1
+	#Check if [num] < 0.
+	.nnum   .z+1    ?+1
+	.num    .nnum   .notneg
+	#Set [nnum] = [num].
+	.tmp    .tmp    ?+1
+	.tmp    .num    ?+1
+	.nnum   .tmp    ?+1
+	.sign   .nneg   .isneg
+.notneg:
+	.nnum   .z-1    ?+1
+	#Load [sign].
+	.tmp    .tmp    ?+1
+	.tmp    .arg6:6 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.p4:0   .z      .isneg
+	.sign   .nplus  ?+1
+.isneg:
+	.num    .num    ?+1
+	.num    .nnum   ?+1
+	#Get [pad].
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.p2     .p2     ?+1
+	.p2     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p2:0   ?+1
+	.pad    .pad    ?+1
+	.pad    .tmp    ?+1
+	#Get [padchr].
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.p3     .p3     ?+1
+	.p3     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p3:0   ?+1
+	.padchr .padchr ?+1
+	.padchr .tmp    ?+1
+	#If [padchr] is not whitespace, print [sign] before padding.
+	.sign   .z      .nosign
+	.pad    .z      ?+4
+	.pad    .z+1    ?+1
+	.padchr .white  ?+7
+	0-2     .sign   ?+1
+	.sign   .sign   ?+1
+	.padchr .nwhite ?+1
+.nosign:
+	#Get [base].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p1     .p1     ?+1
+	.p1     .tmp    ?+1
+	.nbase  .nbase  ?+1
+	.nbase  .p1:0   ?+1
+	.base   .base   ?+1
+	.base   .nbase  ?+1
+	.nbase  .base   ?+1
+	#Make sure 1 <= [base] <= 16.
+	.base   .z      ?+7
+	.base   .z+1    .unary
+	.base   .maxbas .notunary
+	0-1     0       ?-2
+.unary:
+	#[base] = 1. Print 1's like hash marks.
+	#Pad while [pad] > [num].
+	.pad    .num    .unarypaddone
+	0-2     .padchr ?+1
+	.pad    .z+1    .unarypaddone
+	0-2     .padchr ?-5
+.unarypaddone:
+	#Print the sign if we haven't yet.
+	.sign   .z      ?+7
+	0-2     .sign   ?+1
+	.sign   .sign   ?+1
+	#Print 1's while [num] > 0.
+	.num    .z      .ret
+	0-2     .hex+2  ?+1
+	.num    .z+1    .ret
+	0-2     .hex+2  ?-5
+.notunary:
+	#Calculate the most significant digit and how many digits are in [num].
+	.den    .den    ?+1
+	.lden   .lden   ?+1
+	.base   .base   ?+1
+	.base   .nbase  ?+1
+	.chr    .chr    ?+1
+	.chr    .z-1    ?+1
+.firstloop:
+	.digits .z-1    ?+1
+	#num-=den
+	.chr    .base   ?+1
+	.num    .den   .firstdone
+	.num    .z+1    ?+1
+	.chr    .z-2    ?-8
+	#den=base*lden-1
+	.lden   .lden   ?+1
+	.lden   .den    ?+1
+	.den    .den    ?+1
+	.den    .nnum   ?+1
+	.den    .num    ?+1
+	.den    .z+1    ?+1
+	.num    .num    ?+1
+	.num    .nnum   .firstloop
+.firstdone:
+	#Print padding.
+	.pad    .digits ?+10
+	0-2     .padchr ?+1
+	.pad    .z+1    ?+4
+	0-2     .padchr ?-5
+	#Print the sign if we haven't yet.
+	.sign   .z      ?+7
+	0-2     .sign   ?+1
+	.sign   .sign   ?+1
+	#Correct [num], [base], and [den].
+	.chr    .nbase  ?+1
+	.base   .z+2    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .den    ?+1
+	.num    .tmp    ?+1
+	.den    .den    ?+1
+	.den    .lden   .printdigit
+.nextloop:
+	#num=num*base
+	.z+1    .base   ?+1
+	.num    .lden   ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .num    ?+1
+	.num    .nnum   ?+1
+	.z+1    .z-2    ?-5
+.printdigit:
+	#Print a digit.
+	.chr    .nhex   ?+1
+	0-2     .chr:0  ?+1
+	.digits .z+1    .ret
+	#digit=num/den
+	.chr    .chr    ?+1
+	.num    .den    .nextloop
+	.num    .z+1    ?+1
+	.chr    .z-2    ?-8
+.ret:
+	0       0       .arg7:7
+	#Variables
+	0-2 0-1 .z:0 1 2
+	.nnum:0
+	.num:0
+	.maxbas:16-1
+	.nbase:0
+	.base:0
+	.pad:0
+	.padchr:32
+	.digits:0
+	.tmp:0
+	.den:0
+	.lden:0
+	.white:32
+	.nwhite:0-32
+	.sign:0
+	.nplus:0-43
+	.nneg:0-45
+	.hex:
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
+		56 56 57 57 65 65 66 66 67 67 68 68 69 69 70 70
+	.nhex:0-.hex
+
+
+#--------------------------------------------------------------------------------
+#Comparisons
+
+
+#--------------------------------------------------------------------------------
+#Integer Arithmetic
+
+
+#--------------------------------------------------------------------------------
+#Bitwise Arithmetic
+
+

@@ -17,27 +17,46 @@ one instruction into an easy to use architecture.</p>
 <br>
 <p>Libraries:<br>
 <br>
-<a href="#printing" style="margin-left:4rem">String Printing</a><br>
+<a href="#master" style="margin-left:4rem">Master Library</a><br>
+<a href="#strings" style="margin-left:4rem">Strings</a><br>
 <a href="#uint" style="margin-left:4rem">Unsigned Math</a><br>
+<a href="#int" style="margin-left:4rem">Signed Math</a><br>
 <a href="#random" style="margin-left:4rem">Random Number Generation</a><br>
 <a href="#memory" style="margin-left:4rem">Memory</a><br></p>
 </div>
 
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ String Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="printing"><h1>String Printing</h1>
-<p>Download <a href="./print.unl">print.unl</a> or try the live demo
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Master Library ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="master"><h1>Master Library</h1>
+<p><a href="./master.unl">master.unl</a> contains all libraries for ease of use in other
+projects.</p>
+</div>
+
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Strings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="strings"><h1>Strings</h1>
+<p>Download <a href="./string.unl">string.unl</a> or try the live demo
 <a href="../index.html?demo=String%20Printing">here</a>.</p>
 <br>
-<p><a href="./print.unl">print.unl</a> is fundamental to working on other libraries. It defines the
-<i>print</i> function which allows us to print ASCII strings as well as numerical values. This
-allows to print diagnostic messages and see what other libraries are actually doing. It can be
+<p><a href="./string.unl">string.unl</a> is fundamental to working on other libraries. It defines
+the <i>print</i> function which allows us to print ASCII strings as well as numerical values. This
+is needed to print diagnostic messages and see what other libraries are actually doing. It can be
 called like this:</p>
 <br>
-<div class="codeblock langunileq">0 ? print 120 32 61 32 0-1 x 10 0</div>
+<div class="codeblock langunileq">0 ? print 120 32 61 32 string.uint x 10 0</div>
 <br>
-<p>The numbers after <i>print</i> are the ASCII values for "x = ", followed by <i>0-1 x</i> which
-prints out the value of <i>[x]</i>. So if <i>[x]=20</i>, then this will get output to the console:
-</p>
+<p>The example can be broken up into a few parts:</p>
+<br>
+<table class="listtable">
+<tr><td><i>0 ? print</i></td><td>the unileq instruction that jumps to the <i>print</i> function and
+tells it where we called from.</td></tr>
+<tr><td><i>120 32 61 32</i></td><td>the ASCII values for "x = ".</td></tr>
+<tr><td><i>string.uint</i></td><td>a special value that tells <i>print</i> that the next value is
+an unsigned integer.</td></tr>
+<tr><td><i>x</i></td><td>the unsigned integer to output.</td></tr>
+<tr><td><i>10</i></td><td>the ASCII value for an end-of-line.</td></tr>
+<tr><td><i>0</i></td><td>the end of the string.</td></tr>
+</table>
+<br>
+<p>So if <i>[x]</i> is <i>20</i>, then this will get output to the console:</p>
 <br>
 <div class="consoleblock">x = 20</div>
 <br>
@@ -70,6 +89,7 @@ instructions required per function call.</p>
 <br>
 <table class="datatable insttable headerrow">
 <tr><td>Function</td><td>Time</td></tr>
+<tr><td>print</td><td>-</td></tr>
 <tr><td>cmp</td><td>29</td></tr>
 <tr><td>min</td><td>38</td></tr>
 <tr><td>max</td><td>38</td></tr>
@@ -91,6 +111,26 @@ instructions required per function call.</p>
 the live version linked above.</p>
 </div>
 
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Signed Math ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+<div class="content" id="int"><h1>Signed Math</h1>
+<p>Download <a href="./int.unl">int.unl</a>.</p>
+<br>
+<p><a href="./int.unl">int.unl</a> covers all of the signed integer functions that
+<a href="./uint.unl">uint.unl</a> doesn't cover. The table below gives the worst case number of
+instructions required per function call.</p>
+<br>
+<table class="datatable insttable headerrow">
+<tr><td>Function</td><td>Time</td></tr>
+<tr><td>print</td><td>-</td></tr>
+<tr><td>cmp</td><td>not added yet</td></tr>
+<tr><td>min</td><td>not added yet</td></tr>
+<tr><td>max</td><td>not added yet</td></tr>
+<tr><td>mul</td><td>not added yet</td></tr>
+<tr><td>div</td><td>not added yet</td></tr>
+<tr><td>shr</td><td>not added yet</td></tr>
+</table>
+</div>
+
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Random Number Generation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="random"><h1>Random Number Generation</h1>
 <p>Download <a href="./random.unl">random.unl</a> or try the live demo
@@ -105,7 +145,7 @@ random.get     dst
 random.mod     dst mod
 random.shuffle arr len</div>
 <br>
-<p>For instance, to get a random number mod 52 and store it in <i>rand</i>, call:</p>
+<p>For instance, to get a random number modulo 52 and store it in <i>rand</i>, call:</p>
 <br>
 <div class="codeblock langunileq">0 ? random.get rand mod
 rand: 0
@@ -121,7 +161,8 @@ the live version linked above.</p>
 <a href="../index.html?demo=Memory">here</a>.</p>
 <br>
 <p><a href="./memory.unl">memory.unl</a> defines functions for managing and allocating memory. In
-order to allocate memory safely, it needs to be last when concatenating with other libraries.</p>
+order to allocate memory safely, the library needs to be last when concatenating with other
+libraries.</p>
 <br>
 <div class="codeblock langunileq">mem.getargs dst0 refs0 dst1 refs1 ... 0
 
@@ -138,13 +179,13 @@ mem.realloc ret mem len
 mem.free    mem
 mem.alloc.verifyfree</div>
 <br>
-<p>For instance, to allocate a block of memory with <i>30</i> cells and set <i>mem[2]=400</i>:</p>
+<p>For instance, to allocate a block of memory with <i>30</i> cells and set <i>arr[2]=400</i>:</p>
 <br>
-<div class="codeblock langunileq">0 ? mem.alloc mem len
-0 ? mem.set   mem idx val
-0 ? mem.free  mem
+<div class="codeblock langunileq">0 ? mem.alloc arr len
+0 ? mem.set   arr idx val
+0 ? mem.free  arr
 
-mem: 0
+arr: 0
 len: 30
 idx: 2
 val: 400</div>
@@ -154,7 +195,7 @@ the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 30 Nov 2021<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 26 Feb 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>
