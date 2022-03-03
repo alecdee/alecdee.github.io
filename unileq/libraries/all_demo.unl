@@ -87,7 +87,7 @@ Version History
      Reorganized integer printing constants.
 1.02
      Replaced built-in integer printing with uint.print and int.print.
-     Library now handle strings instead of just printing.
+     Library now handles strings instead of just printing.
 
 
 --------------------------------------------------------------------------------
