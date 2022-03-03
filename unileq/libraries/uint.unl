@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Unsigned Integer Operations - v4.04
+Unsigned Integer Operations - v4.05
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -138,6 +138,8 @@ Version History
      Cleaned up function descriptions.
 4.04
      Added uint.print for string printing.
+4.05
+     Corrected timing for uint.cmp.
 
 
 --------------------------------------------------------------------------------
@@ -147,9 +149,9 @@ TODO
 uint.shr
 	Remove bit counting.
 	Use the relation (n<<<k) - (n<<k) = n>>(64-k).
-Use global "uint" scope and shared variables (.z:, .tmp:, etc).
 See if fibonacci multiplication is faster than uint.mul.
 See if there's a way to perform functions for non 2^n mods.
+Optimize uint.min and uint.max based in int.min and int.max.
 
 |#
 
@@ -160,7 +162,9 @@ See if there's a way to perform functions for non 2^n mods.
 
 uint.print:
 	#Call  : 0 ? uint.print num base padding padchar
+	#
 	#Effect: Prints a number in an arbitrary base.
+	#
 	#This function works even if unileq's underlying integers are not a power of two.
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
@@ -212,7 +216,7 @@ uint.print:
 	#Make sure 1 <= [base] <= 16.
 	.base   .z      ?+7
 	.base   .z+1    .unary
-	.base   .maxbas .notunary
+	.base   .mxbase .notunary
 	0-1     0       ?-2
 .unary:
 	#[base] = 1. Print 1's like hash marks.
@@ -289,7 +293,7 @@ uint.print:
 	0-2 0-1 .z:0 1 2
 	.nnum:0
 	.num:0
-	.maxbas:16-1
+	.mxbase:16-1
 	.nbase:0
 	.base:0
 	.pad:0
@@ -315,7 +319,7 @@ uint.cmp:
 	#      : if [a]=[b]: goto eq
 	#      : if [a]>[b]: goto gt
 	#
-	#Time  : 28
+	#Time  : 29
 	#
 	#Setup stack pointer.
 	.z      .arg2   ?+1
@@ -791,7 +795,7 @@ uint.mul:
 uint.div:
 	#Call  : 0 ? uint.div quot rem num den
 	#
-	#Effect: [quot] = [num] / [den] rounded down
+	#Effect: [quot] = [num] / [den] , rounded down
 	#      : [rem]  = [num] % [den]
 	#
 	#Time  : 53 + 13*bits = 885
