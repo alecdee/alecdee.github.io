@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Signed Integer Operations - v1.01
+Signed Integer Operations - v1.02
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -69,6 +69,8 @@ Version History
      Most functions are based off of their unsigned equivalents.
 1.01
      Added int.cmp, int.min, int.max, int.abs, int.mul, int.div, and int.shr.
+1.02
+     Removed a temporary variable in int.abs.
 
 
 --------------------------------------------------------------------------------
@@ -555,7 +557,6 @@ int.abs:
 	#Variables
 	0-1 .z:0 1 2
 	.tmp:0
-	.tmp1:0
 	.val:0
 	.nval:0
 
