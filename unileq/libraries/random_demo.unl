@@ -30,26 +30,22 @@ demo:
 Unileq Master Library
 
 
+--------------------------------------------------------------------------------
+Notes
+
 master.unl contains all basic libraries for ease of use in other projects.
 
-
-Library index:
+This library should be included last. Display an error message and exit if it's
+not.
 
 
           File     |  Line
      --------------+--------
-       string.unl  |    40
-         uint.unl  |   211
-          int.unl  |  1608
-       random.unl  |  2589
-       memory.unl  |  3079
-
-
-================================================================================
-
-
-This library should be included last. Display an error message and exit if it's
-not.
+       string.unl  |    36
+         uint.unl  |   219
+          int.unl  |  1616
+       random.unl  |  2597
+       memory.unl  |  3103
 
 
 |#
@@ -69,6 +65,30 @@ not.
 String Library - v1.02
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+
+
+--------------------------------------------------------------------------------
+Notes
+
+
+string.unl currently only provides the "print" function. In the future, it will
+also provide string manipulation functions.
+
+
+--------------------------------------------------------------------------------
+Index
+
+
+Printing
+print char0 char1 char2 ... 0
+
+String formatting escape codes
+string.uint    [num]
+string.uintfmt [num], [base], [padding], [padchar]
+string.uintcon [num], base, padding, padchar
+string.int     [num]
+string.intfmt  [num], [base], [padding], [padchar], [sign]
+string.intcon  [num], base, padding, padchar, sign
 
 
 --------------------------------------------------------------------------------
@@ -115,18 +135,6 @@ ASCII Table
  23  17      |  49  31   1  |  75  4b   K  | 101  65   e  | 127  7f  DEL
  24  18  CAN |  50  32   2  |  76  4c   L  | 102  66   f  |
  25  19      |  51  33   3  |  77  4d   M  | 103  67   g  |
-
-
---------------------------------------------------------------------------------
-String formatting escape codes
-
-
-     string.uint      [num]
-     string.uintfmt   [num], [base], [padding], [pad char]
-     string.uintcon   [num], base, padding, pad char
-     string.int       [num]
-     string.intfmt    [num], [base], [padding], [pad char], [sign]
-     string.intcon    [num], base, padding, pad char, sign
 
 
 --------------------------------------------------------------------------------
@@ -246,9 +254,9 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-This library provides functions for performing most of the common unsigned
-integer operations. In particular, it handles: comparisons, arithmetic, and
-bitwise operations.
+uint.unl provides functions for performing most of the common unsigned integer
+operations. In particular, it handles: comparisons, arithmetic, and bitwise
+operations.
 
 All functions are bit length agnostic. They don't need to be modified even if
 unileq uses a something other than 64 bit integers.
@@ -286,28 +294,28 @@ Index
 
 
 Strings
-uint.print num base padding padchar
+uint.print [num] [base] [padding] [padchar]
 
 Comparisons
-uint.cmp a b lt eq gt
-uint.min ret a b
-uint.max ret a b
+uint.cmp [a] [b] lt eq gt
+uint.min [ret] [a] [b]
+uint.max [ret] [a] [b]
 
 Integer Arithmetic
-uint.set ret a
-uint.neg ret a
-uint.add ret a b
-uint.sub ret a b
-uint.mul high low a b
-uint.div quot rem num den
+uint.set [ret] [a]
+uint.neg [ret] [a]
+uint.add [ret] [a] [b]
+uint.sub [ret] [a] [b]
+uint.mul [high] [low] [a] [b]
+uint.div [quot] [rem] [num] [den]
 
 Bitwise Arithmetic
-uint.shl ret num shift
-uint.shr ret num shift
-uint.not ret a
-uint.and ret a b
-uint.or  ret a b
-uint.xor ret a b
+uint.shl [ret] [num] [shift]
+uint.shr [ret] [num] [shift]
+uint.not [ret] [a]
+uint.and [ret] [a] [b]
+uint.or  [ret] [a] [b]
+uint.xor [ret] [a] [b]
 
 
 --------------------------------------------------------------------------------
@@ -1643,8 +1651,8 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-This library provides functions for performing the signed integer operations
-that uint.unl doesn't cover.
+int.unl provides functions for performing the signed integer operations that
+uint.unl doesn't cover.
 
 If unileq's underlying integers are mod N, then we consider an integer to be
 negative if x >= floor((N+1)/2). The negative value of x is x' = x - N.
@@ -1677,20 +1685,20 @@ Index
 
 
 Strings
-int.print num base padding padchar sign
+int.print [num] [base] [padding] [padchar] [sign]
 
 Comparisons
-int.cmp a b lt eq gt
-int.min ret a b
-int.max ret a b
-int.abs ret a
+int.cmp [a] [b] lt eq gt
+int.min [ret] [a] [b]
+int.max [ret] [a] [b]
+int.abs [ret] [a]
 
 Integer Arithmetic
-int.mul high low a b
-int.div quot rem num den
+int.mul [high] [low] [a] [b]
+int.div [quot] [rem] [num] [den]
 
 Bitwise Arithmetic
-int.shr ret num shift
+int.shr [ret] [num] [shift]
 
 
 --------------------------------------------------------------------------------
@@ -2614,12 +2622,22 @@ int.shr:
 
 #|==============================================================================
 
+
 Random Number Generator - v1.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
+
+--------------------------------------------------------------------------------
+Notes
+
+
+random.unl provides functions for generating uniform random numbers.
+
+
 --------------------------------------------------------------------------------
 Index
+
 
 random.seed    [num]
 random.jump    [num]
@@ -2627,8 +2645,10 @@ random.get     [dst]
 random.mod     [dst] [mod]
 random.shuffle [[arr]] [len]
 
+
 --------------------------------------------------------------------------------
 Version History
+
 
 1.00
      Initial version.
@@ -2643,11 +2663,15 @@ Version History
      Merged random.generate and random.get.
      Added random.init to initialize random.get and seed using current time.
 
+
 --------------------------------------------------------------------------------
 TODO
 
+
 Generate hash constants when initializing.
 Only use 2 constants for hashing. See if there's an optimal pair.
+
+
 |#
 
 random.table:
@@ -3104,35 +3128,41 @@ random.shuffle:
 
 #|==============================================================================
 
+
 Memory - v1.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
---------------------------------------------------------------------------------
-About
 
-This library handles common memory management functions. If it is concatenated
+--------------------------------------------------------------------------------
+Notes
+
+
+memory.unl handles common memory management functions. If it is concatenated
 with other files, it must be included last for memory allocation to work.
+
 
 --------------------------------------------------------------------------------
 Index
 
+
 Dereferencing
-mem.getargs dst0 refs0 dst1 refs1 ... 0
-mem.get    val mem
-mem.getidx val mem idx
-mem.set    mem val
-mem.setidx mem idx val
+mem.getargs [dst0] refs0 [dst1] refs1 ... 0
+mem.get     [val] [mem]
+mem.getidx  [val] [mem] [idx]
+mem.set     [mem] [val]
+mem.setidx  [mem] [idx] [val]
 
 Bulk Operations
-mem.zero dst len
-mem.copy dst src len
+mem.zero    [dst] [len]
+mem.copy    [dst] [src] [len]
 
 Allocation
-mem.alloc   mem len
-mem.realloc ret mem len
-mem.free    mem
+mem.alloc   [mem] [len]
+mem.realloc [ret] [mem] [len]
+mem.free    [mem]
 mem.alloc.verifyfree
+
 
 --------------------------------------------------------------------------------
 Version History
@@ -3144,8 +3174,10 @@ Version History
      Fixed comments.
      Renamed get/set functions.
 
+
 --------------------------------------------------------------------------------
 TODO
+
 
 Replace alloc hash table with AVL tree.
 Simplify mem.alloc.verify using mem.get and mem.cmp.
@@ -3154,6 +3186,8 @@ mem.sort
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2
 Optimize mem.realloc. Don't use mem.zero, just mem.copy.
+
+
 |#
 
 mem.debug: 1

@@ -10,8 +10,8 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-This library provides functions for performing the signed integer operations
-that uint.unl doesn't cover.
+int.unl provides functions for performing the signed integer operations that
+uint.unl doesn't cover.
 
 If unileq's underlying integers are mod N, then we consider an integer to be
 negative if x >= floor((N+1)/2). The negative value of x is x' = x - N.
@@ -44,20 +44,20 @@ Index
 
 
 Strings
-int.print num base padding padchar sign
+int.print [num] [base] [padding] [padchar] [sign]
 
 Comparisons
-int.cmp a b lt eq gt
-int.min ret a b
-int.max ret a b
-int.abs ret a
+int.cmp [a] [b] lt eq gt
+int.min [ret] [a] [b]
+int.max [ret] [a] [b]
+int.abs [ret] [a]
 
 Integer Arithmetic
-int.mul high low a b
-int.div quot rem num den
+int.mul [high] [low] [a] [b]
+int.div [quot] [rem] [num] [den]
 
 Bitwise Arithmetic
-int.shr ret num shift
+int.shr [ret] [num] [shift]
 
 
 --------------------------------------------------------------------------------

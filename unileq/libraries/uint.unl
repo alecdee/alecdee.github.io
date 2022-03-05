@@ -10,9 +10,9 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-This library provides functions for performing most of the common unsigned
-integer operations. In particular, it handles: comparisons, arithmetic, and
-bitwise operations.
+uint.unl provides functions for performing most of the common unsigned integer
+operations. In particular, it handles: comparisons, arithmetic, and bitwise
+operations.
 
 All functions are bit length agnostic. They don't need to be modified even if
 unileq uses a something other than 64 bit integers.
@@ -50,28 +50,28 @@ Index
 
 
 Strings
-uint.print num base padding padchar
+uint.print [num] [base] [padding] [padchar]
 
 Comparisons
-uint.cmp a b lt eq gt
-uint.min ret a b
-uint.max ret a b
+uint.cmp [a] [b] lt eq gt
+uint.min [ret] [a] [b]
+uint.max [ret] [a] [b]
 
 Integer Arithmetic
-uint.set ret a
-uint.neg ret a
-uint.add ret a b
-uint.sub ret a b
-uint.mul high low a b
-uint.div quot rem num den
+uint.set [ret] [a]
+uint.neg [ret] [a]
+uint.add [ret] [a] [b]
+uint.sub [ret] [a] [b]
+uint.mul [high] [low] [a] [b]
+uint.div [quot] [rem] [num] [den]
 
 Bitwise Arithmetic
-uint.shl ret num shift
-uint.shr ret num shift
-uint.not ret a
-uint.and ret a b
-uint.or  ret a b
-uint.xor ret a b
+uint.shl [ret] [num] [shift]
+uint.shr [ret] [num] [shift]
+uint.not [ret] [a]
+uint.and [ret] [a] [b]
+uint.or  [ret] [a] [b]
+uint.xor [ret] [a] [b]
 
 
 --------------------------------------------------------------------------------

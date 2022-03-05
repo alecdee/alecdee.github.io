@@ -7,6 +7,30 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
 
 --------------------------------------------------------------------------------
+Notes
+
+
+string.unl currently only provides the "print" function. In the future, it will
+also provide string manipulation functions.
+
+
+--------------------------------------------------------------------------------
+Index
+
+
+Printing
+print char0 char1 char2 ... 0
+
+String formatting escape codes
+string.uint    [num]
+string.uintfmt [num], [base], [padding], [padchar]
+string.uintcon [num], base, padding, padchar
+string.int     [num]
+string.intfmt  [num], [base], [padding], [padchar], [sign]
+string.intcon  [num], base, padding, padchar, sign
+
+
+--------------------------------------------------------------------------------
 Version History
 
 
@@ -50,18 +74,6 @@ ASCII Table
  23  17      |  49  31   1  |  75  4b   K  | 101  65   e  | 127  7f  DEL
  24  18  CAN |  50  32   2  |  76  4c   L  | 102  66   f  |
  25  19      |  51  33   3  |  77  4d   M  | 103  67   g  |
-
-
---------------------------------------------------------------------------------
-String formatting escape codes
-
-
-     string.uint      [num]
-     string.uintfmt   [num], [base], [padding], [pad char]
-     string.uintcon   [num], base, padding, pad char
-     string.int       [num]
-     string.intfmt    [num], [base], [padding], [pad char], [sign]
-     string.intcon    [num], base, padding, pad char, sign
 
 
 --------------------------------------------------------------------------------

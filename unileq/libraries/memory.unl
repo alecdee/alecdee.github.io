@@ -1,34 +1,40 @@
 #|==============================================================================
 
+
 Memory - v1.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
---------------------------------------------------------------------------------
-About
 
-This library handles common memory management functions. If it is concatenated
+--------------------------------------------------------------------------------
+Notes
+
+
+memory.unl handles common memory management functions. If it is concatenated
 with other files, it must be included last for memory allocation to work.
+
 
 --------------------------------------------------------------------------------
 Index
 
+
 Dereferencing
-mem.getargs dst0 refs0 dst1 refs1 ... 0
-mem.get    val mem
-mem.getidx val mem idx
-mem.set    mem val
-mem.setidx mem idx val
+mem.getargs [dst0] refs0 [dst1] refs1 ... 0
+mem.get     [val] [mem]
+mem.getidx  [val] [mem] [idx]
+mem.set     [mem] [val]
+mem.setidx  [mem] [idx] [val]
 
 Bulk Operations
-mem.zero dst len
-mem.copy dst src len
+mem.zero    [dst] [len]
+mem.copy    [dst] [src] [len]
 
 Allocation
-mem.alloc   mem len
-mem.realloc ret mem len
-mem.free    mem
+mem.alloc   [mem] [len]
+mem.realloc [ret] [mem] [len]
+mem.free    [mem]
 mem.alloc.verifyfree
+
 
 --------------------------------------------------------------------------------
 Version History
@@ -40,8 +46,10 @@ Version History
      Fixed comments.
      Renamed get/set functions.
 
+
 --------------------------------------------------------------------------------
 TODO
+
 
 Replace alloc hash table with AVL tree.
 Simplify mem.alloc.verify using mem.get and mem.cmp.
@@ -50,6 +58,8 @@ mem.sort
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2
 Optimize mem.realloc. Don't use mem.zero, just mem.copy.
+
+
 |#
 
 mem.debug: 1

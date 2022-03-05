@@ -1,11 +1,21 @@
 #|==============================================================================
 
+
 Random Number Generator - v1.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
+
+--------------------------------------------------------------------------------
+Notes
+
+
+random.unl provides functions for generating uniform random numbers.
+
+
 --------------------------------------------------------------------------------
 Index
+
 
 random.seed    [num]
 random.jump    [num]
@@ -13,8 +23,10 @@ random.get     [dst]
 random.mod     [dst] [mod]
 random.shuffle [[arr]] [len]
 
+
 --------------------------------------------------------------------------------
 Version History
+
 
 1.00
      Initial version.
@@ -29,11 +41,15 @@ Version History
      Merged random.generate and random.get.
      Added random.init to initialize random.get and seed using current time.
 
+
 --------------------------------------------------------------------------------
 TODO
 
+
 Generate hash constants when initializing.
 Only use 2 constants for hashing. See if there's an optimal pair.
+
+
 |#
 
 random.table:
