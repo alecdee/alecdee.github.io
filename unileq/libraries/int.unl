@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Signed Integer Operations - v1.02
+Signed Integer Operations - v1.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -71,6 +71,8 @@ Version History
      Added int.cmp, int.min, int.max, int.abs, int.mul, int.div, and int.shr.
 1.02
      Removed a temporary variable in int.abs.
+1.03
+     Removed unnecessary instructions from int.mul when high=0.
 
 
 --------------------------------------------------------------------------------
@@ -79,6 +81,7 @@ TODO
 
 Optimize sign extension for int.shr.
 Optimize int.cmp.
+Unroll first loop in mul, div, and shr to check for sign.
 
 
 |#
@@ -572,7 +575,7 @@ int.mul:
 	#      : [low]  = [a]*[b] % 2^64
 	#
 	#Time  : 66 + 13*bits = 898
-	#Time  : 45 +  7*bits = 493 if high=0
+	#Time  : 40 +  7*bits = 488 if high=0
 	#
 	#Use [hval] and [lval] to store the high and low values of [a]*[b]. During each
 	#loop, shift [hval], [lval], and [b] to the left by 1. If the top bit of [b] is
@@ -588,9 +591,6 @@ int.mul:
 	.arg4   0       ?+1
 	.arg5   0       ?+1
 	.arg6   0       ?+1
-	#Get high. Only set if [hret]!=0.
-	.hret   .hret   ?+1
-	.hret   .arg2:2 ?+1
 	#Get low
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
@@ -605,8 +605,6 @@ int.mul:
 	.a0     .tmp    ?+1
 	.na     .na     ?+1
 	.na     .a0:0   ?+1
-	.a      .a      ?+1
-	.a      .na     ?+1
 	#Get [b]
 	.tmp    .tmp    ?+1
 	.tmp    .arg5:5 ?+1
@@ -616,12 +614,17 @@ int.mul:
 	.tmp    .b0:0   ?+1
 	.b      .b      ?+1
 	.b      .tmp    ?+1
-	.nb     .nb     ?+1
-	.nb     .b      ?+1
 	#Offset [tmp] by 1 to force [b] to be odd.
 	.tmp    .z+1    ?+1
 	.lval   .lval   ?+1
+	#Get high. Only set if [hret]!=0.
+	.hret   .arg2:2 ?+1
 	.hret   .z      .looplow
+	#Record [a] and -[b] for sign correction.
+	.a      .a      ?+1
+	.a      .na     ?+1
+	.nb     .nb     ?+1
+	.nb     .b      ?+1
 	#If -[a]=1, we have to manually set [low]=[b].
 	.na     .z-1    ?+1
 	.na     .z      .rethigh+3
@@ -684,6 +687,7 @@ int.mul:
 	.h0     .hret   ?+1
 	.h1     .h1     ?+1
 	.h1     .hret   ?+1
+	.hret   .hret   ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .h0:0   ?+1
 	.htmp   .tmp    ?+1

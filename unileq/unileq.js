@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.18
+unileq.js - v1.19
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -632,7 +632,7 @@ function UnlParseAssembly(st,str) {
 				window+=c;
 				under+=c && s0>=j && s0<i?"^":(c<=" "?c:" ");
 			}
-			st.statestr="Parser: "+err+"\nline "+line+":\n\t\""+window+"\"\n\t\""+under+"\"\n";
+			st.statestr="Parser: "+err+"\nLine  : "+line+"\n\n\t"+window+"\n\t"+under+"\n\n";
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.35
+unileq.c - v1.36
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -20,8 +20,10 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 --------------------------------------------------------------------------------
 The Unileq Architecture
+
 
 The goal of unileq is to create the functionality of a normal computer using
 only one computing instruction. This is like trying to build a working car out
@@ -53,8 +55,10 @@ Interaction with the host environment is done by reading and writing from
 special memory addresses. For example, writing anything to -1 will end execution
 of the unileq program.
 
+
 --------------------------------------------------------------------------------
 Unileq Assembly Language
+
 
 We can write a unileq program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
@@ -112,13 +116,17 @@ Input/Output
      B = -3: Subtract stdin from mem[A].
      B = -4: Subtract current time from mem[A].
 
+
 --------------------------------------------------------------------------------
 Notes
+
 
 Keep source under 20,000 bytes.
 
 Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
+
+
 */
 
 #define _CRT_SECURE_NO_WARNINGS
@@ -387,7 +395,7 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 		uchar window[61],under[61];
 		if (i-- && j--)
 		{
-			fmt="Parser: %s\nline %u:\n\t\"%s\"\n\t\"%s\"\n";
+			fmt="Parser: %s\nLine  : %u\n\n\t%s\n\t%s\n\n";
 			//Find the boundaries of the line we're currently parsing.
 			u32 s0=0,s1=j,k;
 			for (k=0;k<j;k++) {
