@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.19
+unileq.js - v1.20
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -20,8 +20,10 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 --------------------------------------------------------------------------------
 The Unileq Architecture
+
 
 The goal of unileq is to create the functionality of a normal computer using
 only one computing instruction. This is like trying to build a working car out
@@ -53,8 +55,10 @@ Interaction with the host environment is done by reading and writing from
 special memory addresses. For example, writing anything to -1 will end execution
 of the unileq program.
 
+
 --------------------------------------------------------------------------------
 Unileq Assembly Language
+
 
 We can write a unileq program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
@@ -113,8 +117,10 @@ Input/Output
      B = -4: Subtract current time from mem[A].
      A = -5: Sleep for mem[B]/2^32 seconds.
 
+
 --------------------------------------------------------------------------------
 Performance
+
 
 Performance tests, measured in instructions per second:
 
@@ -141,21 +147,26 @@ Webassembly speedup isn't that great compared to UnlRun(). Wait until better
 integration with javascript.
 
 We busy wait if sleeping for less than 4ms. This is because the HTML5 standard
-enforces a minimum setTimeout time of 4ms.
+enforces a minimum setTimeout() time of 4ms.
+
 
 --------------------------------------------------------------------------------
 TODO
 
+
 Mouse+Keyboard
 Audio
+
 
 */
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true  */
 /*jshint curly: true   */
 
+
 //--------------------------------------------------------------------------------
 //64 bit unsigned integers.
+
 
 function UnlU64Create(hi,lo) {
 	if (hi===undefined) {
@@ -325,8 +336,10 @@ function UnlU64Dec(n) {
 	}
 }
 
+
 //--------------------------------------------------------------------------------
 //Labels.
+
 
 function UnlLabelAlloc() {
 	return {
@@ -419,7 +432,10 @@ function UnlLabelAdd(map,lbl) {
 	return dst;
 }
 
+
 //--------------------------------------------------------------------------------
+//Unileq architecture interpreter.
+
 
 var UNL_RUNNING     =0;
 var UNL_COMPLETE    =1;

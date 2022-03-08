@@ -111,9 +111,9 @@ function HighlightUnileq(str) {
 	//Convert unileq assembly language into a formatted HTML string.
 	//Define styles.
 	var stylearr=[
-		"<span style='color:#eeeeee'>", //default, number, operator, label ref
-		"<span style='color:#999999'>", //comment
-		"<span style='color:#aabb80'>"  //label declaration
+		"</span><span style='color:#eeeeee'>", //default, number, operator, label ref
+		"</span><span style='color:#999999'>", //comment
+		"</span><span style='color:#aabb80'>"  //label declaration
 	];
 	var styledefault =0;
 	var stylecomment =1;
@@ -123,7 +123,7 @@ function HighlightUnileq(str) {
 	var stylelabeldec=2;
 	var style=styledefault,prevstyle=styledefault;
 	var htmlconvert=document.createElement("div");
-	var htmlret="";
+	var htmlret="<span>";
 	//Helper functions for processing the string.
 	var i=0,i0=0,j=0,len=str.length,c;
 	function  CNUM(c) {return (c<=57?c+208:((c+191)&~32)+10)&255;}
@@ -181,7 +181,7 @@ function HighlightUnileq(str) {
 			var sub=str.substring(j,i0);
 			htmlconvert.innerText=sub;
 			sub=htmlconvert.innerHTML;
-			htmlret+=stylearr[prevstyle]+sub+"</span>";
+			htmlret+=stylearr[prevstyle]+sub;
 			j=i0;
 			prevstyle=style;
 		}

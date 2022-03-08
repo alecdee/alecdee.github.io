@@ -1,6 +1,6 @@
 /*
 Author  : Alec Dee, akdee144@gmail.com
-Modified: 8 Oct 2021
+Modified: 6 Mar 2022
 
 TODO:
 Find out if Firefox fixed the textarea padding bug:
@@ -158,6 +158,10 @@ function UnlInitEditor() {
 			input.value=arg;
 		}
 	}
+	//If we're using IE, avoid text highlighting.
+	if (window.navigator.userAgent.match("(MSIE\\s|Trident/)")) {
+		return;
+	}
 	//Setup editor highlighting. We do this by creating a textarea and then displaying
 	//a colored div directly under it.
 	var container=document.createElement("div");
@@ -200,9 +204,6 @@ function UnlInitEditor() {
 	//Make the textarea text invisible, except for the caret.
 	input.style.color="rgba(0,0,0,0)";
 	input.style["caret-color"]=caretcolor;
-	var updatetext=function() {
-		highlight.innerHTML=HighlightUnileq(input.value);
-	};
 	var updateposition=function() {
 		container.style.width=input.style.width;
 		container.style.height=input.style.height;
@@ -211,22 +212,65 @@ function UnlInitEditor() {
 		highlight.style.width=(input.clientWidth+input.scrollLeft)+"px";
 		highlight.style.height=(input.clientHeight+input.scrollTop)+"px";
 	};
-	if (window.navigator.userAgent.match("(MSIE\\s|Trident/)")) {
-		//If we're using IE, fix text wrapping and tab sizes.
-		input.wrap="off";
-		var tabs=new RegExp("\t","g");
-		updatetext=function() {
-			var text=input.value.replace(tabs,"        ");
-			highlight.innerHTML=HighlightUnileq(text);
-		};
-	} else {
-		//Enable resizing.
-		new ResizeObserver(updateposition).observe(input);
-	}
+	var updatetext=function() {
+		updateposition();
+		highlight.innerHTML=UnlHighlightScroll(input);
+	};
+	new ResizeObserver(updatetext).observe(input);
 	input.oninput=updatetext;
-	input.onscroll=updateposition;
+	input.onscroll=updatetext;
 	updatetext();
-	updateposition();
+}
+
+function UnlHighlightScroll(input) {
+	//Highlighting the whole source code can be slow, so highlight only the portion
+	//that we can see.
+	var str=input.value;
+	//Determine what lines are visible.
+	var len=str.length,lines=1;
+	for (var i=0;i<len;i++) {
+		lines+=str.charCodeAt(i)===10;
+	}
+	var vismin=(input.scrollTop/input.scrollHeight)*lines-1;
+	var vismax=vismin+(input.clientHeight/input.scrollHeight)*lines+2;
+	//console.log(vismin,vismax);
+	var comment=0;
+	//Find where the first visible line starts, and if it's a block comment.
+	var i=0,line=0,c;
+	while (i<len && line<vismin) {
+		c=str.charCodeAt(i++);
+		if (c===10) {
+			line++;
+		} else if (comment===1) {
+			if (c===124 && str.charCodeAt(i)===35) {
+				i++;
+				comment=0;
+			}
+		} else if (c===35) {
+			if (str.charCodeAt(i)===124) {
+				i++;
+				comment=1;
+			}
+		}
+	}
+	if (line<2) {
+		line=0;
+		i=0;
+		comment=0;
+	}
+	var pre="<br>".repeat(line-comment*2);
+	//Find where the visible lines end.
+	var j=i;
+	while (j<len && line<=vismax) {
+		if (str.charCodeAt(j++)===10) {
+			line++;
+		}
+	}
+	//Get the visible substring. If we're in a block comment, manually add a #| for
+	//the highlighter.
+	var sub=str.substring(i,j);
+	if (comment===1) {sub="#|\n\n"+sub;}
+	return pre+HighlightUnileq(sub);
 }
 
 window.addEventListener("load",UnlInitEditor,true);

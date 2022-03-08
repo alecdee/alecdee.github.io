@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.36
+unileq.c - v1.37
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -115,6 +115,7 @@ Input/Output
      A = -2: Write mem[B] to stdout.
      B = -3: Subtract stdin from mem[A].
      B = -4: Subtract current time from mem[A].
+     A = -5: Sleep for mem[B]/2^32 seconds.
 
 
 --------------------------------------------------------------------------------
@@ -149,8 +150,39 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef unsigned char uchar;
 
+
+//--------------------------------------------------------------------------------
+//The unileq interpreter state.
+
+
+#define UNL_RUNNING      0
+#define UNL_COMPLETE     1
+#define UNL_ERROR_PARSER 2
+#define UNL_ERROR_MEMORY 3
+#define UNL_MAX_PARSE    (1<<30)
+
+typedef struct UnlState {
+	u64 *mem,alloc,ip;
+	u32 state;
+	char statestr[256];
+} UnlState;
+
+UnlState* UnlCreate(void);
+void UnlFree(UnlState* st);
+void UnlParseAssembly(UnlState* st,const char* str);
+void UnlParseFile(UnlState* st,const char* path);
+void UnlClear(UnlState* st);
+void UnlPrintState(UnlState* st);
+u64  UnlGetIP(UnlState* st);
+void UnlSetIP(UnlState* st,u64 ip);
+u64  UnlGetMem(UnlState* st,u64 addr);
+void UnlSetMem(UnlState* st,u64 addr,u64 val);
+void UnlRun(UnlState* st,u32 iters);
+
+
 //--------------------------------------------------------------------------------
 //Hash map for labels.
+
 
 typedef struct UnlLabel {
 	struct UnlLabel *next,*scope;
@@ -253,23 +285,10 @@ UnlLabel* UnlLabelAdd(UnlHashMap* map,UnlLabel* lbl) {
 	return dst;
 }
 
+
 //--------------------------------------------------------------------------------
 //Unileq architecture interpreter.
 
-#define UNL_RUNNING      0
-#define UNL_COMPLETE     1
-#define UNL_ERROR_PARSER 2
-#define UNL_ERROR_MEMORY 3
-#define UNL_MAX_PARSE    (1<<30)
-
-typedef struct UnlState {
-	u64 *mem,alloc,ip;
-	u32 state;
-	char statestr[256];
-} UnlState;
-
-void UnlClear(UnlState* st);
-void UnlSetMem(UnlState* st,u64 addr,u64 val);
 
 UnlState* UnlCreate(void) {
 	//Allocate a unileq interpreter.
@@ -582,8 +601,10 @@ void UnlRun(UnlState* st,u32 iters) {
 	st->ip=ip;
 }
 
+
 //--------------------------------------------------------------------------------
 //Example usage. Call "unileq file.unl" to run a file.
+
 
 int main(int argc,char** argv) {
 	UnlState* unl=UnlCreate();
