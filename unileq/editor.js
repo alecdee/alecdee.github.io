@@ -1,10 +1,6 @@
 /*
 Author  : Alec Dee, akdee144@gmail.com
-Modified: 6 Mar 2022
-
-TODO:
-Find out if Firefox fixed the textarea padding bug:
-https://bugzilla.mozilla.org/show_bug.cgi?id=748518
+Modified: 7 Mar 2022
 */
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true  */
@@ -160,6 +156,7 @@ function UnlInitEditor() {
 	}
 	//If we're using IE, avoid text highlighting.
 	if (window.navigator.userAgent.match("(MSIE\\s|Trident/)")) {
+		input.wrap="off";
 		return;
 	}
 	//Setup editor highlighting. We do this by creating a textarea and then displaying
