@@ -121,7 +121,7 @@ print:
 	.tmp    .z+1    .uint
 	.tmp    .z+1    .strfmt
 .invalid:
-	#Invalid format
+	#INVALID FORMAT
 	.tmp    .tmp    ?+1
 	0       0       ?+1
 	0 ? print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
