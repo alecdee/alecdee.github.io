@@ -6,19 +6,19 @@ demo:
 	#Message must end with a '0'.
 
 	#test
-	0 ? print 116 101 115 116 10 0
+	0 ? string.print 116 101 115 116 10 0
 
 	#a = [a]
-	0 ? print 97 32 61 32 string.uint .a 10 0
+	0 ? string.print 97 32 61 32 string.uint .a 10 0
 
 	#b = [b]
-	0 ? print 98 32 61 32 string.uint .b 10 0
+	0 ? string.print 98 32 61 32 string.uint .b 10 0
 
 	#[a], [b]
-	0 ? print string.uint .a 44 32 string.uint .b 10 0
+	0 ? string.print string.uint .a 44 32 string.uint .b 10 0
 
 	#done
-	0 ? print 100 111 110 101 10 0
+	0 ? string.print 100 111 110 101 10 0
 
 	0-1 0 ?-2
 
@@ -45,17 +45,17 @@ not.
           File     |  Line
      --------------+--------
        string.unl  |    36
-         uint.unl  |   219
-          int.unl  |  1616
-       random.unl  |  2597
-       memory.unl  |  3103
+         uint.unl  |   221
+          int.unl  |  1618
+       random.unl  |  2599
+       memory.unl  |  3159
 
 
 |#
 
 
 0 0 ?+1
-0 ? print
+0 ? string.print
 	69 82 82 79 82 58 32 109 97 115 116 101 114 46 117
 	110 108 32 109 117 115 116 32 98 101 32 105 110 99
 	108 117 100 101 100 32 108 97 115 116 10 0
@@ -65,7 +65,7 @@ not.
 #|==============================================================================
 
 
-String Library - v1.02
+String Library - v1.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -74,7 +74,7 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-string.unl currently only provides the "print" function. In the future, it will
+string.unl currently only provides the print function. In the future, it will
 also provide string manipulation functions.
 
 
@@ -83,7 +83,7 @@ Index
 
 
 Printing
-print char0 char1 char2 ... 0
+string.print char0 char1 char2 ... 0
 
 String formatting escape codes
 string.uint    [num]
@@ -106,6 +106,8 @@ Version History
 1.02
      Replaced built-in integer printing with uint.print and int.print.
      Library now handles strings instead of just printing.
+1.03
+     Renamed print to string.print for consistency.
 
 
 --------------------------------------------------------------------------------
@@ -147,8 +149,8 @@ TODO
 |#
 
 
-print:
-	#Call  : 0 ? print char0 char1 char2 ... 0
+string.print:
+	#Call  : 0 ? string.print char0 char1 char2 ... 0
 	#Effect: Prints a zero terminated ASCII string. If an escape code is used,
 	#the next value(s) are expected to be numbers or formatting.
 	#
@@ -185,10 +187,10 @@ print:
 	.tmp    .z+1    .uint
 	.tmp    .z+1    .strfmt
 .invalid:
-	#Invalid format
+	#INVALID FORMAT
 	.tmp    .tmp    ?+1
 	0       0       ?+1
-	0 ? print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
+	0 ? string.print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
 	0-1     0       ?-2
 .str:
 	#Reserved for string printing.
@@ -2626,7 +2628,7 @@ int.shr:
 #|==============================================================================
 
 
-Random Number Generator - v1.04
+Random Number Generator - v1.05
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -2647,6 +2649,7 @@ random.jump    [num]
 random.get     [dst]
 random.mod     [dst] [mod]
 random.shuffle [[arr]] [len]
+random.hash    [ret] [num]
 
 
 --------------------------------------------------------------------------------
@@ -2665,14 +2668,16 @@ Version History
      Optimized jump, mod, and shuffle and made them bit length agnostic.
      Merged random.generate and random.get.
      Added random.init to initialize random.get and seed using current time.
+1.05
+     Added random.hash.
 
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Generate hash constants when initializing.
 Only use 2 constants for hashing. See if there's an optimal pair.
+Optimize random.hash. Dynamically calculate how many iterations are needed.
 
 
 |#
@@ -3129,10 +3134,61 @@ random.shuffle:
 	0-1 .z:0 1 2
 
 
+random.hash:
+	#Call  : 0 ? random.hash ret num
+	#Effect: [ret] = a hash of [num]
+	#Time  : 25 + 6*bits = 409
+	#Setup the stack.
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	#Get ret.
+	.ret0   .arg2:2 ?+1
+	.ret1   .ret0   ?+1
+	.ret2   .ret0   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .ret1   ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	#Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.hash   .hash   ?+1
+	.hash   .p0:0   ?+1
+	.tmp    .tmp    ?+1
+	.i      .i0     ?+4
+.loop:
+	.i      .z+1    .done
+	.tmp    .hash   ?+1
+	.tmp    .z+1    ?+1
+	.hash   .tmp    ?+7
+	.hash   .con1   ?+1
+	.tmp    .tmp    .loop
+	.hash   .con0   ?+1
+	.tmp    .tmp    .loop
+.done:
+	#Set [dst] and return.
+	.ret0:0 .ret1:0 ?+1
+	.ret2:0 .hash   ?+1
+	0       0       .arg4:4
+	#Variables
+	.z:0 1 2
+	.hash:0
+	.tmp:0
+	.i:0
+	.i0:0-64
+	.con0:0x911fe275124571d3
+	.con1:0x98f570cabbbe2960
+
 #|==============================================================================
 
 
-Memory - v1.01
+Memory - v1.02
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -3159,6 +3215,7 @@ mem.setidx  [mem] [idx] [val]
 Bulk Operations
 mem.zero    [dst] [len]
 mem.copy    [dst] [src] [len]
+mem.sort    [arr] [len] cmp
 
 Allocation
 mem.alloc   [mem] [len]
@@ -3170,12 +3227,15 @@ mem.alloc.verifyfree
 --------------------------------------------------------------------------------
 Version History
 
+
 1.00
      Initial version.
      Supports referencing, zeroing, copying, and allocation.
 1.01
      Fixed comments.
      Renamed get/set functions.
+1.02
+     Added mem.sort.
 
 
 --------------------------------------------------------------------------------
@@ -3184,11 +3244,10 @@ TODO
 
 Replace alloc hash table with AVL tree.
 Simplify mem.alloc.verify using mem.get and mem.cmp.
-mem.sort
-	Have comparison function. use jumps.
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2
 Optimize mem.realloc. Don't use mem.zero, just mem.copy.
+Optimize mem.sort to n*log(n).
 
 
 |#
@@ -3564,6 +3623,100 @@ mem.copy:
 	.inc:0
 	.len:0
 	.nlen:0
+
+
+mem.sort:
+	#Call  : 0 ? mem.sort arr len cmp
+	#Effect: Stably sorts [arr] in ascending order.
+	#Time  : 12 + 20*len + (12+cmp)*len*(len-1)/2
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	0       0       ?+1
+	#Get [len].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p1     .p1     ?+1
+	.p1     .tmp    ?+1
+	.nlen   .nlen   ?+1
+	.nlen   .p1:0   ?+1
+	.len    .nlen   ?+1
+	.len    .z+1    .ret
+	#Get [arr].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.narr   .narr   ?+1
+	.narr   .p0:0   ?+1
+	.i0     .i0     ?+1
+	.i0     .narr   ?+1
+	#Get cmp.
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.cmp    .cmp    ?+1
+	.cmp    .tmp    ?+1
+	.tmp    .tmp    .loop0+3
+.loop0:
+	.len    .z+1    .ret+3
+	#Reset [i] to our current index.
+	.i      .nlen   ?+1
+	.i      .len    ?+1
+	#Update array pointers to [arr]+[i].
+	.narr   .z+1    ?+1
+	.i0     .z-1    ?+1
+	.i1     .i1     ?+1
+	.i1     .narr   ?+1
+	.i2     .i2     ?+1
+	.i2     .narr   ?+1
+	#Record [ival]=[[arr]+[i]].
+	.tmp    .i0:0   ?+1
+	.ival   .ival   ?+1
+	.ival   .tmp    ?+1
+	.pval   .pval   ?+1
+	.pval   .tmp    .loop1+6
+	#Sort [ival].
+.loop1:
+	.i2     .z+1    ?+1
+	.i      .z+1    .done1+3
+	.i1     .z+1    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .i1:0   ?+1
+	.jval   .jval   ?+1
+	.jval   .tmp    ?+1
+	0 ? .cmp:0 .jval .ival .done1 .done1 ?+1
+	.pval   .jval   ?+1
+	.i2:0   .pval   ?+1
+	.pval   .pval   .iset:?+1
+	.pval   .tmp    .loop1
+.done1:
+	.i      .i      ?+1
+	#Set [[arr]+[i]]=[ival].
+	.pval   .ival   ?+1
+	.iset   .set0   .i2
+.iret:
+	.iset   .set1   ?+1
+	.tmp    .tmp    .loop0
+.ret:
+	.len    .len    ?+1
+	0       0       .arg5:5
+	#Variables
+	0-1 .z:0 1 2
+	.tmp:0
+	.narr:0
+	.len:0
+	.nlen:0
+	.i:0
+	.ival:0
+	.jval:0
+	.pval:0
+	.set0:.iset+1-.iret
+	.set1:.iret-.iset-1
 
 
 #|-------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-String Library - v1.02
+String Library - v1.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -10,7 +10,7 @@ Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-string.unl currently only provides the "print" function. In the future, it will
+string.unl currently only provides the print function. In the future, it will
 also provide string manipulation functions.
 
 
@@ -19,7 +19,7 @@ Index
 
 
 Printing
-print char0 char1 char2 ... 0
+string.print char0 char1 char2 ... 0
 
 String formatting escape codes
 string.uint    [num]
@@ -42,6 +42,8 @@ Version History
 1.02
      Replaced built-in integer printing with uint.print and int.print.
      Library now handles strings instead of just printing.
+1.03
+     Renamed print to string.print for consistency.
 
 
 --------------------------------------------------------------------------------
@@ -83,8 +85,8 @@ TODO
 |#
 
 
-print:
-	#Call  : 0 ? print char0 char1 char2 ... 0
+string.print:
+	#Call  : 0 ? string.print char0 char1 char2 ... 0
 	#Effect: Prints a zero terminated ASCII string. If an escape code is used,
 	#the next value(s) are expected to be numbers or formatting.
 	#
@@ -124,7 +126,7 @@ print:
 	#INVALID FORMAT
 	.tmp    .tmp    ?+1
 	0       0       ?+1
-	0 ? print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
+	0 ? string.print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
 	0-1     0       ?-2
 .str:
 	#Reserved for string printing.

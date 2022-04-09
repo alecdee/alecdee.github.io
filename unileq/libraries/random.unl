@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Random Number Generator - v1.04
+Random Number Generator - v1.05
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -22,6 +22,7 @@ random.jump    [num]
 random.get     [dst]
 random.mod     [dst] [mod]
 random.shuffle [[arr]] [len]
+random.hash    [ret] [num]
 
 
 --------------------------------------------------------------------------------
@@ -40,14 +41,16 @@ Version History
      Optimized jump, mod, and shuffle and made them bit length agnostic.
      Merged random.generate and random.get.
      Added random.init to initialize random.get and seed using current time.
+1.05
+     Added random.hash.
 
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Generate hash constants when initializing.
 Only use 2 constants for hashing. See if there's an optimal pair.
+Optimize random.hash. Dynamically calculate how many iterations are needed.
 
 
 |#
@@ -503,4 +506,55 @@ random.shuffle:
 	.rand:0
 	0-1 .z:0 1 2
 
+
+random.hash:
+	#Call  : 0 ? random.hash ret num
+	#Effect: [ret] = a hash of [num]
+	#Time  : 25 + 6*bits = 409
+	#Setup the stack.
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	#Get ret.
+	.ret0   .arg2:2 ?+1
+	.ret1   .ret0   ?+1
+	.ret2   .ret0   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .ret1   ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	#Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.hash   .hash   ?+1
+	.hash   .p0:0   ?+1
+	.tmp    .tmp    ?+1
+	.i      .i0     ?+4
+.loop:
+	.i      .z+1    .done
+	.tmp    .hash   ?+1
+	.tmp    .z+1    ?+1
+	.hash   .tmp    ?+7
+	.hash   .con1   ?+1
+	.tmp    .tmp    .loop
+	.hash   .con0   ?+1
+	.tmp    .tmp    .loop
+.done:
+	#Set [dst] and return.
+	.ret0:0 .ret1:0 ?+1
+	.ret2:0 .hash   ?+1
+	0       0       .arg4:4
+	#Variables
+	.z:0 1 2
+	.hash:0
+	.tmp:0
+	.i:0
+	.i0:0-64
+	.con0:0x911fe275124571d3
+	.con1:0x98f570cabbbe2960
 
