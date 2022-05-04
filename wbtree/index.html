@@ -1784,28 +1784,22 @@ is <i>O(log(n))</i>. Finding an index given a node only moves up the tree, which
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Notes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Notes</h1>
 <p>Better balancing is possible by avoiding ratios entirely. Instead, we can attempt a double or
-single rotation and see if that results in a better balance. Research is needed to simplify when
-balancing is performed and what its worst case balance is.</p>
+single rotation and see which one results in a better balance. Research is needed to simplify when
+balancing is performed and what its worst case balance is. I've left some notes
+in <a href="./testing.zip">testing.zip</a>.</p>
 <br>
-<p>Our implementation of an AVL tree performs above average compared to other implementations found
-online, but is far from the best. Performance of the rebalancing and removal functions will need to
-be improved to be competitive.</p>
+<p>Unrolling <i>rebalance()</i> speeds up the tree dramatically, but I omitted it from the article
+and reference implementation because it's much more complicated. The unrolled version can also be
+found in <a href="./testing.zip">testing.zip</a>.</p>
 <br>
-<p><a href="https://en.wikipedia.org/wiki/B-tree">B-trees</a> are the predecessors to most self balancing trees. They are rarely used in practice,
-however.</p>
+<p>For environments with finite integer sizes, performing the balance comparison without overflows
+is possible, but it's slower and obscures the reference implementation too much.</p>
 <br>
-<p>The article presents AVL trees as only using the absolute height of nodes. Although this is a more
-sturdy method of maintaining node balance, it is actually faster to record the relative balance of
-children nodes for each node. That is, instead of each node having a height attribute, they would
-instead have a balance attribute that must be kept between -1 and +1.</p>
+<p>I've also implemented an AVL tree for education and to compare speeds. Its ability to terminate
+early gives it a speed advantage over weight balanced trees.</p>
 <br>
-<p><a href="https://en.wikipedia.org/wiki/Red%E2%80%93black_tree">Red-black trees</a> are the most popular alternative for self balancing trees. They require less
-information per node, but have a more complicated rebalancing step. Also, even though their maximum
-height is <i>h&lt;2*log2(n)</i>, their real-time performance is still competitive with AVL trees.</p>
-<br>
-<p>Concurrency has been a difficult problem for AVL trees. Most papers present AVL trees with a reduced
-set of operations in order to make them concurrent. Researchers seem to have had better luck with
-making Red-black trees concurrent.</p>
+<p>I'd like to implement set theory operations in the future. Until I actually need them, I don't
+know what I'd like the API to look like, so I'll hold off for now.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
