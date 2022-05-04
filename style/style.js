@@ -1,5 +1,5 @@
 //Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 9 Sep 2021
+//Modified: 30 Apr 2022
 /*jshint bitwise: false*/
 /*jshint eqeqeq: true*/
 
@@ -56,8 +56,8 @@ function HighlightPython(text) {
 		["(?:0|[1-9]\\d*)(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?",stylenumber],
 		["0[xX][0-9a-fA-F]*",stylenumber],
 		["[\\~\\!\\@\\$\\%\\^\\&\\*\\(\\)\\-\\+\\=\\<\\>\\/\\|\\[\\]]+",styleoperator],
-		["\".*\"",stylequote],
-		["\'.*\'",stylequote],
+		["\".*?\"",stylequote],
+		["\'.*?\'",stylequote],
 		["\"\"\"[\\s\\S]*?\"\"\"",stylemultiquote],
 		["'''[\\s\\S]*?'''",stylemultiquote],
 		["#.*",stylecomment]
