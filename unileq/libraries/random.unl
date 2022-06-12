@@ -156,7 +156,7 @@ random.init:
 .done:
 	.z-1    .z+1    ?+1
 	#Randomly seed the generator.
-	0 ? random.seed 0-4
+	0 ? random.seed 0-5
 	#Return to the calling function.
 	0       .0      .orig:0-4
 	#Variables

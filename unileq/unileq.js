@@ -1,5 +1,5 @@
 /*
-unileq.js - v1.20
+unileq.js - v1.21
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -114,8 +114,10 @@ Input/Output
      A = -1: End execution.
      A = -2: Write mem[B] to stdout.
      B = -3: Subtract stdin from mem[A].
-     B = -4: Subtract current time from mem[A].
-     A = -5: Sleep for mem[B]/2^32 seconds.
+     B = -4: Subtract timing frequency from mem[A]. 2^32 = 1 second.
+     B = -5: Subtract current time from mem[A].
+     A = -6: Sleep for mem[B]/2^32 seconds.
+     A = -7: Draw an image at mem[B] to the window.
 
 
 --------------------------------------------------------------------------------
@@ -864,6 +866,10 @@ function UnlRun(st,stoptime) {
 			mbhi=tmp2.hi;mblo=tmp2.lo;
 			timeiters-=1;
 		} else if (blo===0xfffffffc) {
+			//Timing frequency. 2^32 = 1 second.
+			mbhi=1;
+			mblo=0;
+		} else if (blo===0xfffffffb) {
 			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			var date=performance.timing.navigationStart+performance.now();
 			mbhi=(date/1000)>>>0;
@@ -926,7 +932,7 @@ function UnlRun(st,stoptime) {
 			//Print to stdout.
 			UnlPrint(st,String.fromCharCode(mblo&255));
 			timeiters-=1;
-		} else if (alo===0xfffffffb) {
+		} else if (alo===0xfffffffa) {
 			//Sleep.
 			var sleep=mbhi*1000+mblo*(1000.0/4294967296.0);
 			var sleeptill=performance.now()+sleep;
@@ -941,7 +947,7 @@ function UnlRun(st,stoptime) {
 			//Busy wait.
 			while (performance.now()<sleeptill) {}
 			timeiters=0;
-		} else if (alo===0xfffffffa) {
+		} else if (alo===0xfffffff9) {
 			//Draw an image.
 			UnlDrawImage(st,mbhi,mblo);
 		}

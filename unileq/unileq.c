@@ -1,5 +1,5 @@
 /*
-unileq.c - v1.37
+unileq.c - v1.38
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -114,8 +114,9 @@ Input/Output
      A = -1: End execution.
      A = -2: Write mem[B] to stdout.
      B = -3: Subtract stdin from mem[A].
-     B = -4: Subtract current time from mem[A].
-     A = -5: Sleep for mem[B]/2^32 seconds.
+     B = -4: Subtract timing frequency from mem[A]. 2^32 = 1 second.
+     B = -5: Subtract current time from mem[A].
+     A = -6: Sleep for mem[B]/2^32 seconds.
 
 
 --------------------------------------------------------------------------------
@@ -553,6 +554,9 @@ void UnlRun(UnlState* st,u32 iters) {
 			//Read stdin.
 			mb=(uchar)getchar();
 		} else if (b==(u64)-4) {
+			//Timing frequency. 2^32 = 1 second.
+			mb=1ULL<<32;
+		} else if (b==(u64)-5) {
 			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			struct timespec ts;
 			timespec_get(&ts,TIME_UTC);
@@ -589,7 +593,7 @@ void UnlRun(UnlState* st,u32 iters) {
 		} else if (a==(u64)-2) {
 			//Print to stdout.
 			putchar((char)mb);
-		} else if (a==(u64)-5) {
+		} else if (a==(u64)-6) {
 			//Sleep.
 			struct timespec ts={
 				(long)(mb>>32),

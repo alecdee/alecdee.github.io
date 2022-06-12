@@ -150,6 +150,8 @@ Version History
 TODO
 
 
+Make sure arguments are only loaded once, in case we read a special address that
+can change values each time we read it.
 uint.shr
 	Remove bit counting.
 	Use the relation (n<<<k) - (n<<k) = n>>(64-k).

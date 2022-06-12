@@ -50,9 +50,9 @@ not.
      --------------+--------
        string.unl  |    36
          uint.unl  |   221
-          int.unl  |  1618
-       random.unl  |  2599
-       memory.unl  |  3159
+          int.unl  |  1620
+       random.unl  |  2601
+       memory.unl  |  3161
 
 
 |#
@@ -403,6 +403,8 @@ Version History
 TODO
 
 
+Make sure arguments are only loaded once, in case we read a special address that
+can change values each time we read it.
 uint.shr
 	Remove bit counting.
 	Use the relation (n<<<k) - (n<<k) = n>>(64-k).
@@ -2787,7 +2789,7 @@ random.init:
 .done:
 	.z-1    .z+1    ?+1
 	#Randomly seed the generator.
-	0 ? random.seed 0-4
+	0 ? random.seed 0-5
 	#Return to the calling function.
 	0       .0      .orig:0-4
 	#Variables
@@ -4575,7 +4577,7 @@ mem.free:
 	.next   .nnext  ?+1
 	#Randomize the entire block to prevent using after freeing.
 	mem.debug .z .dbgdone1
-	.rand   0-4     ?+1
+	.rand   0-5     ?+1
 	#Get the block start and length.
 	.dbg0   .dbg0   ?+1
 	.dbg0   .nblk   ?+1

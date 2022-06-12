@@ -1384,7 +1384,7 @@ mem.free:
 	.next   .nnext  ?+1
 	#Randomize the entire block to prevent using after freeing.
 	mem.debug .z .dbgdone1
-	.rand   0-4     ?+1
+	.rand   0-5     ?+1
 	#Get the block start and length.
 	.dbg0   .dbg0   ?+1
 	.dbg0   .nblk   ?+1
