@@ -1,5 +1,9 @@
 /*
-unileq.c - v1.38
+--------------------------------------------------------------------------------
+License
+
+
+unileq.c - v1.39
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -25,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 The Unileq Architecture
 
 
-The goal of unileq is to create the functionality of a normal computer using
+The goal of unileq is to recreate the functionality of a normal computer using
 only one computing instruction. This is like trying to build a working car out
 of legos while only using one type of lego piece. Since we only have one
 instruction, most modern conveniences are gone. Things like multiplying numbers
@@ -62,68 +66,129 @@ Unileq Assembly Language
 
 We can write a unileq program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
-Because there's only one instruction, we can omit any notation specifying what
-instruction to execute on some given memory values. The flow of the program will
-decide what gets executed and what doesn't.
+Because there's only one instruction, we can skip defining what's used for data,
+execution, or structure like in other languages. We only need to define memory
+values, and the flow of the program will decide what gets executed.
 
-An outline of our language is given below:
 
-#Single line comment.
+This example shows a "Hello, World!" program in assembly.
 
-#|
-     multi line
-     comment
-|#
 
-?
-     Inserts the current memory address.
+     loop: len  one  exit            #Decrement [len]. If [len]<=1, exit.
+           0-2  txt  ?+1             #Print a letter.
+           ?-2  neg  loop            #Increment letter pointer.
 
-Label:
-     Label declaration. Declarations mark the current memory address for later
-     recall. Declarations can't appear within an expression, ex: "0 label: +1".
-     Duplicate declarations are an error.
+     exit: 0-1  0    0
 
-     Labels are case sensitive and support UTF-8.
-     First character    : a-zA-Z_.    and any character with a high bit
-     Trailing characters: a-zA-Z_.0-9 and any character with a high bit
+     txt:  72 101 108 108 111 44 32  #Hello,
+           87 111 114 108 100 33 10  #World!
+     len:  len-txt+1
+     neg:  0-1
+     one:  1
 
-Label
-     Inserts the memory address marked by "Label:". There must be whitespace or
-     an operator between any two label recalls or numbers.
 
-.Sublabel
-     Shorthand for placing a label under another label's scope.
-     Ex: "lbl:0 .sub:1" will be treated as "lbl:0 lbl.sub:1" internally.
+The rules of the assembly language are given below.
 
-Number
-     Inserts the number's value. A number must be in decimal or hexadecimal
-     form, such as "123" or "0xff".
 
-Operator +-
-     Adds or subtracts the number or label from the previous value. Parentheses
-     are not supported. To express a negative number, use its unsigned form or
-     the identity "0-x=-x".
-
-     There cannot be two consecutive operators, ex: "0++1". Also, the program
-     cannot begin or end with an operator.
-
-Input/Output
-     Interaction with the host environment can be done by reading or writing
-     from special addresses.
-
-     A = -1: End execution.
-     A = -2: Write mem[B] to stdout.
-     B = -3: Subtract stdin from mem[A].
-     B = -4: Subtract timing frequency from mem[A]. 2^32 = 1 second.
-     B = -5: Subtract current time from mem[A].
-     A = -6: Sleep for mem[B]/2^32 seconds.
+                  |
+     Single Line  |  Denoted by #
+     Comment      |
+                  |  Ex:
+                  |       #Hello,
+                  |       #World!
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Multi Line   |  Denoted by #| and terminated with |#
+     Comment      |
+                  |  Ex:
+                  |       #|
+                  |            line 1
+                  |            line 2
+                  |       |#
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Current      |  Denoted by a question mark. Inserts the current memory
+     Address      |  address.
+                  |
+                  |  Ex:
+                  |       ?
+                  |       ?+1     #Next address
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Label        |  Denoted by a name followed by a colon. Declarations
+     Declaration  |  mark the current memory address for later recall.
+                  |
+                  |  Labels are case sensitive and support UTF-8. They can
+                  |  consist of letters, underscores, periods, numbers, and
+                  |  any characters with a high bit. However, the first
+                  |  character can't be a number.
+                  |
+                  |  Ex:
+                  |       loop:
+                  |       Another_Label:
+                  |       label3:
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Label        |  Denoted by a label name. Inserts the memory address
+     Recall       |  declared by "Label:".
+                  |
+                  |  Ex:
+                  |       label:     #declaration
+                  |       label      #recall
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Sublabel     |  Denoted by a period in front of a label. Shorthand for
+                  |  placing a label under another label's scope.
+                  |
+                  |  Ex:
+                  |        A:
+                  |       .B:     #Shorthand for A.B:
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Number       |  Inserts the number's value. A number must be in
+                  |  decimal or hexadecimal form.
+                  |
+                  |  Ex:
+                  |       123
+                  |       0xff
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Operator     |  Denoted by a plus or minus. Adds or subtracts the
+                  |  number or label from the previous value. Parentheses
+                  |  are not supported. To express a negative number, use
+                  |  the form "0-x".
+                  |
+                  |  Ex:
+                  |       len-txt+1
+                  |       ?+1
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Input /      |  Interaction with the host environment can be done by
+     Output       |  reading or writing from special addresses.
+                  |
+                  |  A = -1: End execution.
+                  |  A = -2: Write mem[B] to stdout.
+                  |  B = -3: Subtract stdin from mem[A].
+                  |  B = -4: Subtract timing frequency from mem[A].
+                  |  B = -5: Subtract current time from mem[A].
+                  |  A = -6: Sleep for mem[B]/2^32 seconds.
+                  |
+                  |  Ex:
+                  |       0-2  txt  ?+1     #A = -2. Print a letter.
+                  |
 
 
 --------------------------------------------------------------------------------
 Notes
 
-
-Keep source under 20,000 bytes.
 
 Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
@@ -257,16 +322,11 @@ UnlLabel* UnlLabelInit(UnlHashMap* map,UnlLabel* lbl,UnlLabel* scope,const uchar
 	//Compute the hash of the label. Use the scope's hash to speed up computation.
 	for (u32 i=scopelen;i<lbl->len;i++) {
 		hash+=lbl->data[i]+i;
-		hash=(hash>>9)|(hash<<23);
-		hash^=hash>>14;
-		hash*=0xe4d75b4b;
-		hash=(hash>>7)|(hash<<25);
-		hash^=hash>>6;
-		hash*=0x253aa2ed;
-		hash=(hash>>17)|(hash<<15);
-		hash^=hash>>6;
-		hash*=0x5d24324b;
-		hash=(hash>>16)|(hash<<16);
+		hash+=hash<<17;hash^=hash>>11;
+		hash+=hash<< 5;hash^=hash>> 7;
+		hash+=hash<< 9;hash^=hash>>14;
+		hash+=hash<<10;hash^=hash>> 6;
+		hash+=hash<< 7;hash^=hash>> 9;
 	}
 	lbl->hash=hash;
 	//Search for a match.

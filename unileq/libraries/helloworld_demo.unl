@@ -1,10 +1,11 @@
-loop: len  one   exit           #Decrement [len]. If [len]<=1, exit.
-      0-2  text  ?+1            #Print a letter.
-      ?-2  neg   loop           #Increment letter pointer.
-exit: 0-1  0     0
+loop: len  one  exit            #Decrement [len]. If [len]<=1, exit.
+      0-2  txt  ?+1             #Print a letter.
+      ?-2  neg  loop            #Increment letter pointer.
 
-text: 72 101 108 108 111 44 32  #Hello,
+exit: 0-1  0    0
+
+txt:  72 101 108 108 111 44 32  #Hello,
       87 111 114 108 100 33 10  #World!
-len:  len-text+1
-one:  1
+len:  len-txt+1
 neg:  0-1
+one:  1

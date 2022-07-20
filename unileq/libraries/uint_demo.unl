@@ -54,9 +54,9 @@ not.
      --------------+--------
        string.unl  |    36
          uint.unl  |   221
-          int.unl  |  1620
-       random.unl  |  2601
-       memory.unl  |  3161
+          int.unl  |  1758
+       random.unl  |  2865
+       memory.unl  |  3433
 
 
 |#
@@ -258,7 +258,7 @@ string.escend:
 #|==============================================================================
 
 
-Unsigned Integer Operations - v4.06
+Unsigned Integer Operations - v5.00
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -271,8 +271,9 @@ uint.unl provides functions for performing most of the common unsigned integer
 operations. In particular, it handles: comparisons, arithmetic, and bitwise
 operations.
 
-All functions are bit length agnostic. They don't need to be modified even if
-unileq uses a something other than 64 bit integers.
+Unileq typically uses integers modulo 2^64. However, string printing, integer
+arithmetic, and comparisons will work with any modulo. Bitwise functions, on
+the other hand, require integers modulo 2^n.
 
 The 0 address will always be 0 upon function return, even if one of the return
 value addresses is 0.
@@ -282,24 +283,25 @@ This library does not depend on any other libraries.
 Worst case time complexity:
 
 
-       Function  |  Time  |      O(n)
-     ------------+--------+----------------
-         print   |     -  |   -
-          cmp    |    28  |  28
-          min    |    34  |  34
-          max    |    34  |  34
-          set    |    24  |  24
-          neg    |    25  |  25
-          add    |    30  |  30
-          sub    |    31  |  31
-          mul    |   885  |  53 + 13*bits
-          div    |   885  |  53 + 13*bits
-          shl    |   168  |  40 +  2*bits
-          shr    |   543  |  31 +  8*bits
-          not    |    26  |  26
-          and    |   485  |  44 +  7*bits
-           or    |   486  |  45 +  7*bits
-          xor    |   487  |  46 +  7*bits
+       Function  |    Complexity     |  Instructions
+                 |                   |   (64 bits)
+     ------------+-------------------+----------------
+         print   |  --               |       --
+          cmp    |  29               |       29
+          min    |  34               |       34
+          max    |  34               |       34
+          set    |  24               |       24
+          neg    |  25               |       25
+          add    |  30               |       30
+          sub    |  31               |       31
+          mul    |  55 + 12.97*bits  |      885
+          div    |  61 +  8.65*bits  |      614
+          shl    |  40 +  2.00*bits  |      168
+          shr    |  31 +  8.00*bits  |      543
+          not    |  26               |       26
+          and    |  37 +  7.00*bits  |      485
+           or    |  38 +  7.00*bits  |      486
+          xor    |  39 +  7.00*bits  |      487
 
 
 --------------------------------------------------------------------------------
@@ -315,10 +317,10 @@ uint.min [ret] [a] [b]
 uint.max [ret] [a] [b]
 
 Integer Arithmetic
-uint.set [ret] [a]
-uint.neg [ret] [a]
-uint.add [ret] [a] [b]
-uint.sub [ret] [a] [b]
+uint.set [ret]  [a]
+uint.neg [ret]  [a]
+uint.add [ret]  [a] [b]
+uint.sub [ret]  [a] [b]
 uint.mul [high] [low] [a] [b]
 uint.div [quot] [rem] [num] [den]
 
@@ -344,8 +346,8 @@ Version History
 3.00
      Optimized functions so they are all under or around 1K instructions.
 3.01
-     Optimized uint.and, or, and xor so the final value is stored in [a]. This
-     removes the need for a temporary storage variable.
+     Optimized uint.and, uint.or, and uint.xor so the final value is stored in
+     [a]. This removes the need for a temporary storage variable.
      Cleaned up uint.cmp so its branching is more straight forward.
 3.02
      Optimized uint.set and uint.add to remove 1 instruction.
@@ -354,14 +356,16 @@ Version History
      offset [b] by 1 to check for carrying.
      Updated formatting for uint.cmp.
      Changed uint.div to abort with 0xd0 when dividing by 0.
-     Optimized AND/OR/XOR by skipping first loop check.
+     Optimized uint.and, uint.or, and uint.xor by skipping first loop check.
 3.04
-     Optimized AND/OR/XOR by 18%. [a] and [b] only need to be offset by 1 on the
-     first loop. This removes 2 decrement instructions per loop.
+     Optimized uint.and, uint.or, and uint.xor by 18%. [a] and [b] only need to
+     be offset by 1 on the first loop. This removes 2 decrement instructions per
+     loop.
 3.05
-     Optimized AND/OR/XOR by 11%. Removed the iteration counter and instead
-     check if [b]=0. We only set the bottom bit of [a] in 1/4 of cases, and only
-     check if [b]=0 in 1/2 of cases. OR/XOR are based off of AND for their loop.
+     Optimized uint.and, uint.or, and uint.xor by 11%. Removed the iteration
+     counter and instead check if [b]=0. We only set the bottom bit of [a] in
+     1/4 of cases, and only check if [b]=0 in 1/2 of cases. uint.or and uint.xor
+     are based off of uint.and for their loop.
 3.06
      Updated comments.
 3.07
@@ -384,9 +388,9 @@ Version History
      Made uint.div bit length agnostic and lowered run time by 6%.
      All functions are now bit length agnostic.
 4.01
-     Simplified loop termination in mul and div, and lowered run times by 5%.
-     mul will skip calculating the high value if high=0. This is 44% faster.
-     div will skip calculating the quotient if quot=0. This is 29% faster.
+     Simplified loop termination in uint.mul and uint.div. This is 5% faster.
+     uint.mul will skip calculating [high] if high=0. This is 44% faster.
+     uint.div will skip calculating [quot] if quot=0. This is 29% faster.
 4.02
      Removed bit counting in uint.shl and lowered run time by 6%.
      Simplified uint.shr initialization.
@@ -401,19 +405,22 @@ Version History
      Lowered run time of uint.min and uint.max from 38 to 34 instructions.
      Cleaned up variable names in uint.set, uint.neg, uint.add, and uint.sub.
      Removed unnecessary instructions from uint.mul when high=0.
+5.00
+     All integer arithmetic functions work with any modulo on the underlying
+     integers.
+     Remade uint.div and uint.mul to work with any modulo, even non
+     power-of-two, by using the fibonacci sequence.
+     uint.div is 30% faster and uint.mul is 1% faster.
+     Cleaned up version history comments.
 
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Make sure arguments are only loaded once, in case we read a special address that
-can change values each time we read it.
-uint.shr
-	Remove bit counting.
-	Use the relation (n<<<k) - (n<<k) = n>>(64-k).
-See if fibonacci multiplication is faster than uint.mul.
-See if there's a way to perform functions for non 2^n mods.
+Simplify uint.div den0/nden1 calculation. Get rid of exception for den*2>=MOD.
+Optimize uint.mul to have same time complexity as uint.div. Unroll first loop
+iteration and simplify loop?
 
 
 |#
@@ -428,7 +435,6 @@ uint.print:
 	#
 	#Effect: Prints a number in an arbitrary base.
 	#
-	#This function works even if unileq's underlying integers are not a power of two.
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
@@ -554,6 +560,7 @@ uint.print:
 	0       0       .arg6:6
 	#Variables
 	0-2 0-1 .z:0 1 2
+	.tmp:0
 	.nnum:0
 	.num:0
 	.mxbase:16-1
@@ -562,7 +569,6 @@ uint.print:
 	.pad:0
 	.padchr:32
 	.digits:0
-	.tmp:0
 	.den:0
 	.lden:0
 	.hex:
@@ -625,8 +631,8 @@ uint.cmp:
 	.r0     .z      ?+1
 	.z      .z      .r0:0
 	#Variables
-	.a:0
 	.z:0 1 2
+	.a:0
 
 
 uint.min:
@@ -773,6 +779,7 @@ uint.set:
 	.tmp    .a0:0   ?+1
 	.ret0:0 .ret1:0 ?+1
 	.ret2:0 .tmp    ?+1
+	#Return
 	0       0       .arg4:4
 	#Variables
 	.off:2
@@ -813,11 +820,12 @@ uint.neg:
 	.val    .val    ?+1
 	.val    .tmp    ?+1
 	.ret1:0 .val    ?+1
+	#Return
 	0       0       .arg4:4
 	#Variables
 	.off:2
-	.val:0
 	.tmp:0
+	.val:0
 
 
 uint.add:
@@ -912,25 +920,31 @@ uint.sub:
 	0       0       .arg5:5
 	#Variables
 	.off:2
-	.val:0
 	.tmp:0
+	.val:0
 
 
 uint.mul:
 	#Call  : 0 ? uint.mul high low a b
 	#
-	#Effect: [high] = [a]*[b] / 2^64
-	#      : [low]  = [a]*[b] % 2^64
+	#Effect: [high] = [a]*[b] / MOD
+	#      : [low]  = [a]*[b] % MOD
 	#
-	#Time  : 53 + 13*bits = 885
-	#Time  : 40 +  7*bits = 488 if high=0
+	#Time  : 55 + 12.97*bits = 885
+	#Time  : 47 +  7.21*bits = 508 if high=0
 	#
-	#Use [hval] and [lval] to store the high and low values of [a]*[b]. During each
-	#loop, shift [hval], [lval], and [b] to the left by 1. If the top bit of [b] is
-	#set, add [a] to [lval] and carry into [hval].
+	#Deconstruct [b] into a sum of fibonacci numbers (ex: 15=11+3+1). At the same
+	#time, calculate [a]*[b] by building up a separate fibonacci sequence and adding
+	#[a] to it every time a fibonacci number is a part of [b]'s sum.
+	#
+	#The actual time complexity is
+	#
+	#     n(F) = ceil(log_phi(F*sqrt(5)-1/2))
+	#     time = 32 + 9*n(F)
+	#     time = 34 + 5*n(F) if high=0
 	#
 	#Setup stack pointer.
-	.tmp    .tmp    ?+1
+	.tmp    .tmp    .firstrun
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
 	0       .tmp    ?+1
@@ -946,114 +960,193 @@ uint.mul:
 	.l0     .tmp    ?+1
 	.l1     .l1     ?+1
 	.l1     .tmp    ?+1
-	#Get -[a]. Use -[a] for adding to [lval].
+	#Get [a]
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
 	.a0     .a0     ?+1
 	.a0     .tmp    ?+1
+	.na     .na     ?+1
+	.na     .a0:0   ?+1
 	.a      .a      ?+1
-	.a      .a0:0   ?+1
-	#Get [b]
+	.a      .na     ?+1
+	#Get -[b]. We will flip the sign of the result later.
 	.tmp    .tmp    ?+1
 	.tmp    .arg5:5 ?+1
 	.b0     .b0     ?+1
 	.b0     .tmp    ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .b0:0   ?+1
-	.b      .b      ?+1
-	.b      .tmp    ?+1
-	#Offset [tmp] by 1 to force [b] to be odd.
-	.tmp    .z+1    ?+1
-	.lval   .lval   ?+1
-	#Get high. Only set if [hret]!=0.
+	.nb     .nb     ?+1
+	.nb     .b0:0   ?+1
+	.lval0  .lval0  ?+1
+	.lval1  .lval1  ?+1
+	#Get high. If [hret]=0, skip calculating the high value.
 	.hret   .arg2:2 ?+1
-	.hret   .z      .looplow
-	#If -[a]=1, we have to manually set [low]=[b].
-	.a      .z-1    ?+1
-	.a      .z      .rethigh+3
-	.hval   .hval   ?+1
-	.lval   .z-1    .loophigh+3
-	#-------- Calculate [lval] and [hval] --------
-.loophigh:
-	#If the highest bit of [b] is set, add [a] to [lval] and carry to [hval].
-	.tmp    .b      ?+1
-	.b      .tmp    ?+7
-	.lval   .a      ?+10
-	.hval   .z-1    ?+7
-	#If [b]=0, we are done.
-	.b      .z      .rethigh
-	.lval   .z+1    ?+1
-	#Left shift [hval].
-	.htmp   .htmp   ?+1
-	.htmp   .hval   ?+1
-	.hval   .htmp   ?+1
-	#Left shift [lval] and carry into [hval].
-	.ltmp   .ltmp   ?+1
-	.ltmp   .lval   ?+1
-	.ltmp   .z+1    ?+1
-	.lval   .ltmp   ?+4
-	.hval   .z-1    ?+1
-	.tmp    .tmp    .loophigh
-	#----------- Only calculate [lval] -----------
-.looplow:
-	#If the highest bit of [b] is set, add [a] to [lval].
-	.b      .tmp    ?+7
-	.lval   .a      ?+1
-	.tmp    .tmp    ?+7
-	#If [b]=0, we are done.
-	.b      .z      .retlow
-	.tmp    .tmp    ?+1
-	#Left shift [lval].
-	.ltmp   .ltmp   ?+1
-	.ltmp   .lval   ?+1
-	.lval   .ltmp   ?+1
-	.tmp    .b      .looplow
-.rethigh:
-	#Because we terminate 1 iteration late, return [htmp] and [ltmp] instead of
-	#[hval] and [lval].
-	.ltmp   .z-1    ?+7
-	.ltmp   .ltmp   ?+1
-	.htmp   .htmp   ?+1
+	.hret   .z      .lowonly
+	#------- Calculate [lval] and [hval] --------
+	.hval0  .hval0  ?+1
+	.hval1  .hval1  ?+1
+	.nb     .z      .highzero
+	.na     .z      .highzero
+	.nfib0  .fib0i  ?+1
+	.fib0   .nfib0i ?+1
+	.nfib1  .fib1i  ?+1
+	.fib1   .nfib1i .hstart:.highfib0+9
+	#During each loop, fibonacci decrement the [nb]. If [nb]>[fib], reduce [nb] and
+	#add [a] to the return value. Then fibonacci increment the return value.
+.highfib0:
+	.fib1   .fib0   .highret
+	.hval0  .hval1  ?+1
+	#If [lval0]<=[lval1], check for a carry into [hval0].
+	.lval0  .lval1  .highfib1-6
+	#If [nb]>[fib0], add [a] to [lval0] and check for a carry into [hval0].
+	.nb     .fib0   ?+16
+	.lval0  .na     ?+7
+	.hval0  .z+1    ?+1
+	.nfib0  .nfib1  .highfib1
+	.lval0  .z      ?-8
+	.nfib0  .nfib1  .highfib1
+	#[nb]<=[fib0], so restore [nb].
+	.nb     .nfib0  ?+1
+	.nfib0  .nfib1  .highfib1
+	#Checking for a carry from [lval0]-[lval1].
+	.lval0  .z      .highfib0+9
+	.hval0  .z-1    .highfib0+9
+.highfib1:
+	.fib0   .fib1   .highret
+	.hval1  .hval0  ?+1
+	#If [lval1]<=[lval0], check for a carry into [hval1].
+	.lval1  .lval0  .lowonly-6
+	#If [nb]>[fib1], subtract [a] from [lval1] and check for a carry into [hval1].
+	.nb     .fib1   ?+13
+	.lval1  .a      ?+4
+	.nfib1  .nfib0  .highfib0
+	.lval1  .z      ?-5
+	.hval1  .z-1    ?-8
+	#[nb]<=[fib1], so restore [nb].
+	.nb     .nfib1  ?+1
+	.nfib1  .nfib0  .highfib0
+	#Checking for a carry from [lval1]-[lval0].
+	.lval1  .z      .highfib1+9
+	.hval1  .z-1    .highfib1+9
+	#---------- Only calculate [lval] -----------
+.lowonly:
+	.nb     .z      .lowret+3
+	.nfib0  .fib0i  ?+1
+	.fib0   .nfib0i ?+1
+	.nfib1  .fib1i  ?+1
+	.fib1   .nfib1i .lstart:.lowfib0+6
+	#During each loop, fibonacci decrement the [nb]. If [nb]>[fib], reduce [nb] and
+	#add [a] to the return value. Then fibonacci increment the return value.
+.lowfib0:
+	.fib1   .fib0   .lowret
+	.lval0  .lval1  ?+1
+	#If [nb]>[fib0], add [a] to [lval0].
+	.nb     .fib0   ?+7
+	.lval0  .na     ?+1
+	.nfib0  .nfib1  .lowfib1
+	.nb     .nfib0  ?+1
+	.nfib0  .nfib1  .lowfib1
+.lowfib1:
+	.fib0   .fib1   .lowret
+	.lval1  .lval0  ?+1
+	#If [nb]>[fib1], subtract [a] from [lval1].
+	.nb     .fib1   ?+7
+	.lval1  .a      ?+1
+	.nfib1  .nfib0  .lowfib0
+	.nb     .nfib1  ?+1
+	.nfib1  .nfib0  .lowfib0
+	#-------------- Return values ---------------
+.highret:
+	#Calculate the low return value and subtract [a] from it.
+	#Also check for final carries into the high value.
+	.lval0  .lval1  ?+4
+	.hval1  .z-1    ?+4
+	.lval0  .z      ?-5
+	.lval0  .na     ?+4
+	.hval1  .z-1    ?+1
+	.lval1  .lval1  ?+1
+	.hval0  .na     ?+1
+.highzero:
 	#Set [high]
 	.h0     .h0     ?+1
 	.h0     .hret   ?+1
 	.h1     .h1     ?+1
 	.h1     .hret   ?+1
-	.hret   .hret   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .h0:0   ?+1
-	.htmp   .tmp    ?+1
-	.h1:0   .htmp   ?+1
-.retlow:
+	.hval0  .h0:0   ?+1
+	.hval1  .hval0  ?+1
+	.h1:0   .hval1  ?+1
+	.hret   .hret   .lowret+3
+.lowret:
 	#Set [low]
-	.b      .l0:0   ?+1
-	.ltmp   .b      ?+1
-	.l1:0   .ltmp   ?+1
+	.lval0  .na     ?+1
+	.lval1  .l0:0   ?+1
+	.lval0  .lval1  ?+1
+	.l1:0   .lval0  ?+1
+	#Return
 	0       0       .arg6:6
+	#On the first run, calculate the largest fibonacci values that can fit in our
+	#underlying integers.
+	.fdif:.firstrun-uint.mul-3
+	.hdif:.highfib0-.highfib1
+	.ldif:.lowfib0-.lowfib1
+.firstrun:
+	uint.mul+2 .fdif ?+1
+	.nfib1i .fib0i  .firstset1
+	.fib0i  .nfib1i ?-5
+.firstset0:
+	#If [fib0]<[fib1], start on [fib1] loop.
+	.fib1i  .nfib1i ?+1
+	.fib0i  .fib1i  ?+1
+	.nfib0i .fib0i  ?+1
+	.hstart .hdif   ?+1
+	.lstart .ldif   ?+1
+	.fib1i  .z+1    ?+1
+	.nfib1i .z-1    uint.mul+3
+.firstset1:
+	.nfib0i .fib0i  ?+1
+	.nfib1i .nfib0i ?+1
+	.fib1i  .nfib1i ?+1
+	.fib0i  .fib1i  ?+4
+	.fib0i  .nfib1i .firstset1-6
+	.nfib0i .nfib0i .firstset0+3
 	#Variables
 	0-2 0-1 .z:0 1
 	.tmp:0
 	.a:0
-	.b:0
+	.na:0
+	.nb:0
 	.hret:0
-	.hval:0
-	.htmp:0
-	.lval:0
-	.ltmp:0
+	.hval0:0
+	.hval1:0
+	.lval0:0
+	.lval1:0
+	.fib0i:1
+	.nfib0i:0
+	.fib1i:0
+	.nfib1i:0-1
+	.fib0:0
+	.nfib0:0
+	.fib1:1
+	.nfib1:0-1
 
 
 uint.div:
 	#Call  : 0 ? uint.div quot rem num den
 	#
-	#Effect: [quot] = [num] / [den] , rounded down
+	#Effect: [quot] = [num] / [den] rounded down
 	#      : [rem]  = [num] % [den]
 	#
-	#Time  : 53 + 13*bits = 885
-	#      : 45 +  9*bits = 621 if quot=0
+	#Time  : 61 + 8.65*bits = 614
+	#      : 52 + 7.21*bits = 513 if quot=0
 	#
-	#Every loop, shift [quot], [rem], and [num] left by 1. If the top bit of [num] is
-	#set, add 1 to [rem]. Then, if [rem]>=[den], add 1 to [quot] and subtract [den]
-	#from [rem].
+	#Use the fibonacci sequence to build up [den]. Then run the sequence in
+	#reverse to calculate [num]%[den]. While calculating the remainder, calculate
+	#the quotient [num]/[den] by using another, separate fibonacci sequence.
+	#
+	#The actual time complexity is
+	#
+	#     n(F) = ceil(log_phi(F*sqrt(5)-1/2))
+	#     time = 45 + 6*n(F)
+	#     time = 38 + 5*n(F) if quot=0
 	#
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
@@ -1065,9 +1158,6 @@ uint.div:
 	.arg4   0       ?+1
 	.arg5   0       ?+1
 	.arg6   0       ?+1
-	#Get quot. Only set if qret!=0.
-	.qret   .qret   ?+1
-	.qret   .arg2:2 ?+1
 	#Get rem
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
@@ -1075,18 +1165,6 @@ uint.div:
 	.r2     .tmp    ?+1
 	.r3     .r3     ?+1
 	.r3     .tmp    ?+1
-	#Get [den]
-	.tmp    .tmp    ?+1
-	.tmp    .arg5:5 ?+1
-	.p1     .p1     ?+1
-	.p1     .tmp    ?+1
-	.nden   .nden   ?+1
-	.nden   .p1:0   ?+1
-	#If [den]=0, abort.
-	.nden   .z      .divz
-	.nden   .z-1    ?+1
-	.den    .den    ?+1
-	.den    .nden   ?+1
 	#Get [num]
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
@@ -1096,80 +1174,128 @@ uint.div:
 	.tmp    .p0:0   ?+1
 	.num    .num    ?+1
 	.num    .tmp    ?+1
-	#Offset [tmp] by 1 to force [num] to be odd.
-	.tmp    .z+1    ?+1
-	.rem    .rem    ?+1
-	.qret   .z      .looprem
+	#Get [den]
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.p1     .p1     ?+1
+	.p1     .tmp    ?+1
+	.nden1  .nden1  ?+1
+	.nden1  .p1:0   ?+1
+	#If [den]=0, abort.
+	.nden1  .z      .divz
+	#Get quot. If [qret]=0, skip calculating the quotient.
+	.qret   .arg2:2 ?+1
+	#If [den]*2>=MOD, we need to skip calculating the largest multiple of [den].
+	.den0   .nden1  ?+1
+	.nden1  .den0   ?+4
+	.den1   .den1   ?+7
+	.den1   .den1   .denhalf
+	#Calc largest fibonacci multiple of [den].
+	.nden1  .den0   .denstart0
+	.den0   .nden1  ?-5
+.denstart1:
+	#[den1]>[den0]. Fill in the rest of the denominators.
+	.den1   .nden1  ?+1
+	.den0   .den1   ?+1
+	.nden0  .den0   ?+1
+	.qret   .z      .remden1+3
+	.quot0  .quot0  .quotden1+6
+.denstart0:
+	#[den0]>=[den1]. Fill in the rest of the denominators.
+	#If [den0]=[den1], we need to swap values.
+	.nden0  .den0   ?+1
+	.nden1  .nden0  ?+1
+	.den1   .nden1  ?+1
+	.den0   .den1   ?+4
+	.den0   .nden1  .denhalf+9
+	.nden0  .nden0  .denstart1+3
+.denhalf:
+	#[den]*2>=MOD. Manually set the denominators to +-[den].
+	.nden0  .den0   ?+1
+	.nden1  .nden0  ?+1
+	.den1   .nden1  ?+1
+	.qret   .z      .remden0+3
+	.quot0  .quot0  .quotden0+6
 	#-------- Calculate [rem] and [quot] --------
-.loopquot:
-	#[rem]+=[num]>>63, [num]<<=1. If [num]=0, abort.
-	.num    .tmp    ?+4
-	.rem    .z-1    ?+4
-	.num    .z      .retquot
-	#If [rem]>=[den], [quot]+=1
-	.rem    .den    ?+7
-	.rem    .z+1    ?+1
-	.quot   .z-1    ?+4
-	.rem    .nden   ?+1
-	#[quot]<<=1.
-	.qtmp   .qtmp   ?+1
-	.qtmp   .quot   ?+1
-	.quot   .qtmp   ?+1
-	#[rem]<<=1
-	.rtmp   .rtmp   ?+1
-	.rtmp   .rem    ?+1
-	.rem    .rtmp   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .num    .loopquot
+	#During each loop, fibonacci decrement the denominator and increment the
+	#quotient. If [num]>[den], reduce [num] and increment the quotient by 1.
+.quotden0:
+	.den1   .den0   .quotret
+	.quot0  .quot1  ?+1
+	#Test if [num]>[den0].
+	.num    .den0   ?+7
+	.quot0  .z-1    ?+1
+	.nden0  .nden1  .quotden1
+	.num    .nden0  ?+1
+	.nden0  .nden1  .quotden1
+.quotden1:
+	.den0   .den1   .quotret
+	.quot1  .quot0  ?+1
+	#Test if [num]>[den1].
+	.num    .den1   ?+7
+	.quot1  .z+1    ?+1
+	.nden1  .nden0  .quotden0
+	.num    .nden1  ?+1
+	.nden1  .nden0  .quotden0
 	#----------- Only calculate [rem] -----------
-.looprem:
-	#[rem]+=[num]>>63, [num]<<=1. If [num]=0, abort.
-	.num    .tmp    ?+4
-	.rem    .z-1    ?+4
-	.num    .z      .retrem
-	#If [rem]>=[den], [quot]+=1
-	.rem    .den    ?+7
-	.rem    .z+1    ?+1
-	.rtmp   .rtmp   ?+7
-	.rem    .nden   ?+1
-	.rtmp   .rtmp   ?+1
-	#[rem]<<=1
-	.rtmp   .rem    ?+1
-	.rem    .rtmp   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .num    .looprem
-.retquot:
-	#Because we terminate 1 iteration late, return [qtmp] and [rtmp] instead of
-	#[quot] and [rem].
-	#Set [quot]
+	#During each loop, fibonacci decrement the denominator. If [num]>[den],
+	#reduce [num].
+.remden0:
+	.den1   .den0   .remret
+	#Test if [num]>[den0].
+	.num    .den0   ?+4
+	.nden0  .nden1  .remden1
+	.num    .nden0  ?+1
+	.nden0  .nden1  .remden1
+.remden1:
+	.den0   .den1   .remret
+	#Test if [num]>[den1].
+	.num    .den1   ?+4
+	.nden1  .nden0  .remden0
+	.num    .nden1  ?+1
+	.nden1  .nden0  .remden0
+	#-------------- Return values ---------------
+.quotret:
+	#Set [quot]. Because of how additions are split, return [quot0]-[quot1]+1.
+	.num    .den1   ?+4
+	.quot0  .z-1    ?+7
+	.num    .z      ?-5
+	.num    .nden1  ?+1
 	.r0     .r0     ?+1
 	.r0     .qret   ?+1
 	.r1     .r1     ?+1
 	.r1     .qret   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .r0:0   ?+1
-	.qtmp   .tmp    ?+1
-	.r1:0   .qtmp   ?+1
-.retrem:
-	#Set [rem]
+	.quot0  .r0:0   ?+1
+	.quot1  .quot0  ?+1
+	.r1:0   .quot1  ?+1
+	.quot1  .quot1  ?+1
+	.qret   .qret   .remret+9
+.remret:
+	#Set [rem].
+	.num    .den1   ?+1
+	.num    .z      ?+4
+	.num    .nden1  ?+1
 	.num    .r2:0   ?+1
-	.rtmp   .num    ?+1
-	.r3:0   .rtmp   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .num    ?+1
+	.r3:0   .tmp    ?+1
+	#Return
 	0       0       .arg6:6
 .divz:
-	#Abort
+	#Division by 0. Abort.
+	0       0       ?+1
 	0-1     0       ?-2
 	#Variables
 	0-2 0-1 .z:0 1
 	.tmp:0
 	.num:0
-	.den:0
-	.nden:0
+	.den0:0
+	.nden0:0
+	.den1:0
+	.nden1:0
 	.qret:0
-	.quot:0
-	.qtmp:0
-	.rem:0
-	.rtmp:0
+	.quot0:0
+	.quot1:0
 
 
 #--------------------------------------------------------------------------------
@@ -1270,14 +1396,15 @@ uint.shl:
 	.tmp    .ret0:0 ?+1
 	.num    .tmp    ?+1
 	.ret1:0 .num    ?+1
+	#Return
 	0       0       .arg5:5
 	#Variables
-	.num:0
-	.shift:0
-	.tmp:0
 	0-3 0-2 0-1 .z:0 1 2 3
 	.p8:8
 	.n8:0-8
+	.num:0
+	.shift:0
+	.tmp:0
 
 
 uint.shr:
@@ -1349,15 +1476,16 @@ uint.shr:
 	.rval   .ret0:0 ?+1
 	.tmp    .rval   ?+1
 	.ret1:0 .tmp    ?+1
+	#Return
 	0       0       .arg5:5
 	#Variables
+	0-1 .z:0 1 2
+	.tmp:0
 	.firstv:.firsts+1-.firstdone
 	.nbits:0
 	.num:0
 	.rval:0
 	.shift:0
-	.tmp:0
-	0-1 .z:0 1 2
 
 
 uint.not:
@@ -1397,11 +1525,12 @@ uint.not:
 	.ret    .ret    ?+1
 	.ret    .tmp    ?+1
 	.p1:0   .ret    ?+1
+	#Return
 	0       0       .arg4:4
 	#Variables
 	.z:0 1 2
-	.ret:0
 	.tmp:0
+	.ret:0
 
 
 uint.and:
@@ -1409,7 +1538,7 @@ uint.and:
 	#
 	#Effect: [ret] = [a] & [b]
 	#
-	#Time  : 44 + 7*bits = 485
+	#Time  : 37 + 7*bits = 485
 	#
 	#Make sure [a] and [b] are odd. Every loop, rotate [a] to the left and shift [b]
 	#to the left. Depending on how the top bits of [a] and [b] are set, add 1 to [a].
@@ -1482,11 +1611,14 @@ uint.and:
 	.a      .ret0:0 ?+1
 	.btmp   .a      ?+1
 	.ret1:0 .btmp   ?+1
+	#Return
 	0       0       .arg5:5
 	#Variables
 	0-1 .z:0 1 2
-	.a:0 .atmp:0
-	.b:0 .btmp:0
+	.a:0
+	.atmp:0
+	.b:0
+	.btmp:0
 
 
 uint.or:
@@ -1494,7 +1626,7 @@ uint.or:
 	#
 	#Effect: [ret] = [a] | [b]
 	#
-	#Time  : 45 + 7*bits = 486
+	#Time  : 38 + 7*bits = 486
 	#
 	#Use bitwise AND and the relation A|B=-1-(~A)&(~B).
 	#
@@ -1566,11 +1698,14 @@ uint.or:
 	.btmp   .ret0:0 ?+1
 	.a      .btmp   ?+1
 	.ret1:0 .a      ?+1
+	#Return
 	0       0       .arg5:5
 	#Variables
 	0-1 .z:0 1 2
-	.a:0 .atmp:0
-	.b:0 .btmp:0
+	.a:0
+	.atmp:0
+	.b:0
+	.btmp:0
 
 
 uint.xor:
@@ -1578,7 +1713,7 @@ uint.xor:
 	#
 	#Effect: [ret] = [a] ^ [b]
 	#
-	#Time  : 46 + 7*bits = 487
+	#Time  : 39 + 7*bits = 487
 	#
 	#Use bitwise AND and the relation A^B=A+B-2(A&B).
 	#
@@ -1646,18 +1781,21 @@ uint.xor:
 	.off    .ret0:0 ?+1
 	.a      .off    ?+1
 	.ret1:0 .a      ?+1
+	#Return
 	0       0       .arg5:5
 	#Variables
 	0-1 .z:0 1 2
-	.a:0 .atmp:0
-	.b:0 .btmp:0
+	.a:0
+	.atmp:0
+	.b:0
+	.btmp:0
 	.off:0
 
 
 #|==============================================================================
 
 
-Signed Integer Operations - v1.03
+Signed Integer Operations - v2.00
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -1672,8 +1810,9 @@ uint.unl doesn't cover.
 If unileq's underlying integers are mod N, then we consider an integer to be
 negative if x >= floor((N+1)/2). The negative value of x is x' = x - N.
 
-All functions are bit length agnostic. They don't need to be modified even if
-unileq uses a something other than 64 bit integers.
+Unileq typically uses integers modulo 2^64. However, string printing, integer
+arithmetic, and comparisons will work with any modulo. Bitwise functions, on
+the other hand, require integers modulo 2^n.
 
 The 0 address will always be 0 upon function return, even if one of the return
 value addresses is 0.
@@ -1683,16 +1822,17 @@ This library does not depend on any other libraries.
 Worst case time complexity:
 
 
-       Function  |  Time  |      O(n)
-     ------------+--------+----------------
-         print   |     -  |  -
-          cmp    |    37  |  37
-          min    |    43  |  43
-          max    |    43  |  43
-          abs    |    30  |  30
-          mul    |   898  |  66 + 13*bits
-          div    |   904  |  72 + 13*bits
-          shr    |   555  |  43 +  8*bits
+       Function  |    Complexity     |  Instructions
+                 |                   |   (64 bits)
+     ------------+-------------------+----------------
+         print   |  --               |       --
+          cmp    |  37               |       37
+          min    |  43               |       43
+          max    |  43               |       43
+          abs    |  30               |       30
+          mul    |  63 + 12.97*bits  |      893
+          div    |  87 +  8.65*bits  |      640
+          shr    |  43 +  8.00*bits  |      555
 
 
 --------------------------------------------------------------------------------
@@ -1729,6 +1869,12 @@ Version History
      Removed a temporary variable in int.abs.
 1.03
      Removed unnecessary instructions from int.mul when high=0.
+2.00
+     All integer arithmetic functions work with any modulo on the underlying
+     integers.
+     Remade int.div and int.mul to work with any modulo, even non power-of-two,
+     by using the fibonacci sequence.
+     int.div is 30% faster and int.mul is 1% faster.
 
 
 --------------------------------------------------------------------------------
@@ -1736,8 +1882,7 @@ TODO
 
 
 Optimize sign extension for int.shr.
-Optimize int.cmp.
-Unroll first loop in mul, div, and shr to check for sign.
+Optimize comparison functions.
 
 
 |#
@@ -1752,8 +1897,6 @@ int.print:
 	#
 	#Effect: Prints a signed number in an arbitrary base. If the padding
 	#character is whitespace, print the sign after padding.
-	#
-	#This function works even if unileq's underlying integers are not a power of two.
 	#
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
@@ -2008,11 +2151,11 @@ int.cmp:
 	.r0     .z      ?+1
 	.z      .z      .r0:0
 	#Variables
+	.z:0 1 2
 	.a:0
 	.na:0
 	.b:0
 	.nb:0
-	.z:0 1 2
 
 
 int.min:
@@ -2212,6 +2355,7 @@ int.abs:
 	.tmp    .ret0:0 ?+1
 	.nval   .tmp    ?+1
 	.ret1:0 .nval   ?+1
+	#Return
 	0       0       .arg4:4
 	#Variables
 	0-1 .z:0 1 2
@@ -2227,18 +2371,24 @@ int.abs:
 int.mul:
 	#Call  : 0 ? int.mul high low a b
 	#
-	#Effect: [high] = [a]*[b] / 2^64 , sign extended
-	#      : [low]  = [a]*[b] % 2^64
+	#Effect: [high] = [a]*[b] / MOD sign extended
+	#      : [low]  = [a]*[b] % MOD
 	#
-	#Time  : 66 + 13*bits = 898
-	#Time  : 40 +  7*bits = 488 if high=0
+	#Time  : 63 + 12.97*bits = 893
+	#Time  : 47 +  7.21*bits = 508 if high=0
 	#
-	#Use [hval] and [lval] to store the high and low values of [a]*[b]. During each
-	#loop, shift [hval], [lval], and [b] to the left by 1. If the top bit of [b] is
-	#set, add [a] to [lval] and carry into [hval].
+	#Deconstruct [b] into a sum of fibonacci numbers (ex: 15=11+3+1). At the same
+	#time, calculate [a]*[b] by building up a separate fibonacci sequence and adding
+	#[a] to it every time a fibonacci number is a part of [b]'s sum.
+	#
+	#The actual time complexity is
+	#
+	#     n(F) = ceil(log_phi(F*sqrt(5)-1/2))
+	#     time = 40 + 9*n(F)
+	#     time = 34 + 5*n(F) if high=0
 	#
 	#Setup stack pointer.
-	.tmp    .tmp    ?+1
+	.tmp    .tmp    .firstrun
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
 	0       .tmp    ?+1
@@ -2254,132 +2404,205 @@ int.mul:
 	.l0     .tmp    ?+1
 	.l1     .l1     ?+1
 	.l1     .tmp    ?+1
-	#Get -[a]. Use -[a] for adding to [lval].
+	#Get [a]
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
 	.a0     .a0     ?+1
 	.a0     .tmp    ?+1
 	.na     .na     ?+1
 	.na     .a0:0   ?+1
-	#Get [b]
+	.a      .a      ?+1
+	.a      .na     ?+1
+	#Get -[b]. We will flip the sign of the result later.
 	.tmp    .tmp    ?+1
 	.tmp    .arg5:5 ?+1
 	.b0     .b0     ?+1
 	.b0     .tmp    ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .b0:0   ?+1
-	.b      .b      ?+1
-	.b      .tmp    ?+1
-	#Offset [tmp] by 1 to force [b] to be odd.
-	.tmp    .z+1    ?+1
-	.lval   .lval   ?+1
-	#Get high. Only set if [hret]!=0.
+	.nb     .nb     ?+1
+	.nb     .b0:0   ?+1
+	.lval0  .lval0  ?+1
+	.lval1  .lval1  ?+1
+	#Get high. If [hret]=0, skip calculating the high value.
 	.hret   .arg2:2 ?+1
-	.hret   .z      .looplow
-	#Record [a] and -[b] for sign correction.
-	.a      .a      ?+1
-	.a      .na     ?+1
+	.hret   .z      .lowonly
+	#------- Calculate [lval] and [hval] --------
+	.hval0  .hval0  ?+1
+	.hval1  .hval1  ?+1
+	.nb     .z      .highzero
+	.na     .z      .highzero
+	#Record [b] for sign correction.
+	.b      .b      ?+1
+	.b      .nb     ?+1
+	.nfib0  .fib0i  ?+1
+	.fib0   .nfib0i ?+1
+	.nfib1  .fib1i  ?+1
+	.fib1   .nfib1i .hstart:.highfib0+9
+	#During each loop, fibonacci decrement the [nb]. If [nb]>[fib], reduce [nb] and
+	#add [a] to the return value. Then fibonacci increment the return value.
+.highfib0:
+	.fib1   .fib0   .highret
+	.hval0  .hval1  ?+1
+	#If [lval0]<=[lval1], check for a carry into [hval0].
+	.lval0  .lval1  .highfib1-6
+	#If [nb]>[fib0], add [a] to [lval0] and check for a carry into [hval0].
+	.nb     .fib0   ?+16
+	.lval0  .na     ?+7
+	.hval0  .z+1    ?+1
+	.nfib0  .nfib1  .highfib1
+	.lval0  .z      ?-8
+	.nfib0  .nfib1  .highfib1
+	#[nb]<=[fib0], so restore [nb].
+	.nb     .nfib0  ?+1
+	.nfib0  .nfib1  .highfib1
+	#Checking for a carry from [lval0]-[lval1].
+	.lval0  .z      .highfib0+9
+	.hval0  .z-1    .highfib0+9
+.highfib1:
+	.fib0   .fib1   .highret
+	.hval1  .hval0  ?+1
+	#If [lval1]<=[lval0], check for a carry into [hval1].
+	.lval1  .lval0  .lowonly-6
+	#If [nb]>[fib1], subtract [a] from [lval1] and check for a carry into [hval1].
+	.nb     .fib1   ?+13
+	.lval1  .a      ?+4
+	.nfib1  .nfib0  .highfib0
+	.lval1  .z      ?-5
+	.hval1  .z-1    ?-8
+	#[nb]<=[fib1], so restore [nb].
+	.nb     .nfib1  ?+1
+	.nfib1  .nfib0  .highfib0
+	#Checking for a carry from [lval1]-[lval0].
+	.lval1  .z      .highfib1+9
+	.hval1  .z-1    .highfib1+9
+	#---------- Only calculate [lval] -----------
+.lowonly:
+	.nb     .z      .lowret+3
+	.nfib0  .fib0i  ?+1
+	.fib0   .nfib0i ?+1
+	.nfib1  .fib1i  ?+1
+	.fib1   .nfib1i .lstart:.lowfib0+6
+	#During each loop, fibonacci decrement the [nb]. If [nb]>[fib], reduce [nb] and
+	#add [a] to the return value. Then fibonacci increment the return value.
+.lowfib0:
+	.fib1   .fib0   .lowret
+	.lval0  .lval1  ?+1
+	#If [nb]>[fib0], add [a] to [lval0].
+	.nb     .fib0   ?+7
+	.lval0  .na     ?+1
+	.nfib0  .nfib1  .lowfib1
+	.nb     .nfib0  ?+1
+	.nfib0  .nfib1  .lowfib1
+.lowfib1:
+	.fib0   .fib1   .lowret
+	.lval1  .lval0  ?+1
+	#If [nb]>[fib1], subtract [a] from [lval1].
+	.nb     .fib1   ?+7
+	.lval1  .a      ?+1
+	.nfib1  .nfib0  .lowfib0
+	.nb     .nfib1  ?+1
+	.nfib1  .nfib0  .lowfib0
+	#-------------- Return values ---------------
+.highret:
+	#Calculate the low return value and subtract [a] from it.
+	#Also check for final carries into the high value.
+	.lval0  .lval1  ?+4
+	.hval1  .z-1    ?+4
+	.lval0  .z      ?-5
+	.lval0  .na     ?+4
+	.hval1  .z-1    ?+1
+	.lval1  .lval1  ?+1
+	#If [b]>=0, add [a] to [hval].
 	.nb     .nb     ?+1
 	.nb     .b      ?+1
-	#If -[a]=1, we have to manually set [low]=[b].
-	.na     .z-1    ?+1
-	.na     .z      .rethigh+3
-	.hval   .hval   ?+1
-	.lval   .z-1    .loophigh+3
-	#-------- Calculate [lval] and [hval] --------
-.loophigh:
-	#If the highest bit of [b] is set, add [a] to [lval] and carry to [hval].
-	.tmp    .b      ?+1
-	.b      .tmp    ?+7
-	.lval   .na     ?+10
-	.hval   .z-1    ?+7
-	#If [b]=0, we are done.
-	.b      .z      .rethigh
-	.lval   .z+1    ?+1
-	#Left shift [hval].
-	.htmp   .htmp   ?+1
-	.htmp   .hval   ?+1
-	.hval   .htmp   ?+1
-	#Left shift [lval] and carry into [hval].
-	.ltmp   .ltmp   ?+1
-	.ltmp   .lval   ?+1
-	.ltmp   .z+1    ?+1
-	.lval   .ltmp   ?+4
-	.hval   .z-1    ?+1
-	.tmp    .tmp    .loophigh
-	#----------- Only calculate [lval] -----------
-.looplow:
-	#If the highest bit of [b] is set, add [a] to [lval].
-	.b      .tmp    ?+7
-	.lval   .na     ?+1
-	.tmp    .tmp    ?+7
-	#If [b]=0, we are done.
-	.b      .z      .retlow
-	.tmp    .tmp    ?+1
-	#Left shift [lval].
-	.ltmp   .ltmp   ?+1
-	.ltmp   .lval   ?+1
-	.lval   .ltmp   ?+1
-	.tmp    .b      .looplow
-.rethigh:
-	#Because we terminate 1 iteration late, return [htmp] and [ltmp] instead of
-	#[hval] and [lval].
-	.ltmp   .z-1    ?+7
-	.ltmp   .ltmp   ?+1
-	.htmp   .htmp   ?+1
-	#If [a]<0, sub [b] from [high].
-	.na     .z+2    ?+1
+	.nb     .b      ?+4
+	.hval0  .na     ?+1
+	#If [a]<0, subtract [b] from [hval].
+	.na     .z+1    ?+1
 	.a      .na     ?+4
-	.htmp   .nb     ?+1
-	#If [b]<0, sub [a] from [high].
-	.tmp    .tmp    ?+1
-	.tmp    .nb     ?+1
-	.nb     .z+1    ?+1
-	.tmp    .nb     ?+7
-	.htmp   .na     ?+1
-	.htmp   .z+1    ?+1
+	.hval0  .b      ?+1
+.highzero:
 	#Set [high]
 	.h0     .h0     ?+1
 	.h0     .hret   ?+1
 	.h1     .h1     ?+1
 	.h1     .hret   ?+1
-	.hret   .hret   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .h0:0   ?+1
-	.htmp   .tmp    ?+1
-	.h1:0   .htmp   ?+1
-.retlow:
+	.hval0  .h0:0   ?+1
+	.hval1  .hval0  ?+1
+	.h1:0   .hval1  ?+1
+	.hret   .hret   .lowret+3
+.lowret:
 	#Set [low]
-	.b      .l0:0   ?+1
-	.ltmp   .b      ?+1
-	.l1:0   .ltmp   ?+1
+	.lval0  .na     ?+1
+	.lval1  .l0:0   ?+1
+	.lval0  .lval1  ?+1
+	.l1:0   .lval0  ?+1
+	#Return
 	0       0       .arg6:6
+	#On the first run, calculate the largest fibonacci values that can fit in our
+	#underlying integers.
+	.fdif:.firstrun-int.mul-3
+	.hdif:.highfib0-.highfib1
+	.ldif:.lowfib0-.lowfib1
+.firstrun:
+	int.mul+2 .fdif ?+1
+	.nfib1i .fib0i  .firstset1
+	.fib0i  .nfib1i ?-5
+.firstset0:
+	#If [fib0]<[fib1], start on [fib1] loop.
+	.fib1i  .nfib1i ?+1
+	.fib0i  .fib1i  ?+1
+	.nfib0i .fib0i  ?+1
+	.hstart .hdif   ?+1
+	.lstart .ldif   ?+1
+	.fib1i  .z+1    ?+1
+	.nfib1i .z-1    int.mul+3
+.firstset1:
+	.nfib0i .fib0i  ?+1
+	.nfib1i .nfib0i ?+1
+	.fib1i  .nfib1i ?+1
+	.fib0i  .fib1i  ?+4
+	.fib0i  .nfib1i .firstset1-6
+	.nfib0i .nfib0i .firstset0+3
 	#Variables
-	0-2 0-1 .z:0 1 2
+	0-2 0-1 .z:0 1
 	.tmp:0
 	.a:0
 	.na:0
 	.b:0
 	.nb:0
 	.hret:0
-	.hval:0
-	.htmp:0
-	.lval:0
-	.ltmp:0
+	.hval0:0
+	.hval1:0
+	.lval0:0
+	.lval1:0
+	.fib0i:1
+	.nfib0i:0
+	.fib1i:0
+	.nfib1i:0-1
+	.fib0:0
+	.nfib0:0
+	.fib1:1
+	.nfib1:0-1
 
 
 int.div:
 	#Call  : 0 ? int.div quot rem num den
 	#
-	#Effect: [quot] = [num] / [den] , rounded towards 0
+	#Effect: [quot] = [num] / [den] rounded down
 	#      : [rem]  = [num] % [den]
 	#
-	#Time  : 72 + 13*bits = 904
-	#      : 64 +  9*bits = 640 if quot=0
+	#Time  : 87 + 8.65*bits = 640
+	#      : 72 + 7.21*bits = 533 if quot=0
 	#
-	#Every loop, shift [quot], [rem], and [num] left by 1. If the top bit of [num] is
-	#set, add 1 to [rem]. Then, if [rem]>=[den], add 1 to [quot] and subtract [den]
-	#from [rem].
+	#Use the fibonacci sequence to build up [den]. Then run the sequence in
+	#reverse to calculate [num]%[den]. While calculating the remainder, calculate
+	#the quotient [num]/[den] by using another, separate fibonacci sequence.
+	#
+	#The actual time complexity is
+	#
+	#     n(F) = ceil(log_phi(F*sqrt(5)-1/2))
+	#     time = 71 + 6*n(F)
+	#     time = 58 + 5*n(F) if quot=0
 	#
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
@@ -2391,9 +2614,6 @@ int.div:
 	.arg4   0       ?+1
 	.arg5   0       ?+1
 	.arg6   0       ?+1
-	#Get quot. Only set if qret!=0.
-	.qret   .qret   ?+1
-	.qret   .arg2:2 ?+1
 	#Get rem
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
@@ -2406,25 +2626,22 @@ int.div:
 	.tmp    .arg5:5 ?+1
 	.p1     .p1     ?+1
 	.p1     .tmp    ?+1
-	.nden   .nden   ?+1
-	.nden   .p1:0   ?+1
-	#If [den]=0, abort.
-	.nden   .z      .divz
-	#Check if [den]<0.
-	.den    .den    ?+1
-	.den    .nden   ?+1
-	.nden   .z+1    ?+1
-	.den    .nden   .denpos
+	.nden1  .nden1  ?+1
+	.nden1  .p1:0   ?+1
+	#Get abs([den]).
+	.qsign  .qsign  ?+1
+	.den1   .den1   ?+1
+	.den1   .nden1  ?+1
+	.nden1  .z+1    ?+1
+	.den1   .nden1  .denabs
 	.tmp    .tmp    ?+1
-	.tmp    .den    ?+1
-	.nden   .tmp    ?+1
-	.nden   .z-1    ?+1
-	.qsign  .z-1    ?+4
-.denpos:
-	#Correct [den].
-	.nden   .z-2    ?+1
-	.den    .den    ?+1
-	.den    .nden   ?+1
+	.tmp    .den1   ?+1
+	.nden1  .tmp    ?+1
+	.qsign  .z-1    ?+7
+.denabs:
+	.nden1  .z-1    ?+1
+	#If [den]=0, abort.
+	.nden1  .z      .divz
 	#Get [num]
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
@@ -2434,101 +2651,147 @@ int.div:
 	.tmp    .p0:0   ?+1
 	.num    .num    ?+1
 	.num    .tmp    ?+1
-	#If [num]<0.
+	#Get abs([num]).
 	.tmp    .z+1    ?+1
-	.num    .tmp    .numpos
+	.num    .tmp    .numabs
 	.rsign  .num    ?+1
 	.tmp    .rsign  ?+1
-	.qsign  .z      ?+4
-	.qsign  .qsign  .numpos+3
-	.qsign  .z-1    .numpos+3
-.numpos:
+	.qsign  .z+1    ?+4
+.numabs:
 	.tmp    .z-1    ?+1
 	.num    .num    ?+1
 	.num    .tmp    ?+1
-	#Offset [tmp] by 1 to force [num] to be odd.
-	.tmp    .z+1    ?+1
-	.rem    .rem    ?+1
-	.qret   .z      .looprem
+	#Get quot. If [qret]=0, skip calculating the quotient.
+	.qret   .arg2:2 ?+1
+	#If [den]*2>=MOD, we need to skip calculating the largest multiple of [den].
+	.den0   .nden1  ?+1
+	.nden1  .den0   ?+4
+	.den1   .den1   ?+7
+	.den1   .den1   .denhalf
+	#Calc largest fibonacci multiple of [den].
+	.nden1  .den0   .denstart0
+	.den0   .nden1  ?-5
+.denstart1:
+	#[den1]>[den0]. Fill in the rest of the denominators.
+	.den1   .nden1  ?+1
+	.den0   .den1   ?+1
+	.nden0  .den0   ?+1
+	.qret   .z      .remden1+3
+	.quot0  .quot0  .quotden1+6
+.denstart0:
+	#[den0]>=[den1]. Fill in the rest of the denominators.
+	#If [den0]=[den1], we need to swap values.
+	.nden0  .den0   ?+1
+	.nden1  .nden0  ?+1
+	.den1   .nden1  ?+1
+	.den0   .den1   ?+4
+	.den0   .nden1  .denhalf+9
+	.nden0  .nden0  .denstart1+3
+.denhalf:
+	#[den]*2>=MOD. Manually set the denominators to +-[den].
+	.nden0  .den0   ?+1
+	.nden1  .nden0  ?+1
+	.den1   .nden1  ?+1
+	.qret   .z      .remden0+3
+	.quot0  .quot0  .quotden0+6
 	#-------- Calculate [rem] and [quot] --------
-.loopquot:
-	#[rem]+=[num]>>63, [num]<<=1. If [num]=0, abort.
-	.num    .tmp    ?+4
-	.rem    .z-1    ?+4
-	.num    .z      .retquot
-	#If [rem]>=[den], [quot]+=1
-	.rem    .den    ?+7
-	.rem    .z+1    ?+1
-	.quot   .z-1    ?+4
-	.rem    .nden   ?+1
-	#[quot]<<=1.
-	.qtmp   .qtmp   ?+1
-	.qtmp   .quot   ?+1
-	.quot   .qtmp   ?+1
-	#[rem]<<=1
-	.rtmp   .rtmp   ?+1
-	.rtmp   .rem    ?+1
-	.rem    .rtmp   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .num    .loopquot
+	#During each loop, fibonacci decrement the denominator and increment the
+	#quotient. If [num]>[den], reduce [num] and increment the quotient by 1.
+.quotden0:
+	.den1   .den0   .quotret
+	.quot0  .quot1  ?+1
+	#Test if [num]>[den0].
+	.num    .den0   ?+7
+	.quot0  .z-1    ?+1
+	.nden0  .nden1  .quotden1
+	.num    .nden0  ?+1
+	.nden0  .nden1  .quotden1
+.quotden1:
+	.den0   .den1   .quotret
+	.quot1  .quot0  ?+1
+	#Test if [num]>[den1].
+	.num    .den1   ?+7
+	.quot1  .z+1    ?+1
+	.nden1  .nden0  .quotden0
+	.num    .nden1  ?+1
+	.nden1  .nden0  .quotden0
 	#----------- Only calculate [rem] -----------
-.looprem:
-	#[rem]+=[num]>>63, [num]<<=1. If [num]=0, abort.
-	.num    .tmp    ?+4
-	.rem    .z-1    ?+4
-	.num    .z      .retrem
-	#If [rem]>=[den], [quot]+=1
-	.rem    .den    ?+7
-	.rem    .z+1    ?+1
-	.rtmp   .rtmp   ?+7
-	.rem    .nden   ?+1
-	.rtmp   .rtmp   ?+1
-	#[rem]<<=1
-	.rtmp   .rem    ?+1
-	.rem    .rtmp   ?+1
+	#During each loop, fibonacci decrement the denominator. If [num]>[den],
+	#reduce [num].
+.remden0:
+	.den1   .den0   .remret
+	#Test if [num]>[den0].
+	.num    .den0   ?+4
+	.nden0  .nden1  .remden1
+	.num    .nden0  ?+1
+	.nden0  .nden1  .remden1
+.remden1:
+	.den0   .den1   .remret
+	#Test if [num]>[den1].
+	.num    .den1   ?+4
+	.nden1  .nden0  .remden0
+	.num    .nden1  ?+1
+	.nden1  .nden0  .remden0
+	#-------------- Return values ---------------
+.quotret:
+	#Set [quot]. Because of how additions are split, return [quot0]-[quot1]+1.
+	.num    .den1   ?+4
+	.quot0  .z-1    ?+7
+	.num    .z      ?-5
+	.num    .nden1  ?+1
+	#If the signs of [num] and [den] mismatch, negate the quotient.
+	.qsign  .z      .quotflip
+	.quot1  .quot0  ?+1
 	.tmp    .tmp    ?+1
-	.tmp    .num    .looprem
-.retquot:
-	#Because we terminate 1 iteration late, return [qtmp] and [rtmp] instead of
-	#[quot] and [rem].
-	#If the signs of [num] and [den] mismatch, negate [qtmp].
-	.tmp    .tmp    ?+1
-	.qsign  .z      ?+7
-	.qsign  .qsign  ?+1
-	.tmp    .quot   ?+1
-	#Set [quot]
+	.tmp    .quot1  ?+1
+	.quot0  .quot0  ?+1
+	.quot0  .tmp    ?+1
+	.quot1  .quot1  ?+1
+.quotflip:
 	.r0     .r0     ?+1
 	.r0     .qret   ?+1
 	.r1     .r1     ?+1
 	.r1     .qret   ?+1
-	.tmp    .r0:0   ?+1
-	.qtmp   .tmp    ?+1
-	.r1:0   .qtmp   ?+1
-.retrem:
+	.quot0  .r0:0   ?+1
+	.quot1  .quot0  ?+1
+	.r1:0   .quot1  ?+1
+	.quot1  .quot1  ?+1
+	.qret   .qret   .remret+9
+.remret:
+	#Set [rem].
+	.num    .den1   ?+1
+	.num    .z      ?+4
+	.num    .nden1  ?+1
 	#If [num]<0, negate [rem].
-	.rsign  .z      ?+7
+	.tmp    .tmp    ?+1
+	.rsign  .z      .remflip
 	.rsign  .rsign  ?+1
-	.num    .rem    ?+1
-	#Set [rem]
+	.rsign  .num    ?+1
+	.num    .num    ?+1
+	.tmp    .rsign  ?+1
+	.rsign  .rsign  ?+1
+.remflip:
 	.num    .r2:0   ?+1
-	.rtmp   .num    ?+1
-	.r3:0   .rtmp   ?+1
+	.tmp    .num    ?+1
+	.r3:0   .tmp    ?+1
+	#Return
 	0       0       .arg6:6
 .divz:
-	#Abort
+	#Division by 0. Abort.
+	0       0       ?+1
 	0-1     0       ?-2
 	#Variables
 	0-2 0-1 .z:0 1
 	.tmp:0
 	.num:0
-	.den:0
-	.nden:0
+	.den0:0
+	.nden0:0
+	.den1:0
+	.nden1:0
 	.qret:0
-	.quot:0
-	.qtmp:0
+	.quot0:0
+	.quot1:0
 	.qsign:0
-	.rem:0
-	.rtmp:0
 	.rsign:0
 
 
@@ -2623,22 +2886,23 @@ int.shr:
 	.rval   .ret0:0 ?+1
 	.tmp    .rval   ?+1
 	.ret1:0 .tmp    ?+1
+	#Return
 	0       0       .arg5:5
 	#Variables
+	0-1 .z:0 1 2
+	.tmp:0
 	.firstv:.firsts+1-.firstdone
 	.nbits:0
 	.num:0
 	.rval:0
 	.shift:0
-	.tmp:0
 	.neg:0
-	0-1 .z:0 1 2
 
 
 #|==============================================================================
 
 
-Random Number Generator - v1.05
+Random Number Generator - v1.06
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -2680,14 +2944,19 @@ Version History
      Added random.init to initialize random.get and seed using current time.
 1.05
      Added random.hash.
+1.06
+     Performed testing on rejection sampling for various integer ranges.
+     Sampling via "rand-(rand%mod)<=-mod" works for any underlying integers.
 
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Only use 2 constants for hashing. See if there's an optimal pair.
-Optimize random.hash. Dynamically calculate how many iterations are needed.
+Remake random.get to work for any mod.
+Add uint.div to random.mod, random.shuffle.
+Add uint.mul to random.jump.
+Optimize random.hash. Copy random.get.
 
 
 |#
@@ -2950,6 +3219,9 @@ random.get:
 random.mod:
 	#Call  : 0 ? random.get dst mod
 	#Effect: [dst] = a random number in [0,[mod]).
+	#
+	#Note: rejection sampling with "rand-(rand%mod)<=-mod" works for any underlying
+	#integer range.
 	#Setup the stack.
 	.tmp0   .tmp0   ?+1
 	.tmp0   .arg2   ?+1

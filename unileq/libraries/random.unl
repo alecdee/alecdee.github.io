@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Random Number Generator - v1.05
+Random Number Generator - v1.06
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -43,14 +43,19 @@ Version History
      Added random.init to initialize random.get and seed using current time.
 1.05
      Added random.hash.
+1.06
+     Performed testing on rejection sampling for various integer ranges.
+     Sampling via "rand-(rand%mod)<=-mod" works for any underlying integers.
 
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Only use 2 constants for hashing. See if there's an optimal pair.
-Optimize random.hash. Dynamically calculate how many iterations are needed.
+Remake random.get to work for any mod.
+Add uint.div to random.mod, random.shuffle.
+Add uint.mul to random.jump.
+Optimize random.hash. Copy random.get.
 
 
 |#
@@ -313,6 +318,9 @@ random.get:
 random.mod:
 	#Call  : 0 ? random.get dst mod
 	#Effect: [dst] = a random number in [0,[mod]).
+	#
+	#Note: rejection sampling with "rand-(rand%mod)<=-mod" works for any underlying
+	#integer range.
 	#Setup the stack.
 	.tmp0   .tmp0   ?+1
 	.tmp0   .arg2   ?+1

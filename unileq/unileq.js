@@ -1,5 +1,9 @@
 /*
-unileq.js - v1.21
+--------------------------------------------------------------------------------
+License
+
+
+unileq.js - v1.22
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -25,7 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 The Unileq Architecture
 
 
-The goal of unileq is to create the functionality of a normal computer using
+The goal of unileq is to recreate the functionality of a normal computer using
 only one computing instruction. This is like trying to build a working car out
 of legos while only using one type of lego piece. Since we only have one
 instruction, most modern conveniences are gone. Things like multiplying numbers
@@ -62,62 +66,124 @@ Unileq Assembly Language
 
 We can write a unileq program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
-Because there's only one instruction, we can omit any notation specifying what
-instruction to execute on some given memory values. The flow of the program will
-decide what gets executed and what doesn't.
+Because there's only one instruction, we can skip defining what's used for data,
+execution, or structure like in other languages. We only need to define memory
+values, and the flow of the program will decide what gets executed.
 
-An outline of our language is given below:
 
-#Single line comment.
+This example shows a "Hello, World!" program in assembly.
 
-#|
-     multi line
-     comment
-|#
 
-?
-     Inserts the current memory address.
+     loop: len  one  exit            #Decrement [len]. If [len]<=1, exit.
+           0-2  txt  ?+1             #Print a letter.
+           ?-2  neg  loop            #Increment letter pointer.
 
-Label:
-     Label declaration. Declarations mark the current memory address for later
-     recall. Declarations can't appear within an expression, ex: "0 label: +1".
-     Duplicate declarations are an error.
+     exit: 0-1  0    0
 
-     Labels are case sensitive and support UTF-8.
-     First character    : a-zA-Z_.    and any character with a high bit
-     Trailing characters: a-zA-Z_.0-9 and any character with a high bit
+     txt:  72 101 108 108 111 44 32  #Hello,
+           87 111 114 108 100 33 10  #World!
+     len:  len-txt+1
+     neg:  0-1
+     one:  1
 
-Label
-     Inserts the memory address marked by "Label:". There must be whitespace or
-     an operator between any two label recalls or numbers.
 
-.Sublabel
-     Shorthand for placing a label under another label's scope.
-     Ex: "lbl:0 .sub:1" will be treated as "lbl:0 lbl.sub:1" internally.
+The rules of the assembly language are given below.
 
-Number
-     Inserts the number's value. A number must be in decimal or hexadecimal
-     form, such as "123" or "0xff".
 
-Operator +-
-     Adds or subtracts the number or label from the previous value. Parentheses
-     are not supported. To express a negative number, use its unsigned form or
-     the identity "0-x=-x".
-
-     There cannot be two consecutive operators, ex: "0++1". Also, the program
-     cannot begin or end with an operator.
-
-Input/Output
-     Interaction with the host environment can be done by reading or writing
-     from special addresses.
-
-     A = -1: End execution.
-     A = -2: Write mem[B] to stdout.
-     B = -3: Subtract stdin from mem[A].
-     B = -4: Subtract timing frequency from mem[A]. 2^32 = 1 second.
-     B = -5: Subtract current time from mem[A].
-     A = -6: Sleep for mem[B]/2^32 seconds.
-     A = -7: Draw an image at mem[B] to the window.
+                  |
+     Single Line  |  Denoted by #
+     Comment      |
+                  |  Ex:
+                  |       #Hello,
+                  |       #World!
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Multi Line   |  Denoted by #| and terminated with |#
+     Comment      |
+                  |  Ex:
+                  |       #|
+                  |            line 1
+                  |            line 2
+                  |       |#
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Current      |  Denoted by a question mark. Inserts the current memory
+     Address      |  address.
+                  |
+                  |  Ex:
+                  |       ?
+                  |       ?+1     #Next address
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Label        |  Denoted by a name followed by a colon. Declarations
+     Declaration  |  mark the current memory address for later recall.
+                  |
+                  |  Labels are case sensitive and support UTF-8. They can
+                  |  consist of letters, underscores, periods, numbers, and
+                  |  any characters with a high bit. However, the first
+                  |  character can't be a number.
+                  |
+                  |  Ex:
+                  |       loop:
+                  |       Another_Label:
+                  |       label3:
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Label        |  Denoted by a label name. Inserts the memory address
+     Recall       |  declared by "Label:".
+                  |
+                  |  Ex:
+                  |       label:     #declaration
+                  |       label      #recall
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Sublabel     |  Denoted by a period in front of a label. Shorthand for
+                  |  placing a label under another label's scope.
+                  |
+                  |  Ex:
+                  |        A:
+                  |       .B:     #Shorthand for A.B:
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Number       |  Inserts the number's value. A number must be in
+                  |  decimal or hexadecimal form.
+                  |
+                  |  Ex:
+                  |       123
+                  |       0xff
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Operator     |  Denoted by a plus or minus. Adds or subtracts the
+                  |  number or label from the previous value. Parentheses
+                  |  are not supported. To express a negative number, use
+                  |  the form "0-x".
+                  |
+                  |  Ex:
+                  |       len-txt+1
+                  |       ?+1
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Input /      |  Interaction with the host environment can be done by
+     Output       |  reading or writing from special addresses.
+                  |
+                  |  A = -1: End execution.
+                  |  A = -2: Write mem[B] to stdout.
+                  |  B = -3: Subtract stdin from mem[A].
+                  |  B = -4: Subtract timing frequency from mem[A].
+                  |  B = -5: Subtract current time from mem[A].
+                  |  A = -6: Sleep for mem[B]/2^32 seconds.
+                  |
+                  |  Ex:
+                  |       0-2  txt  ?+1     #A = -2. Print a letter.
+                  |
 
 
 --------------------------------------------------------------------------------
@@ -145,8 +211,8 @@ browsers.
 When testing the math library, we jump 77% of the time. Delaying loading mem[C]
 didn't provide a meaningful speedup.
 
-Webassembly speedup isn't that great compared to UnlRun(). Wait until better
-integration with javascript.
+Webassembly speedup isn't that great compared to UnlRun() and adds a lot of
+complexity. Wait until better integration with javascript.
 
 We busy wait if sleeping for less than 4ms. This is because the HTML5 standard
 enforces a minimum setTimeout() time of 4ms.
@@ -213,7 +279,7 @@ function UnlU64ToStr(n) {
 		0x00000000,0x0000000a,0x00000000,0x00000001
 	];
 	var nl=n.lo,nh=n.hi,str="";
-	for (var i=0;i<40;i+=2) {
+	for (var i=0;i<pot.length;i+=2) {
 		var dh=pot[i],dl=pot[i+1];
 		var digit=48;
 		while (nh>dh || (nh===dh && nl>=dl)) {
@@ -261,7 +327,7 @@ function UnlU64IsZero(n) {
 function UnlU64Neg(r,a) {
 	//r=-a
 	r.lo=0x100000000-a.lo;
-	r.hi= 0xffffffff-a.hi;
+	r.hi=0x0ffffffff-a.hi;
 	if (r.lo>=0x100000000) {
 		r.lo=0;
 		if ((++r.hi)>=0x100000000) {
@@ -443,7 +509,7 @@ var UNL_RUNNING     =0;
 var UNL_COMPLETE    =1;
 var UNL_ERROR_PARSER=2;
 var UNL_ERROR_MEMORY=3;
-var UNL_MAX_PARSE   =(1<<30);
+var UNL_MAX_PARSE   =1<<30;
 
 function UnlCreate(textout,canvas) {
 	var st={
@@ -874,7 +940,7 @@ function UnlRun(st,stoptime) {
 			var date=performance.timing.navigationStart+performance.now();
 			mbhi=(date/1000)>>>0;
 			mblo=((date%1000)*4294967.296)>>>0;
-			timeiters-=1;
+			timeiters-=2;
 		} else {
 			//We couldn't find a special address to read.
 			mbhi=0;

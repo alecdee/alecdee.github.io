@@ -42,16 +42,17 @@
 	</div>
 	<canvas id="unileq_canvas" style="display:none;background:#000000;width:100%;margin-top:1rem"></canvas>
 	<textarea id="unileq_output" style="box-sizing:border-box;width:100%;height:14rem;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
-	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one   exit           #Decrement [len]. If [len]&lt;=1, exit.
-      0-2  text  ?+1            #Print a letter.
-      ?-2  neg   loop           #Increment letter pointer.
-exit: 0-1  0     0
+	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one  exit            #Decrement [len]. If [len]&lt;=1, exit.
+      0-2  txt  ?+1             #Print a letter.
+      ?-2  neg  loop            #Increment letter pointer.
 
-text: 72 101 108 108 111 44 32  #Hello,
+exit: 0-1  0    0
+
+txt:  72 101 108 108 111 44 32  #Hello,
       87 111 114 108 100 33 10  #World!
-len:  len-text+1
-one:  1
+len:  len-txt+1
 neg:  0-1
+one:  1
 </textarea>
 </div>
 
@@ -59,25 +60,25 @@ neg:  0-1
 <div class="content"><h1>The Unileq Architecture</h1>
 <p>Download the interpreter here: <a href="./unileq.c">unileq.c</a></p>
 <br>
-<p>The goal of unileq is to create the functionality of a normal computer using only one computing
+<p>The goal of unileq is to recreate the functionality of a normal computer using only one computing
 instruction. This is like trying to build a working car out of legos while only using one type of
 lego piece. Since we only have one instruction, most modern conveniences are gone. Things like
 multiplying numbers or memory allocation need to built from scratch using unileq's instruction.</p>
 <br>
 <p>The instruction is fairly simple: Given <i>A</i>, <i>B</i>, and <i>C</i>, compute
-<i>mem[A]-mem[B]</i> and store the result in <i>mem[A]</i>. Then, if <i>mem[A]</i> was less than
-or equal to <i>mem[B]</i>, jump to <i>C</i>. Otherwise, jump by <i>3</i>. We use the instruction
+<i>mem[A]-mem[B]</i> and store the result in <i>mem[A]</i>. Then, if <i>mem[A]</i> was less than or
+equal to <i>mem[B]</i>, jump to <i>C</i>. Otherwise, jump by <i>3</i>. We use the instruction
 pointer (<i>IP</i>) to keep track of our place in memory. The pseudocode below shows a unileq
 instruction:</p>
 <br>
-<div class="codeblock langpython">A=mem[IP+0]
-B=mem[IP+1]
-C=mem[IP+2]
-if mem[A]&lt;=mem[B]
-     IP=C
-else
-     IP=IP+3
-mem[A]=mem[A]-mem[B]
+<div class="codeblock langpython">     A=mem[IP+0]
+     B=mem[IP+1]
+     C=mem[IP+2]
+     if mem[A]&lt;=mem[B]
+          IP=C
+     else
+          IP=IP+3
+     mem[A]=mem[A]-mem[B]
 </div>
 <br>
 <p>The instruction pointer and memory values are all 64 bit unsigned integers. Overflow and
@@ -85,54 +86,105 @@ underflow are handled by wrapping values around to be between <i>0</i> and <i>2^
 inclusive.</p>
 <br>
 <p>Interaction with the host environment is done by reading and writing from special memory
-addresses. For example, writing anything to <i>-1</i> will end execution of the unileq
-program.</p>
+addresses. For example, writing anything to <i>-1</i> will end execution of the unileq program.</p>
 <br>
 <p>Unileq is based off of the <a href="https://en.wikipedia.org/wiki/Subleq">subleq</a>
 architecture.</p>
 <br>
 <h2>Unileq Assembly Language</h2>
 <br>
-<p>We can write a unileq program by setting the raw memory values directly, but it will be easier to
-both read and write a program by using an assembly language. Because there's only one instruction,
-we can omit any notation specifying what instruction to execute on some given memory values. The
-flow of the program will decide what gets executed and what doesn't.</p>
+<p>We can write a unileq program by setting the raw memory values directly, but it will be easier
+to both read and write a program by using an assembly language. Because there's only one
+instruction, we can skip defining what's used for data, execution, or structure like in other
+languages. We only need to define memory values, and the flow of the program will decide what gets
+executed.</p>
 <br>
-<p>An outline of our language is given below:</p>
+<p>The rules of the assembly language are given below.</p>
 <br>
 <table class="datatable headerrow">
 <tr><td>Component</td><td>Description</td></tr>
-<tr><td><i>#comment</i></td><td>Single line comment.</td></tr>
-<tr><td><i>#|
-	comment
-|#</i></td><td>Multi line comment.</td></tr>
-<tr><td><i>?</i></td><td>Inserts the current memory address.</td></tr>
-<tr><td><i>Label:</i></td><td>Label declaration. Declarations mark the current memory address for
-later recall. Declarations can't appear within an expression, ex: <i>0 label: +1</i>. Duplicate
-declarations are an error.<br>
+<tr><td>Single Line Comment</td><td>Denoted by <i>#</i>.<br>
 <br>
-Labels are case sensitive and support UTF-8.<br>
-First character: <i>a-zA-Z_.</i> and any character with a high bit<br>
-Trailing characters: <i>a-zA-Z_.0-9</i> and any character with a high bit</td></tr>
-<tr><td><i>Label</i></td><td>Inserts the memory address marked by <i>Label:</i>. There must be
-whitespace or an operator between any two label recalls or numbers.</td></tr>
-<tr><td><i>.Sublabel</i></td><td>Shorthand for placing a label under another label's scope. Ex:
-<i>lbl:0 .sub:1</i> will be treated as <i>lbl:0 lbl.sub:1</i> internally.</td></tr>
+Ex:<br>
+<div class="codeblock langunileq">#Hello,
+#World!
+</div>
+</td></tr>
+<tr><td>Multi Line Comment</td><td>Denoted by <i>#|</i> and terminated with <i>|#</i>.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq">#|
+     line 1
+     line 2
+|#
+</div>
+</td></tr>
+<tr><td>Current Address</td><td>Denoted by a question mark. Inserts the current memory address.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq">?
+?+1     #Next address
+</div>
+</td></tr>
+<tr><td>Label Declaration</td><td>Denoted by a name followed by a colon. Declarations mark the
+current memory address for later recall.<br>
+<br>
+Labels are case sensitive and support UTF-8. They can consist of letters, underscores, periods,
+numbers, and any characters with a high bit. However, the first character can't be a number.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq">loop:
+Another_Label:
+label3:
+</div>
+</td></tr>
+<tr><td>Label Recall</td><td>Denoted by a label name. Inserts the memory address declared by
+<i>Label:</i>.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq">label:     #declaration
+label      #recall
+</div>
+</td></tr>
+<tr><td>Sublabel</td><td>Denoted by a period in front of a label. Shorthand for placing a label
+under another label's scope.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq"> A:
+.B:     #Shorthand for A.B:
+</div>
+</td></tr>
 <tr><td>Number</td><td>Inserts the number's value. A number must be in decimal or hexadecimal
-form, such as <i>123</i> or <i>0xff</i>.</td></tr>
-<tr><td>Operator <i>+-</i></td><td>Adds or subtracts the number or label from the previous value.
-Parentheses are not supported. To express a negative number, use its unsigned form or the identity
-<i>0-x=-x</i>.
+form.<br>
 <br>
-There cannot be two consecutive operators, ex: <i>0++1</i>. Also, the program cannot begin or end
-with an operator.</td></tr>
-<tr><td>Input/Output</td><td>Interaction with the host environment can be done by reading or writing
-from special addresses.<br>
+Ex:<br>
+<div class="codeblock langunileq">123
+0xff
+</div>
+</td></tr>
+<tr><td>Operator</td><td>Denoted by a plus or minus. Adds or subtracts the number or label from the
+previous value. Parentheses are not supported. To express a negative number, use the form
+<i>0-x</i>.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq">len-txt+1
+?+1
+</div>
+</td></tr>
+<tr><td>Input / Output</td><td>Interaction with the host environment can be done by reading or
+writing from special addresses.<br>
 <br>
 <i>A = -1</i>: End execution.<br>
 <i>A = -2</i>: Write <i>mem[B]</i> to stdout.<br>
 <i>B = -3</i>: Subtract stdin from <i>mem[A]</i>.<br>
-<i>B = -4</i>: Subtract current time from <i>mem[A]</i>.</td></tr>
+<i>B = -4</i>: Subtract timing frequency from <i>mem[A]</i>.<br>
+<i>B = -5</i>: Subtract current time from <i>mem[A]</i>.<br>
+<i>A = -6</i>: Sleep for <i>mem[B]/2^32</i> seconds.<br>
+<br>
+Ex:<br>
+<div class="codeblock langunileq">0-2  txt  ?+1     #A = -2. Print a letter.
+</div>
+</td></tr>
 </table>
 </div>
 
@@ -141,16 +193,17 @@ from special addresses.<br>
 <p>We can show how the unileq assembly language and architecture work with a simple program that
 prints "Hello, World!" to the screen:</p>
 <br>
-<div class="codeblock langunileq">loop: len  one   exit           #Decrement [len]. If [len]&lt;=1, exit.
-      0-2  text  ?+1            #Print a letter.
-      ?-2  neg   loop           #Increment letter pointer.
-exit: 0-1  0     0
+<div class="codeblock langunileq">loop: len  one  exit            #Decrement [len]. If [len]&lt;=1, exit.
+      0-2  txt  ?+1             #Print a letter.
+      ?-2  neg  loop            #Increment letter pointer.
 
-text: 72 101 108 108 111 44 32  #Hello,
+exit: 0-1  0    0
+
+txt:  72 101 108 108 111 44 32  #Hello,
       87 111 114 108 100 33 10  #World!
-len:  len-text+1
-one:  1
+len:  len-txt+1
 neg:  0-1
+one:  1
 </div>
 <br>
 <p>The first 3 lines of the program define a loop, and at each iteration of the loop we print a new
@@ -343,10 +396,11 @@ several reasons for this:</p>
 addresses subleq allows.</td></tr>
 <tr><td>&bull;</td><td>Unileq offers 3 ways to guarantee a jump<br>
 <br>
-<span style="margin-left:2rem;"></span>1. Zeroing an address: <i>A  A  jmp</i><br>
-<span style="margin-left:2rem;"></span>2. Subtracting anything from <i>0</i>: <i>Z  A  jmp</i><br>
-<span style="margin-left:2rem;"></span>3. Subtracting <i>-1</i> from anything:
-<i>A  Z-1  jmp</i><br>
+<table style="margin-left:2rem;">
+<tr><td>1. Zeroing an address:</td><td><i>A  A    jmp</i></td></tr>
+<tr><td>2. Subtracting anything from <i>0</i>:</td><td><i>Z  A    jmp</i></td></tr>
+<tr><td>3. Subtracting <i>-1</i> from anything:</td><td><i>A  Z-1  jmp</i></td></tr>
+</table>
 <br>
 Subleq can only guarantee a jump by zeroing an address. This gives unileq more options when deciding
 program flow, since these are all common operations.
@@ -512,7 +566,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 3 Mar 2022<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 19 Jul 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
