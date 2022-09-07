@@ -52,10 +52,11 @@ Version History
 TODO
 
 
+Simplify bit counting.
+Optimize random.hash. Copy random.get.
 Remake random.get to work for any mod.
 Add uint.div to random.mod, random.shuffle.
 Add uint.mul to random.jump.
-Optimize random.hash. Copy random.get.
 
 
 |#

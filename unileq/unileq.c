@@ -3,7 +3,7 @@
 License
 
 
-unileq.c - v1.39
+unileq.c - v1.40
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -29,11 +29,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 The Unileq Architecture
 
 
-The goal of unileq is to recreate the functionality of a normal computer using
-only one computing instruction. This is like trying to build a working car out
-of legos while only using one type of lego piece. Since we only have one
-instruction, most modern conveniences are gone. Things like multiplying numbers
-or memory allocation need to built from scratch using unileq's instruction.
+Unileq's purpose is to recreate the functionality of a normal computer using
+only one computing instruction. This is like going into a forest with no tools
+and trying to build a house. Since we only have one instruction, most modern
+conveniences are gone. Things like multiplying numbers or memory allocation
+need to be built from scratch using unileq's instruction.
 
 The instruction is fairly simple: Given A, B, and C, compute mem[A]-mem[B] and
 store the result in mem[A]. Then, if mem[A] was less than or equal to mem[B],

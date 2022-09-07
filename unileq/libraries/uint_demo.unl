@@ -44,19 +44,20 @@ Unileq Master Library
 --------------------------------------------------------------------------------
 Notes
 
+
 master.unl contains all basic libraries for ease of use in other projects.
 
-This library should be included last. Display an error message and exit if it's
-not.
+This library should be included after any other unl files. Display an error
+message and exit if it's not.
 
 
           File     |  Line
      --------------+--------
-       string.unl  |    36
-         uint.unl  |   221
-          int.unl  |  1758
-       random.unl  |  2865
-       memory.unl  |  3433
+       string.unl  |    37
+         uint.unl  |   222
+          int.unl  |  1759
+       random.unl  |  2866
+       memory.unl  |  3435
 
 
 |#
@@ -64,9 +65,9 @@ not.
 
 0 0 ?+1
 0 ? string.print
-	69 82 82 79 82 58 32 109 97 115 116 101 114 46 117
-	110 108 32 109 117 115 116 32 98 101 32 105 110 99
-	108 117 100 101 100 32 108 97 115 116 10 0
+    69 82 82 79 82 58 32 109 97 115 116 101 114 46 117
+    110 108 32 109 117 115 116 32 98 101 32 105 110 99
+    108 117 100 101 100 32 108 97 115 116 10 0
 0-1 0 ?-2
 
 
@@ -2953,10 +2954,11 @@ Version History
 TODO
 
 
+Simplify bit counting.
+Optimize random.hash. Copy random.get.
 Remake random.get to work for any mod.
 Add uint.div to random.mod, random.shuffle.
 Add uint.mul to random.jump.
-Optimize random.hash. Copy random.get.
 
 
 |#
