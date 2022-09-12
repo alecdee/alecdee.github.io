@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Unsigned Integer Operations - v5.00
+Unsigned Integer Operations - v5.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -39,6 +39,7 @@ Worst case time complexity:
           sub    |  31               |       31
           mul    |  55 + 12.97*bits  |      885
           div    |  61 +  8.65*bits  |      614
+          gcd    |  40 +  0.80*bit2  |     3855
           shl    |  40 +  2.00*bits  |      168
           shr    |  31 +  8.00*bits  |      543
           not    |  26               |       26
@@ -66,6 +67,9 @@ uint.add [ret]  [a] [b]
 uint.sub [ret]  [a] [b]
 uint.mul [high] [low] [a] [b]
 uint.div [quot] [rem] [num] [den]
+
+Number Theory
+uint.gcd [ret] [a] [b]
 
 Bitwise Arithmetic
 uint.shl [ret] [num] [shift]
@@ -155,7 +159,8 @@ Version History
      power-of-two, by using the fibonacci sequence.
      uint.div is 30% faster and uint.mul is 1% faster.
      Cleaned up version history comments.
-
+5.01
+     Added uint.gcd.
 
 --------------------------------------------------------------------------------
 TODO
@@ -1039,6 +1044,115 @@ uint.div:
 	.qret:0
 	.quot0:0
 	.quot1:0
+
+
+#--------------------------------------------------------------------------------
+#Number Theory
+
+
+uint.gcd:
+	#Call  : 0 ? uint.gcd ret a b
+	#
+	#Effect: [ret] = gcd([a],[b])
+	#
+	#Time  : 40 + 8.40*bits + 0.80*bits^2 = 3855
+	#
+	#Calculate the greatest common denominator by repeatedly taking a pseudo
+	#modulo. This function works with any modulo on the underlying integers.
+	#
+	#Setup stack pointer.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	#Get ret
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
+	#Get [a]
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p3     .p3     ?+1
+	.p3     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p3:0   ?+1
+	.a      .a      ?+1
+	.a      .tmp    ?+1
+	#Get [b]
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.nden   .nden   ?+1
+	.nden   .p4:0   ?+1
+	.b      .b      ?+1
+	#Make sure [b]!=0, or we'll loop forever.
+	.pden   .pden   ?+1
+	.nden   .z      .ret
+	.b      .nden   ?+7
+.mainloop:
+	.nden   .nden   ?+1
+	.nden   .b      ?+1
+	#Use [a]<=[b] to determine if we take [a]%[b] or [b]%[a].
+	.a      .b      .amod
+.bmod:
+	#[a]>[b], so calculate a pseudo [a]%[b]. We do this by repeatedly multiplying
+	#[b] and subtracting it from [a] until we can't anymore.
+	.pden   .nden   ?+1
+.bloop:
+	.a      .pden   .bdone
+	.a      .pden   .bdone
+	.a      .pden   .bdone
+	.nden   .pden   ?+1
+	.pden   .nden   .bloop
+.bdone:
+	#Restore [a] from [a]-=[pden]. If [a]<=-[pden], then [a]=0 and [b]=gcd.
+	.nden   .nden   ?+1
+	.nden   .pden   ?+1
+	.a      .nden   .ret
+	.pden   .pden   .mainloop
+.amod:
+	#[a]<=[b], so calculate a pseudo [b]%[a]. We do this by repeatedly multiplying
+	#[a] and subtracting it from [b] until we can't anymore.
+	#Restore [a] from [a]-=[b]. If [a]<=-[b], then [a]=0 and [b]=gcd.
+	.a      .nden   .ret+3
+	.nden   .nden   ?+1
+	.nden   .a      ?+1
+	.pden   .nden   ?+1
+.aloop:
+	.b      .pden   .adone
+	.b      .pden   .adone
+	.b      .pden   .adone
+	.nden   .pden   ?+1
+	.pden   .nden   .aloop
+.adone:
+	#Restore [b] from [b]-=[pden]. If [b]<=-[pden], then [b]=0 and [a]=gcd.
+	.nden   .nden   ?+1
+	.nden   .pden   ?+1
+	.b      .nden   .ret
+	.pden   .pden   .mainloop
+.ret:
+	#Return the gcd. Either [a]=[pden] and [b]=gcd, or vice versa.
+	#So, [pden]-[a]-[b]=-gcd.
+	.pden   .a      ?+1
+	.b      .ret0:0 ?+1
+	.pden   .b      ?+1
+	.ret1:0 .pden   ?+1
+	0       0       .arg5:5
+	#Variables
+	.z:0 1 2
+	.a:0
+	.b:0
+	.tmp:0
+	.pden:0
+	.nden:0
 
 
 #--------------------------------------------------------------------------------
