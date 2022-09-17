@@ -55,9 +55,9 @@ message and exit if it's not.
      --------------+--------
        string.unl  |    37
          uint.unl  |   222
-          int.unl  |  1847
-       random.unl  |  2954
-       memory.unl  |  3523
+          int.unl  |  1870
+       random.unl  |  2977
+       memory.unl  |  3546
 
 
 |#
@@ -259,7 +259,7 @@ string.escend:
 #|==============================================================================
 
 
-Unsigned Integer Operations - v5.01
+Unsigned Integer Operations - v5.02
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -297,7 +297,7 @@ Worst case time complexity:
           sub    |  31               |       31
           mul    |  55 + 12.97*bits  |      885
           div    |  61 +  8.65*bits  |      614
-          gcd    |  51 +  1.23*bit2  |     5529
+          gcd    |  41 + 20.17*bits  |     1332
           shl    |  40 +  2.00*bits  |      168
           shr    |  31 +  8.00*bits  |      543
           not    |  26               |       26
@@ -419,6 +419,8 @@ Version History
      Cleaned up version history comments.
 5.01
      Added uint.gcd.
+5.02
+     Improved the time complexity of uint.gcd from log^2(n) to log(n).
 
 --------------------------------------------------------------------------------
 TODO
@@ -1314,10 +1316,10 @@ uint.gcd:
 	#
 	#Effect: [ret] = gcd([a],[b])
 	#
-	#Time  : 51 + 6.86*bits + 1.23*bits^2 = 5529
+	#Time  : 41 + 20.17*bits = 1332
 	#
-	#Calculate the greatest common denominator by repeatedly taking a pseudo
-	#modulo. This function works for any underlying integers.
+	#Calculate the greatest common denominator with the Euclidean algorithm. By
+	#dynamically calculating the modulo, this algorithm has log time complexity.
 	#
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
@@ -1335,13 +1337,6 @@ uint.gcd:
 	.ret0   .tmp    ?+1
 	.ret1   .ret1   ?+1
 	.ret1   .tmp    ?+1
-	#Get -[b]
-	.tmp    .tmp    ?+1
-	.tmp    .arg4:4 ?+1
-	.p4     .p4     ?+1
-	.p4     .tmp    ?+1
-	.nb     .nb     ?+1
-	.nb     .p4:0   ?+1
 	#Get [a]
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
@@ -1351,40 +1346,68 @@ uint.gcd:
 	.tmp    .p3:0   ?+1
 	.a      .a      ?+1
 	.a      .tmp    ?+1
+	#Get -[b]
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.nmul0  .nmul0  ?+1
+	.nmul0  .p4:0   ?+1
 	#Make sure [a]!=0 and [b]!=0, or we'll loop forever.
-	.nb     .z      .ret
+	.nmul0  .z      .ret
 	.a      .z      .ret
 .loop:
-	#Swap [a] and -[b].
-	.a      .a      ?+1
-	.a      .nb     ?+1
-	.mul    .mul    ?+1
-	.mul    .tmp    ?+1
-	.nb     .nb     ?+1
-	.nb     .mul    ?+7
-	#Calculate a pseudo [a]%[b]. We do this by repeatedly multiplying
-	#[b] by 2 and subtracting it from [a] until we can't anymore.
-.modloop:
-	.tmp    .tmp    ?+1
-	.tmp    .mul    ?+1
-	.a      .mul    .moddone
-	.a      .mul    .moddone
-	.mul    .tmp    .modloop
+	#[mul1]=[b].
+	.mul1   .mul1   ?+1
+	.mul1   .nmul0  ?+1
+	.nmul0  .nmul0  ?+1
+	#Find the largest multiple of [b]<=[a], and reduce [a] as well.
+.mulloop:
+	.a      .mul1   .muldone
+	.a      .mul1   .muldone
+	.a      .mul1   .muldone
+	.nmul0  .mul1   ?+1
+	.mul1   .nmul0  .mulloop
+.muldone:
+	.mul0   .nmul0  ?+1
+	.nmul1  .nmul1  ?+1
+	.nmul1  .mul1   .mod1+9
+	#Calculate [a]%[b].
+.mod0:
+	.mul1   .mul0   .moddone
+	#Test if [a]>[mul0].
+	.a      .mul0   ?+4
+	.nmul0  .nmul1  .mod1
+	.a      .nmul0  ?+1
+	.nmul0  .nmul1  .mod1
+.mod1:
+	.mul0   .mul1   .moddone
+	#Test if [a]>[mul1].
+	.a      .mul1   ?+4
+	.nmul1  .nmul0  .mod0
+	.a      .nmul1  ?+1
+	.nmul1  .nmul0  .mod0
 .moddone:
-	#Restore [a] from [a]-=[mul]. If -[mul]<=[a], then [a]=0 and -[b]=-gcd.
-	.tmp    .a      .loop
+	#If [mul1]=[b]<=[a], then [a]%[b]=0, so return [b].
+	.mul1   .a      .ret
+	#Otherwise, swap [a] and [b], and continue the algorithm.
+	.nmul0  .a      ?+1
+	.a      .a      ?+1
+	.a      .nmul1  .loop
 .ret:
-	#Return the gcd. Either [a]=0 or -[b]=0, so [a]-(-[b])=gcd.
+	#Return the gcd. Either [a]=0 or [nmul0]=-[b]=0, so [a]-(-[b])=gcd.
 	.a      .ret0:0 ?+1
-	.nb     .a      ?+1
-	.ret1:0 .nb     ?+1
+	.nmul0  .a      ?+1
+	.ret1:0 .nmul0  ?+1
 	0       0       .arg5:5
 	#Variables
 	.z:0 1 2
 	.a:0
-	.nb:0
 	.tmp:0
-	.mul:0
+	.nmul0:0
+	.nmul1:0
+	.mul0:0
+	.mul1:0
 
 
 #--------------------------------------------------------------------------------
