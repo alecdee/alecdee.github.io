@@ -1281,8 +1281,8 @@ uint.gcd:
 	#
 	#Time  : 41 + 20.17*bits = 1332
 	#
-	#Calculate the greatest common denominator with the Euclidean algorithm. By
-	#dynamically calculating the modulo, this algorithm has log time complexity.
+	#Calculate the greatest common denominator using the Euclidean algorithm. By
+	#dynamically calculating the modulus, this algorithm has log time complexity.
 	#
 	#Setup stack pointer.
 	.tmp    .tmp    ?+1
