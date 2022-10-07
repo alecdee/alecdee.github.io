@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Signed Integer Operations - v2.00
+Signed Integer Operations - v2.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -81,6 +81,8 @@ Version History
      Remade int.div and int.mul to work with any modulo, even non power-of-two,
      by using the fibonacci sequence.
      int.div is 30% faster and int.mul is 1% faster.
+2.01
+     Updated comments.
 
 
 --------------------------------------------------------------------------------
@@ -104,7 +106,7 @@ int.print:
 	#Effect: Prints a signed number in an arbitrary base. If the padding
 	#character is whitespace, print the sign after padding.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -284,8 +286,8 @@ int.print:
 	.nplus:0-43
 	.nneg:0-45
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
-		56 56 57 57 65 65 66 66 67 67 68 68 69 69 70 70
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
+		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
 	.nhex:0-.hex
 
 
@@ -303,7 +305,7 @@ int.cmp:
 	#
 	#Time  : 37
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
@@ -371,7 +373,7 @@ int.min:
 	#
 	#Time  : 43
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -449,7 +451,7 @@ int.max:
 	#
 	#Time  : 43
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -527,7 +529,7 @@ int.abs:
 	#
 	#Time  : 30
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -593,7 +595,7 @@ int.mul:
 	#     time = 40 + 9*n(F)
 	#     time = 34 + 5*n(F) if high=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    .firstrun
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -810,7 +812,7 @@ int.div:
 	#     time = 71 + 6*n(F)
 	#     time = 58 + 5*n(F) if quot=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -874,7 +876,7 @@ int.div:
 	.nden1  .den0   ?+4
 	.den1   .den1   ?+7
 	.den1   .den1   .denhalf
-	#Calc largest fibonacci multiple of [den].
+	#Calculate the largest fibonacci multiple of [den].
 	.nden1  .den0   .denstart0
 	.den0   .nden1  ?-5
 .denstart1:
@@ -1012,7 +1014,7 @@ int.shr:
 	#
 	#Time  : 43 + 8*bits = 555
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1

@@ -3,7 +3,7 @@
 License
 
 
-unileq.c - v1.40
+unileq.c - v1.41
 
 Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -196,6 +196,7 @@ Windows: cl /O2 unileq.c
 
 */
 
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
@@ -204,12 +205,8 @@ Windows: cl /O2 unileq.c
 #include <time.h>
 #ifdef _MSC_VER
 	#include <windows.h>
-	void thrd_sleep(struct timespec* ts,void* zone) {
-		((void)zone);
-		Sleep((DWORD)(ts->tv_sec*1000+ts->tv_nsec/1000000));
-	}
-#else
-	#include <threads.h>
+	#define nanosleep(req,rem)\
+		Sleep((DWORD)((req)->tv_sec*1000+(req)->tv_nsec/1000000))
 #endif
 
 typedef uint32_t u32;
@@ -294,7 +291,7 @@ void UnlHashFree(UnlHashMap* map) {
 	if (map) {
 		for (u32 i=0;i<=map->mask;i++) {
 			UnlLabel *lbl,*next=map->map[i];
-			while ((lbl=next)) {
+			while ((lbl=next)!=0) {
 				next=lbl->next;
 				free(lbl);
 			}
@@ -596,13 +593,14 @@ void UnlRun(UnlState* st,u32 iters) {
 	if (st->state!=UNL_RUNNING) {
 		return;
 	}
-	u32 dec=iters!=(u32)-1;
-	u64 a,b,ma,mb,ip=st->ip,io=(u64)-32;
+	u32 dec=(iters+1)>0;
+	u64 a,b,c,ma,mb,ip=st->ip,io=(u64)-32;
 	u64 *mem=st->mem,alloc=st->alloc;
 	for (;iters;iters-=dec) {
-		//Load a and b. c is loaded only if we jump.
+		//Load a, b, and c.
 		a=ip<alloc?mem[ip]:0;ip++;
 		b=ip<alloc?mem[ip]:0;ip++;
+		c=ip<alloc?mem[ip]:0;ip++;
 		//Input
 		if (b<alloc) {
 			//Read mem[b].
@@ -628,19 +626,15 @@ void UnlRun(UnlState* st,u32 iters) {
 		if (a<alloc) {
 			//Execute a normal unileq instruction.
 			ma=mem[a];
-			if (ma<=mb) {
-				ip=ip<alloc?mem[ip]:0;
-			} else {
-				ip++;
-			}
+			if (ma<=mb) {ip=c;}
 			mem[a]=ma-mb;
 			continue;
 		}
 		//a is out of bounds or a special address.
-		ip=ip<alloc?mem[ip]:0;
+		ip=c;
 		if (a<io) {
 			//Execute a normal unileq instruction.
-			UnlSetMem(st,a,-mb);
+			UnlSetMem(st,a,0-mb);
 			if (st->state!=UNL_RUNNING) {
 				break;
 			}
@@ -659,7 +653,7 @@ void UnlRun(UnlState* st,u32 iters) {
 				(long)(mb>>32),
 				(long)((mb&0xffffffffULL)*1000000000ULL/0x100000000ULL)
 			};
-			thrd_sleep(&ts,0);
+			nanosleep(&ts,0);
 		}
 	}
 	st->ip=ip;
@@ -690,7 +684,7 @@ int main(int argc,char** argv) {
 	}
 	//Main loop.
 	UnlRun(unl,(u32)-1);
-	//Exit and print status if there was an error.
+	//Exit and print the status if there was an error.
 	u32 ret=unl->state;
 	if (ret!=UNL_COMPLETE) {UnlPrintState(unl);}
 	UnlFree(unl);

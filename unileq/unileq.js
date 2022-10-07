@@ -900,11 +900,11 @@ function UnlRun(st,stoptime) {
 		//Load a, b, and c.
 		if (iphi===0 && iplo<alloc2) {
 			//Inbounds read.
-			ahi=memh[iplo];
+			ahi=memh[iplo  ];
 			alo=meml[iplo++];
-			bhi=memh[iplo];
+			bhi=memh[iplo  ];
 			blo=meml[iplo++];
-			chi=memh[iplo];
+			chi=memh[iplo  ];
 			clo=meml[iplo++];
 		} else {
 			//Out of bounds read. Use UnlGetMem to read a, b, and c.

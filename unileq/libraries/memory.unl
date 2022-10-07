@@ -56,6 +56,8 @@ TODO
 
 
 Replace alloc hash table with AVL tree.
+	Find the smallest block that will fit an allocation.
+	If there are multiple matches, choose the one with the smallest address.
 Simplify mem.alloc.verify using mem.get and mem.cmp.
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2

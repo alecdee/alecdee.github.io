@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-String Library - v1.03
+String Library - v1.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -44,6 +44,8 @@ Version History
      Library now handles strings instead of just printing.
 1.03
      Renamed print to string.print for consistency.
+1.04
+     Updated comments.
 
 
 --------------------------------------------------------------------------------
@@ -89,7 +91,7 @@ string.print:
 	#Call  : 0 ? string.print char0 char1 char2 ... 0
 	#Effect: Prints a zero terminated ASCII string. If an escape code is used,
 	#the next value(s) are expected to be numbers or formatting.
-	#
+	#Use [0] to get the calling address.
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1

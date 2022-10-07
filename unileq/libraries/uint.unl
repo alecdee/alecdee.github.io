@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Unsigned Integer Operations - v5.02
+Unsigned Integer Operations - v5.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -38,8 +38,8 @@ Worst case time complexity:
           add    |  30               |       30
           sub    |  31               |       31
           mul    |  55 + 12.97*bits  |      885
-          div    |  61 +  8.65*bits  |      614
-          gcd    |  41 + 20.17*bits  |     1332
+          div    |  60 +  8.65*bits  |      613
+          gcd    |  40 + 20.17*bits  |     1330
           shl    |  40 +  2.00*bits  |      168
           shr    |  31 +  8.00*bits  |      543
           not    |  26               |       26
@@ -88,7 +88,7 @@ Version History
      Initial version. Used uint.cmp, mem.get, and mem.set for proof of concept.
      Functions take tens of thousands of instructions.
 2.00
-     Unrolled functions so they don't use mem.get and mem.set.
+     Inlined functions so they don't use mem.get and mem.set.
      Functions take thousands of instructions.
 3.00
      Optimized functions so they are all under or around 1K instructions.
@@ -163,15 +163,19 @@ Version History
      Added uint.gcd.
 5.02
      Improved the time complexity of uint.gcd from log^2(n) to log(n).
+5.03
+     Updated comments.
+     Removed a few instructions from uint.div and uint.gcd.
+
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Simplify uint.div den0/nden1 calculation. Get rid of exception for den*2>=MOD.
-
-Optimize uint.mul to have same time complexity as uint.div. Unroll first loop
-iteration and simplify loop?
+Optimize uint.mul to have same time complexity as uint.div
+	Unroll first loop iteration and simplify loop?
+	See if 2*fib0+fib1<MOD limit works better than fib0+fib1<MOD.
+	Calculate inverse (~high or ~low) instead to flip carrying operation.
 
 
 |#
@@ -186,7 +190,7 @@ uint.print:
 	#
 	#Effect: Prints a number in an arbitrary base.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -323,8 +327,8 @@ uint.print:
 	.den:0
 	.lden:0
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
-		56 56 57 57 65 65 66 66 67 67 68 68 69 69 70 70
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
+		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
 	.nhex:0-.hex
 
 
@@ -341,7 +345,7 @@ uint.cmp:
 	#
 	#Time  : 29
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
@@ -393,7 +397,7 @@ uint.min:
 	#
 	#Time  : 34
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -446,7 +450,7 @@ uint.max:
 	#
 	#Time  : 34
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -504,7 +508,7 @@ uint.set:
 	#
 	#Time  : 24
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -544,7 +548,7 @@ uint.neg:
 	#
 	#Time  : 25
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -586,7 +590,7 @@ uint.add:
 	#
 	#Time  : 30
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -633,7 +637,7 @@ uint.sub:
 	#
 	#Time  : 31
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -694,7 +698,7 @@ uint.mul:
 	#     time = 32 + 9*n(F)
 	#     time = 34 + 5*n(F) if high=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    .firstrun
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -886,8 +890,8 @@ uint.div:
 	#Effect: [quot] = [num] / [den] rounded down
 	#      : [rem]  = [num] % [den]
 	#
-	#Time  : 61 + 8.65*bits = 614
-	#      : 52 + 7.21*bits = 513 if quot=0
+	#Time  : 60 + 8.65*bits = 613
+	#      : 50 + 7.21*bits = 511 if quot=0
 	#
 	#Use the fibonacci sequence to build up [den]. Then run the sequence in
 	#reverse to calculate [num]%[den]. While calculating the remainder, calculate
@@ -896,10 +900,10 @@ uint.div:
 	#The actual time complexity is
 	#
 	#     n(F) = ceil(log_phi(F*sqrt(5)-1/2))
-	#     time = 45 + 6*n(F)
-	#     time = 38 + 5*n(F) if quot=0
+	#     time = 44 + 6*n(F)
+	#     time = 36 + 5*n(F) if quot=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -941,9 +945,10 @@ uint.div:
 	.nden1  .den0   ?+4
 	.den1   .den1   ?+7
 	.den1   .den1   .denhalf
-	#Calc largest fibonacci multiple of [den].
+	#Calculate the largest fibonacci multiple of [den].
+.denloop:
 	.nden1  .den0   .denstart0
-	.den0   .nden1  ?-5
+	.den0   .nden1  .denloop
 .denstart1:
 	#[den1]>[den0]. Fill in the rest of the denominators.
 	.den1   .nden1  ?+1
@@ -1008,10 +1013,10 @@ uint.div:
 	#-------------- Return values ---------------
 .quotret:
 	#Set [quot]. Because of how additions are split, return [quot0]-[quot1]+1.
-	.num    .den1   ?+4
-	.quot0  .z-1    ?+7
-	.num    .z      ?-5
-	.num    .nden1  ?+1
+	.den1   .num    ?+4
+	.den1   .den1   ?+7
+	.num    .num    ?+1
+	.quot0  .z-1    ?+1
 	.r0     .r0     ?+1
 	.r0     .qret   ?+1
 	.r1     .r1     ?+1
@@ -1022,19 +1027,17 @@ uint.div:
 	.quot1  .quot1  ?+1
 	.qret   .qret   .remret+9
 .remret:
-	#Set [rem].
-	.num    .den1   ?+1
-	.num    .z      ?+4
-	.num    .nden1  ?+1
+	#Set [rem]=[num]-[den1].
+	.den1   .num    ?+4
+	.den1   .den1   ?+4
+	.num    .num    ?+1
 	.num    .r2:0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .num    ?+1
-	.r3:0   .tmp    ?+1
+	.den1   .num    ?+1
+	.r3:0   .den1   ?+1
 	#Return
 	0       0       .arg6:6
 .divz:
 	#Division by 0. Abort.
-	0       0       ?+1
 	0-1     0       ?-2
 	#Variables
 	0-2 0-1 .z:0 1
@@ -1058,12 +1061,12 @@ uint.gcd:
 	#
 	#Effect: [ret] = gcd([a],[b])
 	#
-	#Time  : 41 + 20.17*bits = 1332
+	#Time  : 40 + 20.17*bits = 1330
 	#
 	#Calculate the greatest common denominator using the Euclidean algorithm. By
 	#dynamically calculating the modulus, this algorithm has log time complexity.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1104,8 +1107,8 @@ uint.gcd:
 	.mul1   .nmul0  ?+1
 	.nmul0  .nmul0  ?+1
 	#Find the largest multiple of [b]<=[a], and reduce [a] as well.
+	.a      .mul1   .muldone+3
 .mulloop:
-	.a      .mul1   .muldone
 	.a      .mul1   .muldone
 	.a      .mul1   .muldone
 	.nmul0  .mul1   ?+1
@@ -1163,7 +1166,7 @@ uint.shl:
 	#
 	#Time  : 56 + 16*((bits-1)/8) = 168
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1268,7 +1271,7 @@ uint.shr:
 	#
 	#Time  : 31 + 8*bits = 543
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1351,7 +1354,7 @@ uint.not:
 	#
 	#Use the relation -1-[a]=~[a].
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1399,7 +1402,7 @@ uint.and:
 	#Stop when [b]=0, and return [a]. Branches are organized in the loop to minimize
 	#instructions.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1
 	0       .z+2    ?+1
@@ -1484,7 +1487,7 @@ uint.or:
 	#
 	#Use bitwise AND and the relation A|B=-1-(~A)&(~B).
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1
 	0       .z+2    ?+1
@@ -1571,7 +1574,7 @@ uint.xor:
 	#
 	#Use bitwise AND and the relation A^B=A+B-2(A&B).
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1
 	0       .z+2    ?+1

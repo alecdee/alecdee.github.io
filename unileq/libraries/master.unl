@@ -17,10 +17,10 @@ message and exit if it's not.
           File     |  Line
      --------------+--------
        string.unl  |    37
-         uint.unl  |   222
-          int.unl  |  1870
-       random.unl  |  2977
-       memory.unl  |  3546
+         uint.unl  |   224
+          int.unl  |  1875
+       random.unl  |  2984
+       memory.unl  |  3589
 
 
 |#
@@ -37,7 +37,7 @@ message and exit if it's not.
 #|==============================================================================
 
 
-String Library - v1.03
+String Library - v1.04
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -80,6 +80,8 @@ Version History
      Library now handles strings instead of just printing.
 1.03
      Renamed print to string.print for consistency.
+1.04
+     Updated comments.
 
 
 --------------------------------------------------------------------------------
@@ -125,7 +127,7 @@ string.print:
 	#Call  : 0 ? string.print char0 char1 char2 ... 0
 	#Effect: Prints a zero terminated ASCII string. If an escape code is used,
 	#the next value(s) are expected to be numbers or formatting.
-	#
+	#Use [0] to get the calling address.
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1
@@ -222,7 +224,7 @@ string.escend:
 #|==============================================================================
 
 
-Unsigned Integer Operations - v5.02
+Unsigned Integer Operations - v5.03
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -259,8 +261,8 @@ Worst case time complexity:
           add    |  30               |       30
           sub    |  31               |       31
           mul    |  55 + 12.97*bits  |      885
-          div    |  61 +  8.65*bits  |      614
-          gcd    |  41 + 20.17*bits  |     1332
+          div    |  60 +  8.65*bits  |      613
+          gcd    |  40 + 20.17*bits  |     1330
           shl    |  40 +  2.00*bits  |      168
           shr    |  31 +  8.00*bits  |      543
           not    |  26               |       26
@@ -309,7 +311,7 @@ Version History
      Initial version. Used uint.cmp, mem.get, and mem.set for proof of concept.
      Functions take tens of thousands of instructions.
 2.00
-     Unrolled functions so they don't use mem.get and mem.set.
+     Inlined functions so they don't use mem.get and mem.set.
      Functions take thousands of instructions.
 3.00
      Optimized functions so they are all under or around 1K instructions.
@@ -384,15 +386,19 @@ Version History
      Added uint.gcd.
 5.02
      Improved the time complexity of uint.gcd from log^2(n) to log(n).
+5.03
+     Updated comments.
+     Removed a few instructions from uint.div and uint.gcd.
+
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Simplify uint.div den0/nden1 calculation. Get rid of exception for den*2>=MOD.
-
-Optimize uint.mul to have same time complexity as uint.div. Unroll first loop
-iteration and simplify loop?
+Optimize uint.mul to have same time complexity as uint.div
+	Unroll first loop iteration and simplify loop?
+	See if 2*fib0+fib1<MOD limit works better than fib0+fib1<MOD.
+	Calculate inverse (~high or ~low) instead to flip carrying operation.
 
 
 |#
@@ -407,7 +413,7 @@ uint.print:
 	#
 	#Effect: Prints a number in an arbitrary base.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -544,8 +550,8 @@ uint.print:
 	.den:0
 	.lden:0
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
-		56 56 57 57 65 65 66 66 67 67 68 68 69 69 70 70
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
+		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
 	.nhex:0-.hex
 
 
@@ -562,7 +568,7 @@ uint.cmp:
 	#
 	#Time  : 29
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
@@ -614,7 +620,7 @@ uint.min:
 	#
 	#Time  : 34
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -667,7 +673,7 @@ uint.max:
 	#
 	#Time  : 34
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -725,7 +731,7 @@ uint.set:
 	#
 	#Time  : 24
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -765,7 +771,7 @@ uint.neg:
 	#
 	#Time  : 25
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -807,7 +813,7 @@ uint.add:
 	#
 	#Time  : 30
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -854,7 +860,7 @@ uint.sub:
 	#
 	#Time  : 31
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -915,7 +921,7 @@ uint.mul:
 	#     time = 32 + 9*n(F)
 	#     time = 34 + 5*n(F) if high=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    .firstrun
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -1107,8 +1113,8 @@ uint.div:
 	#Effect: [quot] = [num] / [den] rounded down
 	#      : [rem]  = [num] % [den]
 	#
-	#Time  : 61 + 8.65*bits = 614
-	#      : 52 + 7.21*bits = 513 if quot=0
+	#Time  : 60 + 8.65*bits = 613
+	#      : 50 + 7.21*bits = 511 if quot=0
 	#
 	#Use the fibonacci sequence to build up [den]. Then run the sequence in
 	#reverse to calculate [num]%[den]. While calculating the remainder, calculate
@@ -1117,10 +1123,10 @@ uint.div:
 	#The actual time complexity is
 	#
 	#     n(F) = ceil(log_phi(F*sqrt(5)-1/2))
-	#     time = 45 + 6*n(F)
-	#     time = 38 + 5*n(F) if quot=0
+	#     time = 44 + 6*n(F)
+	#     time = 36 + 5*n(F) if quot=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -1162,9 +1168,10 @@ uint.div:
 	.nden1  .den0   ?+4
 	.den1   .den1   ?+7
 	.den1   .den1   .denhalf
-	#Calc largest fibonacci multiple of [den].
+	#Calculate the largest fibonacci multiple of [den].
+.denloop:
 	.nden1  .den0   .denstart0
-	.den0   .nden1  ?-5
+	.den0   .nden1  .denloop
 .denstart1:
 	#[den1]>[den0]. Fill in the rest of the denominators.
 	.den1   .nden1  ?+1
@@ -1229,10 +1236,10 @@ uint.div:
 	#-------------- Return values ---------------
 .quotret:
 	#Set [quot]. Because of how additions are split, return [quot0]-[quot1]+1.
-	.num    .den1   ?+4
-	.quot0  .z-1    ?+7
-	.num    .z      ?-5
-	.num    .nden1  ?+1
+	.den1   .num    ?+4
+	.den1   .den1   ?+7
+	.num    .num    ?+1
+	.quot0  .z-1    ?+1
 	.r0     .r0     ?+1
 	.r0     .qret   ?+1
 	.r1     .r1     ?+1
@@ -1243,19 +1250,17 @@ uint.div:
 	.quot1  .quot1  ?+1
 	.qret   .qret   .remret+9
 .remret:
-	#Set [rem].
-	.num    .den1   ?+1
-	.num    .z      ?+4
-	.num    .nden1  ?+1
+	#Set [rem]=[num]-[den1].
+	.den1   .num    ?+4
+	.den1   .den1   ?+4
+	.num    .num    ?+1
 	.num    .r2:0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .num    ?+1
-	.r3:0   .tmp    ?+1
+	.den1   .num    ?+1
+	.r3:0   .den1   ?+1
 	#Return
 	0       0       .arg6:6
 .divz:
 	#Division by 0. Abort.
-	0       0       ?+1
 	0-1     0       ?-2
 	#Variables
 	0-2 0-1 .z:0 1
@@ -1279,12 +1284,12 @@ uint.gcd:
 	#
 	#Effect: [ret] = gcd([a],[b])
 	#
-	#Time  : 41 + 20.17*bits = 1332
+	#Time  : 40 + 20.17*bits = 1330
 	#
 	#Calculate the greatest common denominator using the Euclidean algorithm. By
 	#dynamically calculating the modulus, this algorithm has log time complexity.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1325,8 +1330,8 @@ uint.gcd:
 	.mul1   .nmul0  ?+1
 	.nmul0  .nmul0  ?+1
 	#Find the largest multiple of [b]<=[a], and reduce [a] as well.
+	.a      .mul1   .muldone+3
 .mulloop:
-	.a      .mul1   .muldone
 	.a      .mul1   .muldone
 	.a      .mul1   .muldone
 	.nmul0  .mul1   ?+1
@@ -1384,7 +1389,7 @@ uint.shl:
 	#
 	#Time  : 56 + 16*((bits-1)/8) = 168
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1489,7 +1494,7 @@ uint.shr:
 	#
 	#Time  : 31 + 8*bits = 543
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1572,7 +1577,7 @@ uint.not:
 	#
 	#Use the relation -1-[a]=~[a].
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -1620,7 +1625,7 @@ uint.and:
 	#Stop when [b]=0, and return [a]. Branches are organized in the loop to minimize
 	#instructions.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1
 	0       .z+2    ?+1
@@ -1705,7 +1710,7 @@ uint.or:
 	#
 	#Use bitwise AND and the relation A|B=-1-(~A)&(~B).
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1
 	0       .z+2    ?+1
@@ -1792,7 +1797,7 @@ uint.xor:
 	#
 	#Use bitwise AND and the relation A^B=A+B-2(A&B).
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.atmp   .arg2   ?+1
 	0       .atmp   ?+1
 	0       .z+2    ?+1
@@ -1870,7 +1875,7 @@ uint.xor:
 #|==============================================================================
 
 
-Signed Integer Operations - v2.00
+Signed Integer Operations - v2.01
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -1950,6 +1955,8 @@ Version History
      Remade int.div and int.mul to work with any modulo, even non power-of-two,
      by using the fibonacci sequence.
      int.div is 30% faster and int.mul is 1% faster.
+2.01
+     Updated comments.
 
 
 --------------------------------------------------------------------------------
@@ -1973,7 +1980,7 @@ int.print:
 	#Effect: Prints a signed number in an arbitrary base. If the padding
 	#character is whitespace, print the sign after padding.
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -2153,8 +2160,8 @@ int.print:
 	.nplus:0-43
 	.nneg:0-45
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55
-		56 56 57 57 65 65 66 66 67 67 68 68 69 69 70 70
+		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
+		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
 	.nhex:0-.hex
 
 
@@ -2172,7 +2179,7 @@ int.cmp:
 	#
 	#Time  : 37
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.z      .arg2   ?+1
 	0       .z      ?+1
 	0       .z+2    ?+1
@@ -2240,7 +2247,7 @@ int.min:
 	#
 	#Time  : 43
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -2318,7 +2325,7 @@ int.max:
 	#
 	#Time  : 43
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -2396,7 +2403,7 @@ int.abs:
 	#
 	#Time  : 30
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -2462,7 +2469,7 @@ int.mul:
 	#     time = 40 + 9*n(F)
 	#     time = 34 + 5*n(F) if high=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    .firstrun
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -2679,7 +2686,7 @@ int.div:
 	#     time = 71 + 6*n(F)
 	#     time = 58 + 5*n(F) if quot=0
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
@@ -2743,7 +2750,7 @@ int.div:
 	.nden1  .den0   ?+4
 	.den1   .den1   ?+7
 	.den1   .den1   .denhalf
-	#Calc largest fibonacci multiple of [den].
+	#Calculate the largest fibonacci multiple of [den].
 	.nden1  .den0   .denstart0
 	.den0   .nden1  ?-5
 .denstart1:
@@ -2881,7 +2888,7 @@ int.shr:
 	#
 	#Time  : 43 + 8*bits = 555
 	#
-	#Setup stack pointer.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	0       .tmp    ?+1
@@ -2977,7 +2984,7 @@ int.shr:
 #|==============================================================================
 
 
-Random Number Generator - v1.06
+Random Number Generator - v2.00
 
 Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
 
@@ -2993,12 +3000,12 @@ random.unl provides functions for generating uniform random numbers.
 Index
 
 
+random.hash    [ret] [num]
 random.seed    [num]
 random.jump    [num]
-random.get     [dst]
-random.mod     [dst] [mod]
+random.get     [ret]
+random.mod     [ret] [mod]
 random.shuffle [[arr]] [len]
-random.hash    [ret] [num]
 
 
 --------------------------------------------------------------------------------
@@ -3021,139 +3028,316 @@ Version History
      Added random.hash.
 1.06
      Performed testing on rejection sampling for various integer ranges.
-     Sampling via "rand-(rand%mod)<=-mod" works for any underlying integers.
+     Accepting "rand-(rand%mod)<=-mod" works for any underlying integers.
+2.00
+     Remade PRNG to work with any underlying integers.
+
+
+--------------------------------------------------------------------------------
+PRNG Overview
+
+
+The PRNG works by incrementing the state, hashing it, and returning the result.
+The hash function has the following form:
+
+
+     tmp=-1-hash
+     hash-=tmp
+     if GT:
+          tmp=-hash
+          hash-=tmp
+          if GT: hash-=con3
+          else : hash-=con2
+     else:
+          tmp=-hash
+          hash-=tmp
+          if GT: hash-=con1
+          else : hash-=con0
+
+
+The ideal number of iterations for the hash function is ceil(log2(mod)/2).
+
+The formulas below provide a way to calculate the constants (con0, con1, ...)
+so that the function provides a full mapping, depending on the modulus of our
+underlying integers modulo 4.
+
+If mod % 4 = 0, for instance, we would pick a random value (A), and choose
+one of the six forms listed below to give us con0, con1, con2, and con3.
+
+The best performers were selected by comparing avalanche and differential
+effects.
+
+if mod % 4 = 0:
+
+     A, B, C, D
+     A%4 != B%4 != C%4 != D%4
+
+     best: A%4 = 0, B%4 = 2, C%4 = 1, D%4 = 3
+
+if mod % 4 = 1:
+
+     A+0, A-3, A+1, A+2
+     A+0, A-3, A+3, A+0
+     A+0, A-2, A+0, A+2
+     A+0, A-2, A+3, A-1
+     A+0, A+0, A+0, A+0
+     A+0, A+0, A+1, A-1
+
+     best: A+0, A-2, A+3, A-1
+
+if mod % 4 = 2:
+
+     A, B, B, A
+     A, A, B, B
+     A%2 != B%2
+
+     best: A%2 = 0, B%2 = 1, B%2 = 1, A%2 = 0
+
+if mod % 4 = 3:
+
+     A+0, A-2, A+1, A-3
+     A+0, A-1, A+1, A+0
+     A+0, A+0, A-1, A-3
+     A+0, A+0, A+0, A+0
+
+     best: A+0, A-2, A+1, A-3
+
+The increment for the PRNG can be found by randomly selecting a value relatively
+prime to the modulus in ~ln(ln(mod)) GCD operations. We can do this by testing:
+
+     while gcd(add,-add)!=1: add=rand()
 
 
 --------------------------------------------------------------------------------
 TODO
 
 
-Simplify bit counting.
-Optimize random.hash. Copy random.get.
-Remake random.get to work for any mod.
-Add uint.div to random.mod, random.shuffle.
-Add uint.mul to random.jump.
+Figure out better constants for mod%4 = 1 or 3.
+See if there are better seeding algorithms.
 
 
 |#
 
-random.table:
-	#For the hash output to be unique, the bottom 8 bits of the table elements
-	#need be unique. Add 128 to compensate for shifting in random.generate.
-	0x98f570cabbbe2960 0x911fe275124571d3 0xc4b49b92decb87b8 0x2cd974e264a1471e
-	0xf25c1cd4ec741993 0x6ac38c14e315ff72 0x532a643077bdeaf3 0xe73da4ddf4ea21ce
-	0xf482feb36863db2c 0xb0b08786cdd32bff 0x2912bb15798712d5 0xaa3c40a2341958ba
-	0xa56c2aec8d398c9f 0xb571c4090f4e31b5 0xcfbbfe93f0333090 0x4d08908eb0d3773f
-	0x902c693a21a631cb 0x9b35783a62da3801 0xeb23e76d74a030bd 0x148e78184600d905
-	0x93cdff03f57a90f0 0xdc500bc795c0db4b 0x70da57814f7632c1 0x036633f4013f2582
-	0x0c8b76d2def52fc2 0xa45d1da2dba14a25 0x28dbc12379f88e00 0xcf437f8d91ddbc86
-	0x0e04a0cdced858ab 0xc7ad971bd5fd8b40 0x29c4517860f09471 0x651bab92d762f10c
-	0x9e5f7051205bcc26 0xdcf588711bbcf16c 0xb511a1dded21dd29 0x3679f6456f3452f6
-	0xe38dc026335be06b 0xc11d3c759a573da9 0x69410c19157a935a 0xbcc29a4c1b48f135
-	0x178c1f951bb7690d 0xd0fc4d498b3e96cf 0xb5b221282132f91f 0x3406dfcb2f0366c6
-	0xa18219fffb9a29fc 0xf389feeac4bde69c 0x7b0c200137dd9f57 0x2ecc7eb7f4962591
-	0x92ac81ab67b51beb 0x9009eb7acc6a5c7d 0x3182a4ab17f0d814 0xde30902e8d338137
-	0x3f3b76e6cccfc642 0xb90d0547d1666133 0x8829b84121f35da7 0xaf509317565b19e7
-	0x8fa5742b4f4eeeac 0xbfb86e765ab97f32 0x42b8d16ac3cc3a7f 0x33b8fda60fa07180
-	0x68b9f22c1b7ba74d 0x0cee1ee11bc6d449 0x0dce2401a6399421 0x052188c95763afdb
-	0x4cd0743f96271244 0x8ab6545393a1ebf9 0x768742f4f5d2cab3 0x2505089bf7de1def
-	0xc77ddf5d4bcb4fe8 0x3b861ae62a54910f 0xbba48529fa2859a1 0x9364a79693182e69
-	0x29da3184545bf7ed 0xae8efc34c79dd8d0 0xefb805aef57bab34 0xf78943322ead0764
-	0x9c357259e48eb6af 0x1dcf0b5f98e2b294 0xa84cb6e4e7897551 0x9054b2308f7ff5a8
-	0xdea01eccc8cb3002 0x46be28419fcd8f73 0x5c466247cab9ce7a 0x1034bef3c280cb12
-	0x8595486352ef7b07 0xe9c864d995472116 0x9d17d691fa40b9d8 0x1b0a781d7f42e5c0
-	0x9260768bc3848498 0x32b48273b8447b6e 0xa630dd7aa9926f68 0x6a5f0a3586db52e5
-	0xbeda047a0761a9de 0xeeedd85395df432a 0x9fa214fd946164b7 0xd76c7fadfb1b9f27
-	0xe2679809cd7c7195 0x4dbb967cba099877 0x9e611d7eb7c16511 0xde11e3858421c4dd
-	0x8f60a79abb8d57a4 0xb69e8632011f0476 0x3a1b15a9d57b3adc 0x6ec8bf7ca6e952f4
-	0x18ab73ed10808a85 0xccf19063a89d6ed6 0x9ddaae641e0d371d 0x349a6b56eb499da3
-	0xdebee3f7288eabe9 0x6d75b7185e043496 0xbfe68ee59f24e009 0xe2f755c64a184728
-	0xe3956041e0330606 0x1684ec84b22cf1a6 0xe547786c47fe87e1 0x7aaf255ec884c10b
-	0xb9a7b0be91eca4fa 0x18a85229e8fbe317 0x9b6dad19e7415bc4 0xdab2c6a930db6224
-	0xd745efee27085597 0x76f406eb0c7428d4 0x3f779c073097aad9 0xbd0f440b38d1bb66
-	0x6ebf3706f695fc55 0x5fbeb72a136c5f89 0xd1c85045aafa5699 0x9b0cf77eb69cfe5b
-	0x96bc972c67aeefe2 0xb878518614240efb 0x915a36484cec1b5d 0xa020e164db74d519
-	0x875a2ac9e4b98658 0xe34b6b0a580b7d50 0xcd30c71286948c3b 0xf0e6820ef3e9dedf
-	0x5dd7e2048d695b67 0xc631ad2b02402fe4 0xc04e99806aa6b8b0 0x5c3304efe897203a
-	0x8470f7bb68304a7e 0x4667d0d2c455a98f 0x627165e1b5e16941 0xcd115b2a371d7253
-	0x9d6959acac5178f2 0x2722e04d0a4a143e 0x9da126422bd82cb6 0xef7d31df6da70b9b
-	0x8419df95b52ed518 0x8744bd266232eec9 0xfec4fb7d4a39b7b4 0x653e09ad754e9663
-	0x2608342e20aa3b1b 0xcaacecdf21d87d83 0x60760dd379bb46ea 0xb3f7371bd3167bee
-	0x83456546a5d4b0c8 0x3b873a2c613d06d2 0x12c3d73474334dec 0xbec28771231d6d4f
-	0x1e0915b280ca6d78 0x12f9adbc60d758f8 0x9fb08c027989eee0 0xbe06995c7b3a3a8d
-	0xa018541f0b2d74fe 0xcb0dd0f03d00ed20 0xcea6dda8960694ae 0x903aaea97447f361
-	0xa790fbe394d3a1f1 0x40efcea66b9f4687 0xce2e0082770418c3 0x648d7efc4101d2c7
-	0x77554a83e487e00e 0x88a954411c963eca 0x5e50a70702f25e70 0x0f71bbe7c9f8888e
-	0xe10b0dd69b525b39 0xb6e0722926754946 0xf170a88f296f535f 0x3c04bceebe44795e
-	0x68bba5422fffc54a 0x3532437701d42d5c 0x0f193926db9f9f03 0xe3e8936f5cc07b75
-	0xeb05b184ecbc0781 0xcfb13169fb869a04 0x42a0202293da976a 0xf2b6c837dd71ec52
-	0x384cbe585d4a284c 0xaa3111a39a9aeffd 0x6c8ab832cf881743 0x0483dd6ad0cc54da
-	0x720a2dd6094fc823 0x03107a9e669770bc 0x1668b4ba38718ed7 0x771106507afb5788
-	0x5054ac481b535308 0x7e485aae5cf0843c 0x881766ced977c01c 0x2eb2c7255ded91e6
-	0xeeb1ca030d19f04e 0x68138ac1b21f7030 0xe5de8ba1badd73c5 0x03a8f78e3114d636
-	0xde62bdde8d42596d 0xcb15fc108b83a222 0x47e32cf9f7cb1038 0xdd46c0bcb1b2ed8b
-	0x24966b07ce5abb74 0x107257fa9545c5d1 0xbb6bed3a3715a192 0xca941e35cb1a8ab9
-	0x3ea5389dbca69e2d 0x0b84722da650e37c 0x0ddd81bdedcd05ad 0xa55ee070874ab6be
-	0x4856d854cdc81015 0xaf3482758939f02f 0x80547b7b42c6082b 0x32a83053658a73aa
-	0xb4e0f4a4bd383c9e 0x86c52d7ce1b79e0a 0x1567a7aa94e4fcb1 0x71fc8c1a6dfa442e
-	0x381ae7272b68bb48 0x85632a5c9280d6f7 0x141c9e3bdecc42f5 0xae184e25976dae1a
-	0x6fd0f1321084317b 0xb95e50ee69ed5f9d 0x786f68e44c0f0ea2 0x88ac24917ce632bb
-	0x88fca453535915bf 0x6c6e38b0bf5b979a 0x4b42cfc646897ccd 0x2a18e1dbbded9bb2
-	0x8c75ad2c94462045 0xde14e4d24fc9bb62 0x88d304a2898a4584 0xf7e1e0b52d45f0cc
-	0x9d8a8dd7d1bafba0 0x5ba48bfee8d17479 0x5d2d0cfc9a48fa56 0x85e41916f3616c6f
-	0xedfc0c68c0217147 0x067e32a00b210665 0x04440fe6a9b7ad3d 0xe0942f02c01f838c
-	0x86c8c765b04b7031 0x03edd68c2c9f6259 0xa82b24db8deaf410 0x66337c5333e8c4a5
-	0x305d36e368598b13 0xbdd8330fbb889ee3 0xc146c702c618a08a 0x377d5bd4c5c6b854
-
 
 random.init:
-	#Get the calling address and original stack pointner.
+	#Get the current and original calling addresses.
 	.orig   .0      ?+1
 	.0      .0      ?+1
 	.0      0       ?+1
 	0       0       ?+1
 	#Make sure we only initialize once.
-	random.seed+2 .z-3 ?+1
-	random.jump+2 .z-3 ?+1
-	random.get +2 .z-3 ?+1
-	#Count how many times we need to iterate in random.get.
-.loop:
-	.z-1    .z      .done
-	random.get.i0 .z+1 ?+1
-	#[z-1]<<8
-	.z      .z-1    ?+1
-	.z-1    .z      ?+1
-	.z      .z-1    ?+1
-	.z-1    .z      ?+1
-	.z      .z-1    ?+1
-	.z      .z-1    ?+1
-	.z-1    .z      ?+1
-	.z-1    .z      ?+1
-	.z      .z-1    ?+1
-	.z      .z-1    ?+1
-	.z-1    .z      ?+1
-	.z-1    .z      ?+1
-	.z-1    .z      ?+1
-	.z      .z      .loop
-.done:
-	.z-1    .z+1    ?+1
-	#Randomly seed the generator.
+	random.seed   +2 .z-3 ?+1
+	random.hash   +2 .z-3 ?+1
+	random.get    +2 .z-3 ?+1
+	random.jump   +2 .z-3 ?+1
+	#Set i to the number of iterations we need properly hash our values.
+	#i~=ceil(log2(mod)/2) has the best hashing characteristics.
+	.mul    .mul    ?+1
+	.mul    .z+1    .idone-3
+.iloop:
+	.i      .z-1    ?+1
+	.tmp    .mul    ?+1
+	.mul    .tmp    .idone
+	.tmp    .tmp    ?+1
+	.tmp    .mul    ?+1
+	.mul    .tmp    .idone
+	.tmp    .tmp    .iloop
+.idone:
+	#Set .get and .hash iteration counters.
+	random.hash.iters .i ?+1
+	random.get.iters  .i ?+1
+	#Reset the PRNG state.
+	random.get.state random.get.state ?+1
+	random.get.inc   random.get.inc   ?+1
+	random.get.inc   .z+1             ?+1
+	#Set the PRNG constants based on the modulus % 4.
+	0 ? uint.div 0 .mod .mod .z+4
+	.i      .z-1    ?+1
+.conloop:
+	#Set random.get's constants.
+	random.get.con0 random.get.con0 ?+1
+	random.get.con0 .con0           ?+1
+	random.get.con1 random.get.con1 ?+1
+	random.get.con1 .con1           ?+1
+	random.get.con2 random.get.con2 ?+1
+	random.get.con2 .con2           ?+1
+	random.get.con3 random.get.con3 ?+1
+	random.get.con3 .con3           ?+1
+	.i      .z+1    .condone
+	.con0   .con0   ?+1
+	.con1   .con1   ?+1
+	.con2   .con2   ?+1
+	.con3   .con3   ?+1
+	.mod    .z      .mod1
+	.mod    .z+1    .mod2
+	.mod    .z+1    .mod3
+.mod0:
+	#A%4 = 0, B%4 = 2, C%4 = 1, D%4 = 3
+	0 ? random.get .tmp
+	.con0   .tmp    ?+1
+	.con0   .tmp    ?+1
+	.con0   .tmp    ?+1
+	.con0   .tmp    ?+1
+	0 ? random.get .tmp
+	.con1   .tmp    ?+1
+	.con1   .tmp    ?+1
+	.con1   .tmp    ?+1
+	.con1   .tmp    ?+1
+	.con1   .z+2    ?+1
+	0 ? random.get .tmp
+	.con2   .tmp    ?+1
+	.con2   .tmp    ?+1
+	.con2   .tmp    ?+1
+	.con2   .tmp    ?+1
+	.con2   .z+1    ?+1
+	0 ? random.get .tmp
+	.con3   .tmp    ?+1
+	.con3   .tmp    ?+1
+	.con3   .tmp    ?+1
+	.con3   .tmp    ?+1
+	.con3   .z+3    ?+1
+	.mod    .z-3    .conloop
+.mod1:
+	#A+0, A-2, A+3, A-1
+	0 ? random.get .tmp
+	.con0   .tmp    ?+1
+	.con1   .tmp    ?+1
+	.con1   .z-2    ?+1
+	.con2   .tmp    ?+1
+	.con2   .z+3    ?+1
+	.con3   .tmp    ?+1
+	.con3   .z-1    ?+1
+	.mod    .z      .conloop
+.mod2:
+	#A%2 = 0, B%2 = 1, B%2 = 1, A%2 = 0
+	0 ? random.get .tmp
+	.con0   .tmp    ?+1
+	.con0   .tmp    ?+1
+	.con3   .tmp    ?+1
+	.con3   .tmp    ?+1
+	0 ? random.get .tmp
+	.con1   .tmp    ?+1
+	.con1   .tmp    ?+1
+	.con1   .z+1    ?+1
+	.con2   .tmp    ?+1
+	.con2   .tmp    ?+1
+	.con2   .z+1    ?+1
+	.mod    .z-1    .conloop
+.mod3:
+	#A+0, A-2, A+1, A-3
+	0 ? random.get .tmp
+	.con0   .tmp    ?+1
+	.con1   .tmp    ?+1
+	.con1   .z-2    ?+1
+	.con2   .tmp    ?+1
+	.con2   .z+1    ?+1
+	.con3   .tmp    ?+1
+	.con3   .z-3    ?+1
+	.mod    .z-2    .conloop
+.condone:
+	#Set random.hash's constants to the same as random.get.
+	random.hash.con0 random.hash.con0 ?+1
+	random.hash.con0 .con0            ?+1
+	random.hash.con1 random.hash.con1 ?+1
+	random.hash.con1 .con1            ?+1
+	random.hash.con2 random.hash.con2 ?+1
+	random.hash.con2 .con2            ?+1
+	random.hash.con3 random.hash.con3 ?+1
+	random.hash.con3 .con3            ?+1
+	#Seed the generator with the system time.
 	0 ? random.seed 0-5
 	#Return to the calling function.
 	0       .0      .orig:0-4
 	#Variables
+	0-3 0-2 0-1 .z:0 1 2 3 4
 	.0:0
-	0-3 0-2 0-1 .z:0 1
+	.tmp:0
+	.mul:0
+	.i:0
+	.mod:0-1
+	#Start with values that are decent across different mods.
+	.con0:0-1
+	.con1:0-0
+	.con2:0+1
+	.con3:0+2
+
+
+random.hash:
+	#Call  : 0 ? random.hash ret num
+	#Effect: [ret] = a hash of [num]
+	#Time  : 26 + 4.5*bits = 314
+	#Use [0] to get the calling address.
+	.tmp    .tmp    ?+1
+	random.init.0 ? random.init
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
+	0       .z+2    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	#Get ret.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
+	#Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	.hash   .hash   ?+1
+	.hash   .p0:0   ?+1
+	#Hash [val].
+	.tmp    .tmp    ?+1
+	.i      .iters  ?+4
+.loop:
+	.i      .z+1    .done
+		   .tmp    .z+1    ?+1
+		   .tmp    .hash   ?+1
+	.fxx:   .hash   .tmp    .f0x
+	.f1x:   .tmp    .tmp    ?+1
+		   .tmp    .hash   ?+1
+		   .hash   .tmp    .f10
+	.f11:   .hash   .con3   ?+1
+		   .tmp    .tmp    .loop
+	.f10:   .hash   .con2   ?+1
+		   .tmp    .tmp    .loop
+	.f0x:   .tmp    .tmp    ?+1
+		   .tmp    .hash   ?+1
+		   .hash   .tmp    .f00
+	.f01:   .hash   .con1   ?+1
+		   .tmp    .tmp    .loop
+	.f00:   .hash   .con0   ?+1
+		   .tmp    .tmp    .loop
+.done:
+	#Set [ret] and return.
+	.hash   .ret0:0 ?+1
+	.tmp    .hash   ?+1
+	.ret1:0 .tmp    ?+1
+	0       0       .arg4:4
+	#Variables
+	.z:0 1 2
+	.tmp:0
+	.hash:0
+	.i:0
+	#The hash function state.
+	.iters:0
+	.con0:0+1
+	.con1:0+0
+	.con2:0-1
+	.con3:0-2
 
 
 random.seed:
 	#Call  : 0 ? random.seed num
 	#Effect: Sets the PRNG state based on the value of [num].
-	#Setup the stack.
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	random.init.0 ? random.init
 	.tmp    .arg2   ?+1
-	.tmp    .z-2    ?+1
+	0       .z+2    ?+1
 	0       .tmp    ?+1
 	.arg2   0       ?+1
 	.arg3   0       ?+1
@@ -3166,19 +3350,26 @@ random.seed:
 	.num    .p0:0   ?+1
 	#Reset the generator state.
 	random.get.state random.get.state ?+1
+	random.get.state .num             ?+1
 	random.get.inc   random.get.inc   ?+1
-	#Set [inc] make sure it's odd.
-	random.get.state .num ?+1
-	0 ? random.get .tmp
-	random.get.inc .tmp ?+1
-	random.get.inc .tmp ?+1
-	random.get.inc .z-1 ?+1
+	random.get.inc   .z+1             ?+1
+	#Generate a random increment relatively prime to the modulus.
+	#If gcd(num,-num)=1, then it's relatively prime.
+	.tmp    .tmp    ?+1
+.incloop:
+	0 ? random.get .num
+	.tmp    .num    ?+1
+	0 ? uint.gcd .tmp .tmp .num
+	.tmp    .z+1    ?+1
+	.tmp    .z      .incdone
+	.tmp    .tmp    .incloop
+.incdone:
 	#Set [state].
-	random.get.state .tmp ?+1
-	0 ? random.get random.get.state
+	random.get.inc   random.get.inc   ?+1
+	random.get.inc   .num             ?+1
 	.num    .num    .arg3:3
 	#Variables
-	0-2 0-1 .z:0
+	.z:0 1 2
 	.tmp:0
 	.num:0
 
@@ -3186,210 +3377,157 @@ random.seed:
 random.jump:
 	#Call  : 0 ? random.jump num
 	#Effect: Jumps the PRNG state forward or backwards [num] number of steps.
-	#Time  : 21 + 7*bits = 469
-	#Setup the stack.
+	#Time  : 62 + 7.21*bits = 523
+	#Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
 	random.init.0 ? random.init
 	.tmp    .arg2   ?+1
-	.tmp    .z-2    ?+1
+	0       .z+2    ?+1
 	0       .tmp    ?+1
 	.arg2   0       ?+1
 	.arg3   0       ?+1
+	0       0       ?+1
 	#Get [num].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
-	.p0     .p0     ?+1
-	.p0     .tmp    ?+1
 	.num    .num    ?+1
-	.num    .p0:0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .num    ?+1
-	#Offset [tmp] by 1 to force [num] to be odd.
-	.tmp    .z+1    ?+1
-	.mul    .mul    ?+1
-	#Calculate [inc]*[num].
-.loop:
-	#If the highest bit of [b] is set, add [a] to [lval].
-	.num    .tmp    ?+7
-	.mul    random.get.inc ?+1
-	.tmp    .tmp    ?+7
-	#If [b]=0, we are done.
-	.num    .z      .done
-	.tmp    .tmp    ?+1
-	#Left shift [mul].
-	.mtmp   .mtmp   ?+1
-	.mtmp   .mul    ?+1
-	.mul    .mtmp   ?+1
-	.tmp    .num    .loop
-.done:
+	.num    .tmp    ?+1
 	#[state]+=[inc]*[num]
-	random.get.state .mtmp ?+1
+	0 ? uint.mul 0 .mul .num:0 random.get.inc
+	.tmp    .tmp    ?+1
+	.tmp    .mul    ?+1
+	random.get.state .tmp ?+1
 	#Return
 	0       0       .arg3:3
 	#Variables
+	.z:0 1 2
 	.tmp:0
-	.mtmp:0
-	.num:0
 	.mul:0
-	0-2 0-1 .z:0 1
 
 
 random.get:
-	#Call  : 0 ? random.get dst
-	#Effect: [dst] = a random 64 bit integer
-	#Time  : 20 + 36*((bits+7)/8) = 308
-	#Setup the stack.
-	.tmp    .tmp    ?+1
+	#Call  : 0 ? random.get ret
+	#Effect: [ret] = a uniform random number
+	#Time  : 21 + 9*ceil(bits/2) = 309
+	#Time  :  8 + 9*ceil(bits/2) = 296 for reentry
+	#Use [0] to get the calling address.
+	.hash   .hash   ?+1
 	random.init.0 ? random.init
-	.tmp    .arg2   ?+1
-	0       .tmp    ?+1
+	.hash   .arg2   ?+1
+	0       .hash   ?+1
 	0       .z+2    ?+1
 	.arg2   0       ?+1
 	.arg3   0       ?+1
-	#Get dst.
-	.dst0   .arg2:2 ?+1
-	.dst1   .dst0   ?+1
-	.dst2   .dst0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .dst1   ?+1
-	.dst0   .dst0   ?+1
-	.dst0   .tmp    ?+1
+	#Get ret.
+	.ret0   .arg2:2 ?+1
+	.ret1   .ret0   ?+1
+	.ret2   .ret0   ?+1
+	.hash   .hash   ?+1
+	.hash   .ret1   ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .hash   ?+1
 .reenter:
-	#Advance state.
+	#Advance the PRNG state.
 	.state  .inc    ?+1
-	.rnd    .rnd    ?+1
-	.rnd    .state  ?+1
-	.i      .i0     ?+4
+	.hash   .hash   ?+1
+	.hash   .state  ?+1
+	#Hash the state.
+	.i      .iters  ?+4
 .loop:
 	.i      .z+1    .done
-	#Set [rnd]=[rnd]*256+128 and [t0]=[table+([rnd]>>56)]. Offset [rnd] by 1 so
-	#we can detect if a carry occurs.
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .tmp .z+1 ?+1 .rnd .tmp ?+4
-	.tbl .l+0 ?+4 .tbl .l+8 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+1 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+2 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+3 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+4 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+5 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+6 ?+1
-	.tmp .tmp ?+1 .tmp .rnd ?+1 .rnd .tmp ?+4 .tbl .l+7 ?+1
-	#[rnd]-=table+128
-	.rnd    .tbl:0  ?+1
-	.tbl    .tbl    .loop
+		   .tmp    .z+1    ?+1
+		   .tmp    .hash   ?+1
+	.fxx:   .hash   .tmp    .f0x
+	.f1x:   .tmp    .tmp    ?+1
+		   .tmp    .hash   ?+1
+		   .hash   .tmp    .f10
+	.f11:   .hash   .con3   ?+1
+		   .tmp    .tmp    .loop
+	.f10:   .hash   .con2   ?+1
+		   .tmp    .tmp    .loop
+	.f0x:   .tmp    .tmp    ?+1
+		   .tmp    .hash   ?+1
+		   .hash   .tmp    .f00
+	.f01:   .hash   .con1   ?+1
+		   .tmp    .tmp    .loop
+	.f00:   .hash   .con0   ?+1
+		   .tmp    .tmp    .loop
 .done:
-	#Set [dst] and return.
-	.dst0:0 .dst1:0 ?+1
-	.dst2:0 .rnd    ?+1
+	#Set [ret] and return.
+	.ret0:0 .ret1:0 ?+1
+	.ret2:0 .hash   ?+1
 	0       0       .arg3:3
 	#Variables
 	.z:0 1 2
-	.l:0-128-random.table 0-64 0-32 0-16 0-8 0-4 0-2 0-1 0-random.table
-	.rnd:0
 	.tmp:0
+	.hash:0
 	.i:0
-	.i0:0
+	#The PRNG state.
+	.iters:0
 	.state:0
-	.inc:1
+	.inc:0-1
+	.con0:0+1
+	.con1:0+0
+	.con2:0-1
+	.con3:0-2
 
 
 random.mod:
-	#Call  : 0 ? random.get dst mod
-	#Effect: [dst] = a random number in [0,[mod]).
-	#
-	#Note: rejection sampling with "rand-(rand%mod)<=-mod" works for any underlying
-	#integer range.
-	#Setup the stack.
-	.tmp0   .tmp0   ?+1
-	.tmp0   .arg2   ?+1
-	0       .tmp0   ?+1
+	#Call  : 0 ? random.mod ret mod
+	#Effect: [ret] = a uniform random number in [0,[mod])
+	#Time  : 63 + 8.42*bits = 601
+	#Use [0] to get the calling address.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	0       .tmp    ?+1
 	0       .z+2    ?+1
 	.arg2   0       ?+1
 	.arg3   0       ?+1
 	.arg4   0       ?+1
 	0       0       ?+1
-	#Get dst.
-	.tmp0   .tmp0   ?+1
-	.tmp0   .arg2:2 ?+1
-	.p0     .p0     ?+1
-	.p0     .tmp0   ?+1
-	.p1     .p1     ?+1
-	.p1     .tmp0   ?+1
+	#Get ret.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
 	#Get [mod].
-	.tmp0   .tmp0   ?+1
-	.tmp0   .arg3:3 ?+1
-	.p2     .p2     ?+1
-	.p2     .tmp0   ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
 	.nmod   .nmod   ?+1
-	.nmod   .p2:0   ?+1
-	.nmod   .z      .div0
-	.nmod   .z-1    ?+1
+	.nmod   .p0:0   ?+1
 	.mod    .mod    ?+1
 	.mod    .nmod   ?+1
-	#Get our first random number and set up successive random.get calls.
-	.tmp1   .tmp1   ?+1
-	0 ?+2 random.get .randloop+1
-.randloop:
-	#Skip setting up random.get on successive calls.
-	.tmp1   .tmp1   random.get.reenter .rand
-	.tmp1   .rand   ?+1
-	.tmp0   .tmp0   ?+1
-	.tmp0   .tmp1   ?+1
-	.tmp1   .z+1    ?+1
-	.rem    .rem    .modloop+6
-	#Caculate [rem]=[rand]%[mod].
-.modloop:
-	#[rem]+=[num]>>63, [num]<<=1. If [num]=0, abort.
-	.rtmp   .rtmp   ?+1
-	.tmp1   .tmp0   ?+1
-	.tmp0   .tmp1   ?+4
-	.rtmp   .z+1    ?+4
-	.tmp0   .z      .moddone
-	.rtmp   .rem    ?+1
-	.rem    .rtmp   ?+1
-	#If [rem]>=[mod], [rem]-=[mod]
-	.rem    .mod    ?+7
-	.rem    .z+1    ?+1
-	.tmp1   .tmp1   .modloop
-	.rem    .nmod   ?+1
-	#[rem]<<=1
-	.tmp1   .tmp1   .modloop
-.moddone:
-	#Rejection sampling. Accept if rand-rem<=-mod.
-	.nmod   .z+1    ?+1
-	.rand   .rem    ?+1
-	.rand   .nmod   .modaccept
-	.nmod   .z-1    .randloop
-.modaccept:
-	.rem    .p0:0   ?+1
-	.tmp0   .rem    ?+1
-	.p1:0   .tmp0   ?+1
-	0       0       .arg4:4
-.div0:
-	0-1     0       ?-2
+	#Loop until we satisfy rand-(rand%mod)<=-mod. Return rand%mod.
+	0 ? random.get .rand
+	0 ? uint.div 0 .ret0:0 .rand .mod
+	.rand   .ret1:0 ?+1
+	.rand   .nmod   .arg4:4
+	.tmp    .tmp    random.get.reenter
 	#Variables
-	.nmod:0
-	.mod:0
+	.z:0 1 2
+	.tmp:0
 	.rand:0
-	.rem:0
-	.rtmp:0
-	.tmp0:0
-	.tmp1:0
-	0-1 .z:0 1 2
+	.mod:0
+	.nmod:0
 
 
 random.shuffle:
 	#Call  : 0 ? random.shuffle arr len
 	#Effect: Randomly shuffles [[arr]] from [0,[len]).
-	#Setup the stack.
+	#Use [0] to get the calling address.
 	.tmp0   .tmp0   ?+1
 	.tmp0   .arg2   ?+1
-	0       .tmp0   ?+1
 	0       .z+2    ?+1
+	0       .tmp0   ?+1
 	.arg2   0       ?+1
 	.arg3   0       ?+1
 	.arg4   0       ?+1
 	0       0       ?+1
-	#Get [len].
+	#Get [len]. If [len]<=1, return.
 	.tmp0   .tmp0   ?+1
 	.tmp0   .arg3:3 ?+1
 	.p1     .p1     ?+1
@@ -3398,7 +3536,6 @@ random.shuffle:
 	.tmp0   .p1:0   ?+1
 	.len    .len    ?+1
 	.len    .tmp0   ?+1
-	#Return if [len]<=1.
 	.len    .z+1    .done
 	#Get -[arr].
 	.tmp0   .tmp0   ?+1
@@ -3412,57 +3549,18 @@ random.shuffle:
 	.i0     .narr   ?+1
 	.i1     .i1     ?+1
 	.i1     .narr   ?+1
-	.nmod   .nmod   ?+1
-	.nmod   .z+1    ?+1
-	.mod    .mod    ?+1
-	.mod    .nmod   ?+1
-	#Get our first random number and set up successive random.get calls.
-	.tmp1   .tmp1   ?+1
-	0 ?+2 random.get .randloop+1
-.shuffleloop:
-	.len    .z+1    .done
-	#Get a random number in [0,i+1).
-.randloop:
-	#Skip setting up random.get on successive calls.
-	.tmp1   .tmp1   random.get.reenter .rand
-	.tmp1   .rand   ?+1
+	#Begin shuffling.
+.loop:
+	#Set j=arr+[rand]%(i+1).
+	0 ? random.mod .j0 .z+2
+	.j0     .narr   ?+1
 	.tmp0   .tmp0   ?+1
-	.tmp0   .tmp1   ?+1
-	.tmp1   .z+1    ?+1
-	.rem    .rem    .modloop+6
-	#Caculate [rem]=[rand]%[mod].
-.modloop:
-	#[rem]+=[num]>>63, [num]<<=1. If [num]=0, abort.
-	.rtmp   .rtmp   ?+1
-	.tmp1   .tmp0   ?+1
-	.tmp0   .tmp1   ?+4
-	.rtmp   .z+1    ?+4
-	.tmp0   .z      .moddone
-	.rtmp   .rem    ?+1
-	.rem    .rtmp   ?+1
-	#If [rem]>=[mod], [rem]-=[mod]
-	.rem    .mod    ?+7
-	.rem    .z+1    ?+1
-	.tmp1   .tmp1   .modloop
-	.rem    .nmod   ?+1
-	#[rem]<<=1
-	.tmp1   .tmp1   .modloop
-.moddone:
-	#Rejection sampling. Accept if rand-rem<=-mod.
-	.nmod   .z+1    ?+1
-	.rand   .rem    ?+1
-	.rand   .nmod   .modaccept
-	.nmod   .z-1    .randloop
-.modaccept:
+	.tmp0   .j0     ?+1
+	.j1     .j1     ?+1
+	.j1     .tmp0   ?+1
 	#Increment i.
 	.i0     .z-1    ?+1
 	.i1     .z-1    ?+1
-	#Set j=arr+[rand]%(i+1).
-	.rem    .j0     ?+1
-	.rem    .narr   ?+1
-	.tmp0   .rem    ?+1
-	.j0     .tmp0   ?+1
-	.j1     .tmp0   ?+1
 	#Swap [i] and [j].
 	.tmp0   .tmp0   ?+1
 	.tmp0   .i0:0   ?+1
@@ -3476,72 +3574,17 @@ random.shuffle:
 	.tmp0   .tmp1   ?+1
 	.j1:0   .tmp0   ?+1
 	#Next loop.
-	.mod    .z-1    .shuffleloop
+	.len    .z+1    .done
+	random.mod.nmod .z+1 ?+1
+	random.mod.mod  .z-1 random.get.reenter
 .done:
 	0       0       .arg4:4
 	#Variables
+	0-1 .z:0 1 2
 	.tmp0:0
 	.tmp1:0
 	.narr:0
-	.rem:0
-	.rtmp:0
-	.nmod:0
-	.mod:0
 	.len:0
-	.rand:0
-	0-1 .z:0 1 2
-
-
-random.hash:
-	#Call  : 0 ? random.hash ret num
-	#Effect: [ret] = a hash of [num]
-	#Time  : 25 + 6*bits = 409
-	#Setup the stack.
-	.tmp    .arg2   ?+1
-	0       .tmp    ?+1
-	0       .z+2    ?+1
-	.arg2   0       ?+1
-	.arg3   0       ?+1
-	.arg4   0       ?+1
-	#Get ret.
-	.ret0   .arg2:2 ?+1
-	.ret1   .ret0   ?+1
-	.ret2   .ret0   ?+1
-	.tmp    .tmp    ?+1
-	.tmp    .ret1   ?+1
-	.ret0   .ret0   ?+1
-	.ret0   .tmp    ?+1
-	#Get [num].
-	.tmp    .tmp    ?+1
-	.tmp    .arg3:3 ?+1
-	.p0     .p0     ?+1
-	.p0     .tmp    ?+1
-	.hash   .hash   ?+1
-	.hash   .p0:0   ?+1
-	.tmp    .tmp    ?+1
-	.i      .i0     ?+4
-.loop:
-	.i      .z+1    .done
-	.tmp    .hash   ?+1
-	.tmp    .z+1    ?+1
-	.hash   .tmp    ?+7
-	.hash   .con1   ?+1
-	.tmp    .tmp    .loop
-	.hash   .con0   ?+1
-	.tmp    .tmp    .loop
-.done:
-	#Set [dst] and return.
-	.ret0:0 .ret1:0 ?+1
-	.ret2:0 .hash   ?+1
-	0       0       .arg4:4
-	#Variables
-	.z:0 1 2
-	.hash:0
-	.tmp:0
-	.i:0
-	.i0:0-64
-	.con0:0x911fe275124571d3
-	.con1:0x98f570cabbbe2960
 
 #|==============================================================================
 
@@ -3601,6 +3644,8 @@ TODO
 
 
 Replace alloc hash table with AVL tree.
+	Find the smallest block that will fit an allocation.
+	If there are multiple matches, choose the one with the smallest address.
 Simplify mem.alloc.verify using mem.get and mem.cmp.
 mem.binsearch mem len val cmp
 	use +-2^n instead of division by 2
