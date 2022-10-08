@@ -53,7 +53,7 @@ message and exit if it's not.
          uint.unl  |   224
           int.unl  |  1875
        random.unl  |  2984
-       memory.unl  |  3589
+       memory.unl  |  3590
 
 
 |#
@@ -3534,7 +3534,8 @@ random.mod:
 	.nmod   .p0:0   ?+1
 	.mod    .mod    ?+1
 	.mod    .nmod   ?+1
-	#Loop until we satisfy rand-(rand%mod)<=-mod. Return rand%mod.
+	#Perform rejection sampling until we satisfy rand-(rand%mod)<=-mod.
+	#Return rand%mod.
 	0 ? random.get .rand
 	0 ? uint.div 0 .ret0:0 .rand .mod
 	.rand   .ret1:0 ?+1
@@ -3582,7 +3583,7 @@ random.shuffle:
 	.i0     .narr   ?+1
 	.i1     .i1     ?+1
 	.i1     .narr   ?+1
-	#Begin shuffling.
+	#Use the Fisher-Yates shuffling algorithm.
 .loop:
 	#Set j=arr+[rand]%(i+1).
 	0 ? random.mod .j0 .z+2
