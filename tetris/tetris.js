@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-tetris.js - v1.04
+tetris.js - v1.05
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -972,9 +972,9 @@ function tetris_gui(parent) {
 		var drawh=self.drawh;
 		var outer=self.outer;
 		var ctx=self.ctx;
-		ctx.fillStyle="#6060cc";
+		ctx.fillStyle="#8080ee";
 		ctx.fillRect(0,0,draww,drawh);
-		ctx.fillStyle="#444488";
+		ctx.fillStyle="#5555aa";
 		ctx.fillRect(outer,outer,draww-outer*2,drawh-outer*2);
 	};
 	self.drawarea=function(x,y,w,h,title) {
@@ -982,7 +982,7 @@ function tetris_gui(parent) {
 		var inner=self.inner;
 		var ctx=self.ctx;
 		ctx.font="bold "+(scale*4).toString()+"px Monospace";
-		ctx.fillStyle="#6060cc";
+		ctx.fillStyle="#8080ee";
 		ctx.fillRect(x-inner,y-inner,w+inner*2,h+inner*2);
 		ctx.fillStyle="#000000";
 		ctx.fillRect(x,y,w,h);
