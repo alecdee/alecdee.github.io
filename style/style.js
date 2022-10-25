@@ -1,10 +1,24 @@
-//Author  : Alec Dee, akdee144@gmail.com.
-//Modified: 30 Apr 2022
-/*jshint bitwise: false*/
-/*jshint eqeqeq: true*/
+/*------------------------------------------------------------------------------
+
+
+style.js - v2.01
+
+Copyright 2018 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
+
+
+--------------------------------------------------------------------------------
+TODO
+
+
+*/
+/* jshint bitwise: false */
+/* jshint eqeqeq: true   */
+/* jshint curly: true    */
+
 
 function HighlightPython(text) {
-	//Set up regular expressions to match an expression to a style.
+	// Set up regular expressions to match an expression to a style.
 	var styledefault   ="color:#cccccc";
 	var stylecomment   ="color:#999999";
 	var stylequote     ="color:#2aa198";
@@ -12,8 +26,8 @@ function HighlightPython(text) {
 	var stylenumber    ="color:#2aa198";
 	var styleoperator  ="color:#cccccc";
 	var stylespecial   ="color:#2aa198";
-	var styleimport    ="color:#859900"; 
-	var stylebuiltin   ="color:#859900"; 
+	var styleimport    ="color:#859900";
+	var stylebuiltin   ="color:#859900";
 	var stylekeyword   ="color:#859900";
 	var styleexception ="color:#859900";
 	var arrspecial=["False","None","True"];
@@ -56,9 +70,9 @@ function HighlightPython(text) {
 		["(?:0|[1-9]\\d*)(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?",stylenumber],
 		["0[xX][0-9a-fA-F]*",stylenumber],
 		["[\\~\\!\\@\\$\\%\\^\\&\\*\\(\\)\\-\\+\\=\\<\\>\\/\\|\\[\\]]+",styleoperator],
-		["\".*?\"",stylequote],
-		["\'.*?\'",stylequote],
-		["\"\"\"[\\s\\S]*?\"\"\"",stylemultiquote],
+		['"(?:\\\\[\\s\\S]|[^"\\\\])*?"',stylequote],
+		["'(?:\\\\[\\s\\S]|[^'\\\\])*?'",stylequote],
+		['"""[\\s\\S]*?"""',stylemultiquote],
 		["'''[\\s\\S]*?'''",stylemultiquote],
 		["#.*",stylecomment]
 	];
@@ -67,15 +81,15 @@ function HighlightPython(text) {
 		if (i>0 && i<6) {reg="("+reg.join("|")+")[^_0-9a-zA-Z]";}
 		regexmatch[i][0]=new RegExp(reg);
 	}
-	//Begin parsing the text.
+	// Begin parsing the text.
 	var prev=styledefault;
 	var ret="<span style=\""+styledefault+"\">";
 	while (text.length>0) {
 		var minpos=text.length;
 		var mintext="";
 		var minstyle=styledefault;
-		//Find the regex closest to index 0. If two occur at the same index, take the
-		//latter regex.
+		// Find the regex closest to index 0. If two occur at the same index, take the
+		// latter regex.
 		for (var i=0;i<regexmatch.length;i++) {
 			var match=text.match(regexmatch[i][0]);
 			if (match!==null && minpos>=match.index) {
@@ -84,14 +98,14 @@ function HighlightPython(text) {
 				minstyle=regexmatch[i][1];
 			}
 		}
-		//If we skipped over text and it's not whitespace, give it the default style.
+		// If we skipped over text and it's not whitespace, give it the default style.
 		var prefix=text.substring(0,minpos);
 		if (prefix.trim().length>0 && prev!==styledefault) {
 			ret+="</span><span style=\""+styledefault+"\">";
 			prev=styledefault;
 		}
 		ret+=prefix;
-		//Append and style the best matched regex.
+		// Append and style the best matched regex.
 		if (prev!==minstyle) {
 			ret+="</span><span style=\""+minstyle+"\">";
 			prev=minstyle;
@@ -108,12 +122,12 @@ function HighlightPython(text) {
 }
 
 function HighlightUnileq(str) {
-	//Convert unileq assembly language into a formatted HTML string.
-	//Define styles.
+	// Convert unileq assembly language into a formatted HTML string.
+	// Define styles.
 	var stylearr=[
-		"</span><span style='color:#eeeeee'>", //default, number, operator, label ref
-		"</span><span style='color:#999999'>", //comment
-		"</span><span style='color:#aabb80'>"  //label declaration
+		"</span><span style='color:#eeeeee'>", // default, number, operator, label ref
+		"</span><span style='color:#999999'>", // comment
+		"</span><span style='color:#aabb80'>"  // label declaration
 	];
 	var styledefault =0;
 	var stylecomment =1;
@@ -124,60 +138,60 @@ function HighlightUnileq(str) {
 	var style=styledefault,prevstyle=styledefault;
 	var htmlconvert=document.createElement("div");
 	var htmlret="<span>";
-	//Helper functions for processing the string.
+	// Helper functions for processing the string.
 	var i=0,i0=0,j=0,len=str.length,c;
 	function  CNUM(c) {return (c<=57?c+208:((c+191)&~32)+10)&255;}
 	function ISLBL(c) {return CNUM(c)<36 || c===95 || c===46 || c>127;}
 	function  ISOP(c) {return c===43 || c===45;}
 	function   NEXT() {return (c=i++<len?str.charCodeAt(i-1):0);}
-	//Process the string.
+	// Process the string.
 	NEXT();
 	while (c!==0) {
 		i0=i-1;
 		if (c===13 || c===10 || c===9 || c===32) {
-			//Whitespace.
+			// Whitespace.
 			NEXT();
 		} else if (c===35) {
-			//Comment. If next='|', use the multi-line format.
+			// Comment. If next='|', use the multi-line format.
 			var mask=0,eoc=10,n=0;
 			if (NEXT()===124) {mask=255;eoc=31779;NEXT();}
 			while (c!==0 && n!==eoc) {n=((n&mask)<<8)+c;NEXT();}
 			style=stylecomment;
 		} else if (ISOP(c)) {
-			//Operator.
+			// Operator.
 			NEXT();
 			style=styleoperator;
 		} else if (CNUM(c)<10) {
-			//Number. If it starts with "0x", use hexadecimal.
+			// Number. If it starts with "0x", use hexadecimal.
 			var token=10;
 			if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
 			while (CNUM(c)<token) {NEXT();}
 			style=stylenumber;
 		} else if (c===63) {
-			//Current address token.
+			// Current address token.
 			NEXT();
 			style=stylelabelref;
 		} else if (ISLBL(c)) {
-			//Label.
+			// Label.
 			while (ISLBL(c)) {NEXT();}
 			if (c===58) {
-				//Label declaration.
+				// Label declaration.
 				NEXT();
 				style=stylelabeldec;
 			} else {
 				style=stylelabelref;
 			}
 		} else if (c===58) {
-			//Lone label declaration.
+			// Lone label declaration.
 			NEXT();
 			style=stylelabeldec;
 		} else {
-			//Unknown
+			// Unknown
 			NEXT();
 			style=styledefault;
 		}
 		if (prevstyle!==style) {
-			//Extract the highlighted substring and convert it to HTML friendly text.
+			// Extract the highlighted substring and convert it to HTML friendly text.
 			var sub=str.substring(j,i0);
 			htmlconvert.innerText=sub;
 			sub=htmlconvert.innerHTML;
@@ -186,7 +200,7 @@ function HighlightUnileq(str) {
 			prevstyle=style;
 		}
 	}
-	//We need to manually handle the tail end of the string.
+	// We need to manually handle the tail end of the string.
 	var sub=str.substring(j,str.length);
 	htmlconvert.innerText=sub;
 	sub=htmlconvert.innerHTML;
@@ -195,7 +209,7 @@ function HighlightUnileq(str) {
 }
 
 function HighlightStyle(classname,func) {
-	//Replace innerHTML with highlighted text.
+	// Replace innerHTML with highlighted text.
 	var elems=document.getElementsByClassName(classname);
 	for (var i=0;i<elems.length;i++) {
 		var elem=elems[i];
@@ -204,8 +218,8 @@ function HighlightStyle(classname,func) {
 }
 
 function StyleFooter() {
-	//De-obfuscate the email address in the footer to allow the email to work with
-	//ctrl+f.
+	// De-obfuscate the email address in the footer to allow the email to work with
+	// ctrl+f.
 	var footer=document.getElementById("footer");
 	if (footer!==null) {
 		var text=footer.innerHTML;
@@ -214,12 +228,12 @@ function StyleFooter() {
 }
 
 function StyleOnload() {
-	//var time=performance.now();
+	// var time=performance.now();
 	StyleFooter();
 	HighlightStyle("langpython",HighlightPython);
 	HighlightStyle("langunileq",HighlightUnileq);
-	//console.log("Time: "+(performance.now()-time));
-	//55 ms
+	// console.log("Time: "+(performance.now()-time));
+	// 55 ms
 }
 
 window.addEventListener("load",StyleOnload,true);

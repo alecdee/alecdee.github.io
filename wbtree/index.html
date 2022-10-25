@@ -192,7 +192,7 @@ a root node, and some balancing mechanism.</p>
 <table class="datatable headercol">
 <tr><td>Red-Black:</td><td>Traveling to any descendant node will cross the same number of black
 nodes.</td></tr>
-<tr><td>AVL:</td><td>The heights of child nodes will be kept within ±1 of eachother.</td></tr>
+<tr><td>AVL:</td><td>The heights of child nodes will be kept within &#177;1 of eachother.</td></tr>
 <tr><td>Weight:</td><td>The weights of child nodes will be kept within a ratio of 2.5.</td></tr>
 </table>
 <br>
@@ -528,17 +528,18 @@ rebalancing, the act of rebalancing will take longer than any time we might save
 balancing tree.</p>
 <br>
 <p>For our tree, we will define a node to be balanced if its left and right child weights are within
-a ratio of 2.5. That is <i>1 / 2.5 ≤ left.weight / right.weight ≤ 2.5</i>. However, defining the
-actual inequality in python is fairly tricky, and even slight errors can lead to trees that become
-imbalanced. The actual inequality we will use to detect an imbalance only involves integer math:</p>
+a ratio of 2.5. That is <i>1 / 2.5 &#8804; left.weight / right.weight &#8804; 2.5</i>. However,
+defining the actual inequality in python is fairly tricky, and even slight errors can lead to trees
+that become imbalanced. The actual inequality we will use to detect an imbalance only involves
+integer math:</p>
 <br>
 <div class="codeblock langpython">if right.weight * 5 + 2 &lt;  left.weight * 2:
-	#Node is leaning to the left.
+	# Node is leaning to the left.
 
 if  left.weight * 5 + 2 &lt; right.weight * 2:
-	#Node is leaning to the right.
+	# Node is leaning to the right.
 
-#Otherwise, the node is balanced.
+# Otherwise, the node is balanced.
 </div>
 <br>
 <p>Choosing other values could lead to the balancing invariant being broken over time, or lead to
@@ -587,9 +588,9 @@ node leaning to the left, we have the following cases:</p>
 <br>
 <div class="codeblock langpython">if right.weight * 5 + 2 &lt; left.weight * 2:
 	if left.left.weight * 5 &lt; left.weight * 2:
-		#Double rotation.
-		#Rotate node.left to the left.
-	#Rotate node to the right.
+		# Double rotation.
+		# Rotate node.left to the left.
+	# Rotate node to the right.
 </div>
 <br>
 <p>Single and double rotations will handle every type of imbalance we'll encounter, so there's need
@@ -865,8 +866,8 @@ below shows what would happen if we didn't make this correction.</p>
 correct, we need to rebalance from the node we've added (or removed) all the way up to the root.</p>
 <br>
 <div class="codeblock langpython">def rebalance(self,next):
-	#Rebalance from next upward. If 2 children differ in weight by a ratio of 2.5 or
-	#more, we can rotate to rebalance.
+	# Rebalance from next upward. If 2 children differ in weight by a ratio of 2.5 or
+	# more, we can rotate to rebalance.
 	def Weight(n): return n.weight if n else 0
 	while next:
 		node,orig=next,next
@@ -874,11 +875,11 @@ correct, we need to rebalance from the node we've added (or removed) all the way
 		l,r=node.left,node.right
 		lw,rw=Weight(l),Weight(r)
 		if rw*5+2&lt;lw*2:
-			#Leaning to the left.
+			# Leaning to the left.
 			if Weight(l.left)*5&lt;lw*2: node.left=l.rotleft()
 			node=node.rotright()
 		elif lw*5+2&lt;rw*2:
-			#Leaning to the right.
+			# Leaning to the right.
 			if Weight(r.right)*5&lt;rw*2: node.right=r.rotright()
 			node=node.rotleft()
 		else:
@@ -1569,23 +1570,23 @@ node (as in case 1), and then replace the node with the next node.</p>
 <p>The complete python code for removing a given node is shown below.</p>
 <br>
 <div class="codeblock langpython">def removenode(self,node):
-	#Remove a specific node.
+	# Remove a specific node.
 	p=node.parent
 	l,r=node.left,node.right
 	if r is None:
-		#Case 1
+		# Case 1
 		bal,next,l=p,l,None
 	elif r.left:
-		#Case 3
+		# Case 3
 		next=r
 		while next.left: bal,next=next,next.left
 		c=next.right
 		bal.left=c
 		if c: c.parent=bal
 	else:
-		#Case 2
+		# Case 2
 		bal,next,r=r,r,None
-	#Replace node with next.
+	# Replace node with next.
 	if p is None: self.root=next
 	elif p.left is node: p.left=next
 	else: p.right=next
@@ -1686,12 +1687,12 @@ the numbers we'll be using will refer to weights.</p>
 <p>The code for this ends up being fairly simple.</p>
 <br>
 <div class="codeblock langpython">def __len__(self):
-	#Return the number of nodes in the tree.
+	# Return the number of nodes in the tree.
 	return self.root.weight if self.root else 0
 
 
 def __getitem__(self,i):
-	#Index nodes like an array.
+	# Index nodes like an array.
 	node=self.root
 	weight=node.weight if node else 0
 	if i&lt;0: i+=weight
@@ -1714,7 +1715,7 @@ to the root. Every time our node is a right descendant, we add the weight of the
 to our index.</p>
 <br>
 <div class="codeblock langpython">def index(node):
-	#Returns the node's index within the tree. Ex: tree[node.index()]=node.
+	# Returns the node's index within the tree. Ex: tree[node.index()]=node.
 	i=-1
 	prev=node.right
 	while node:
@@ -1803,7 +1804,7 @@ know what I'd like the API to look like, so I'll hold off for now.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 27 Apr 2018 - Modified on 13 Jul 2022<br>
+<div id="footer">Created on 27 Apr 2018 - Modified on 25 Oct 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

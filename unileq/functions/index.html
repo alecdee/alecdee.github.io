@@ -66,9 +66,9 @@ instructions every time we wanted to perform this operation:</p>
 <br>
 <div class="codeblock langunileq">tmp tmp ?+1
 tmp a   ?+1
-tmp b   ?+1  #[tmp]=-[a]-[b]
+tmp b   ?+1  # [tmp]=-[a]-[b]
 r   r   ?+1
-r   tmp ?+1  #[r]=[a]+[b]
+r   tmp ?+1  # [r]=[a]+[b]
 </div>
 <br>
 <p>After writing our function, called <i>addnum</i>, we will be able to shrink this down to a single
@@ -81,25 +81,25 @@ line:</p>
 <div class="codeblock langunileq">0 0 main
 
 addnum:
-	#...
+	# ...
 
 main:
-	#Set [c]=[a]+[b].
+	# Set [c]=[a]+[b].
 	0 ? addnum .c .a .b
-	#Add 48 to convert the numbers to ASCII digits.
+	# Add 48 to convert the numbers to ASCII digits.
 	0 ? addnum .a .a .asc0
 	0 ? addnum .b .b .asc0
 	0 ? addnum .c .c .asc0
-	#Print "[a]+[b]=[c]".
+	# Print "[a]+[b]=[c]".
 	0-2 .a     ?+1
 	0-2 .plus  ?+1
 	0-2 .b     ?+1
 	0-2 .equal ?+1
 	0-2 .c     ?+1
 	0-2 .eol   ?+1
-	#End the program.
+	# End the program.
 	0-1 0 0
-	#Constants.
+	# Constants.
 	.a:3
 	.b:5
 	.c:0
@@ -124,13 +124,13 @@ convert them to printable digits. After that shift, we can print our digits and 
 in.</p>
 <br>
 <div class="codeblock langunileq">addnum:
-	#Get r.
-	#Get a.
-	#Get b.
-	#Set the return address.
-	#Set [r]=[a]+[b].
-	#Return and set [0]=0.
-	#Constants.
+	# Get r.
+	# Get a.
+	# Get b.
+	# Set the return address.
+	# Set [r]=[a]+[b].
+	# Return and set [0]=0.
+	# Constants.
 </div>
 <br>
 <p>In our outline, we deliberately specify getting the addresses <i>r</i>, <i>a</i>, and <i>b</i>
@@ -141,7 +141,7 @@ instead of their values. This is because we won't need their values until the
 There's only a few of them, but they're used throughout the function. Covering them first will help
 with understanding the other sections.</p>
 <br>
-<div class="codeblock langunileq">	#Constants.
+<div class="codeblock langunileq">	# Constants.
 	.z:0 1 2
 	.tmp:0
 	.val:0
@@ -154,16 +154,16 @@ values.</p>
 <br>
 <p>To get the return address, <i>r</i>, we'll need to perform 3 dereferences.</p>
 <br>
-<div class="codeblock langunileq">	#Get r.
+<div class="codeblock langunileq">	# Get r.
 	0     .z+2  ?+1
 	.r0   .r0   ?+1
 	.r0   0     ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .r0:0 ?+1  #[tmp]=-r
+	.tmp  .r0:0 ?+1  # [tmp]=-r
 	.r1   .r1   ?+1
-	.r1   .tmp  ?+1  #[r1]=r
+	.r1   .tmp  ?+1  # [r1]=r
 	.r2   .r2   ?+1
-	.r2   .tmp  ?+1  #[r2]=r</div>
+	.r2   .tmp  ?+1  # [r2]=r</div>
 <br>
 <p>At this point, value <i>-[0]</i> is pointing to the calling instruction
 (<i>0 ? addnum r a b</i>), and the first argument is at <i>-([0]-2)</i>. So, our first dereference
@@ -176,31 +176,31 @@ second and third dereferences.</p>
 <p>To get <i>a</i> we decrement <i>[0]</i> by <i>1</i> and perform another 2 dereferences. This time
 we only have 1 destination address to write to.</p>
 <br>
-<div class="codeblock langunileq">	#Get a.
+<div class="codeblock langunileq">	# Get a.
 	0     .z+1  ?+1
 	.a0   .a0   ?+1
 	.a0   0     ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .a0:0 ?+1  #[tmp]=-a
+	.tmp  .a0:0 ?+1  # [tmp]=-a
 	.a1   .a1   ?+1
-	.a1   .tmp  ?+1  #[a1]=a
+	.a1   .tmp  ?+1  # [a1]=a
 </div>
 <br>
 <p>To get <i>b</i> we decrement <i>[0]</i> and perform another 2 dereferences.</p>
 <br>
-<div class="codeblock langunileq">	#Get b.
+<div class="codeblock langunileq">	# Get b.
 	0     .z+1  ?+1
 	.b0   .b0   ?+1
 	.b0   0     ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .b0:0 ?+1  #[tmp]=-b
+	.tmp  .b0:0 ?+1  # [tmp]=-b
 	.b1   .b1   ?+1
-	.b1   .tmp  ?+1  #[b1]=b
+	.b1   .tmp  ?+1  # [b1]=b
 </div>
 <br>
 <p>Getting the return address is much simpler than getting the arguments.</p>
 <br>
-<div class="codeblock langunileq">	#Set the return address.
+<div class="codeblock langunileq">	# Set the return address.
 	0     .z+1  ?+1
 	.ret  .ret  ?+1
 	.ret  0     ?+1
@@ -214,12 +214,12 @@ numbers.</p>
 <br>
 <div class="codeblock langunileq">	#Set [r]=[a]+[b].
 	.tmp  .tmp  ?+1
-	.tmp  .r1:0 ?+1  #[tmp]=-[r]
+	.tmp  .r1:0 ?+1  # [tmp]=-[r]
 	.val  .val  ?+1
-	.val  .tmp  ?+1  #[val]=[r]
-	.val  .a1:0 ?+1  #[val]=[r]-[a]
-	.val  .b1:0 ?+1  #[val]=[r]-[a]-[b]
-	.r2:0 .val  ?+1  #[r]=[a]+[b]</div>
+	.val  .tmp  ?+1  # [val]=[r]
+	.val  .a1:0 ?+1  # [val]=[r]-[a]
+	.val  .b1:0 ?+1  # [val]=[r]-[a]-[b]
+	.r2:0 .val  ?+1  # [r]=[a]+[b]</div>
 <br>
 <p>The block above looks a bit like the 5 instruction example we gave at the start of this section,
 and that's because it is effectively the same. The only difference is instead of zeroing out
@@ -229,7 +229,7 @@ allows us to write both negative and positive values to the return address.</p>
 <br>
 <p>After setting <i>[r]</i>, we have the last instruction:</p>
 <br>
-<div class="codeblock langunileq">	#Return and set [0]=0.
+<div class="codeblock langunileq">	# Return and set [0]=0.
 	0     0     .ret:0</div>
 <br>
 <p>As the comment says, our last instruction simply sets <i>[0]</i> to <i>0</i> for future functions
@@ -240,70 +240,70 @@ to use and returns to the end of the calling instruction.</p>
 <div class="codeblock langunileq">0 0 main
 
 addnum:
-	#Call  : 0 ? addnum r a b
-	#Effect: Set [r]=[a]+[b].
-	#Get r.
+	# Call  : 0 ? addnum r a b
+	# Effect: Set [r]=[a]+[b].
+	# Get r.
 	0     .z+2  ?+1
 	.r0   .r0   ?+1
 	.r0   0     ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .r0:0 ?+1  #[tmp]=-r
+	.tmp  .r0:0 ?+1  # [tmp]=-r
 	.r1   .r1   ?+1
-	.r1   .tmp  ?+1  #[r1]=r
+	.r1   .tmp  ?+1  # [r1]=r
 	.r2   .r2   ?+1
-	.r2   .tmp  ?+1  #[r2]=r
-	#Get a.
+	.r2   .tmp  ?+1  # [r2]=r
+	# Get a.
 	0     .z+1  ?+1
 	.a0   .a0   ?+1
 	.a0   0     ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .a0:0 ?+1  #[tmp]=-a
+	.tmp  .a0:0 ?+1  # [tmp]=-a
 	.a1   .a1   ?+1
-	.a1   .tmp  ?+1  #[a1]=a
-	#Get b.
+	.a1   .tmp  ?+1  # [a1]=a
+	# Get b.
 	0     .z+1  ?+1
 	.b0   .b0   ?+1
 	.b0   0     ?+1
 	.tmp  .tmp  ?+1
-	.tmp  .b0:0 ?+1  #[tmp]=-b
+	.tmp  .b0:0 ?+1  # [tmp]=-b
 	.b1   .b1   ?+1
-	.b1   .tmp  ?+1  #[b1]=b
-	#Set the return address.
+	.b1   .tmp  ?+1  # [b1]=b
+	# Set the return address.
 	0     .z+1  ?+1
 	.ret  .ret  ?+1
 	.ret  0     ?+1
-	#Set [r]=[a]+[b].
+	# Set [r]=[a]+[b].
 	.tmp  .tmp  ?+1
-	.tmp  .r1:0 ?+1  #[tmp]=-[r]
+	.tmp  .r1:0 ?+1  # [tmp]=-[r]
 	.val  .val  ?+1
-	.val  .tmp  ?+1  #[val]=[r]
-	.val  .a1:0 ?+1  #[val]=[r]-[a]
-	.val  .b1:0 ?+1  #[val]=[r]-[a]-[b]
-	.r2:0 .val  ?+1  #[r]=[a]+[b]
-	#Return and set [0]=0.
+	.val  .tmp  ?+1  # [val]=[r]
+	.val  .a1:0 ?+1  # [val]=[r]-[a]
+	.val  .b1:0 ?+1  # [val]=[r]-[a]-[b]
+	.r2:0 .val  ?+1  # [r]=[a]+[b]
+	# Return and set [0]=0.
 	0     0     .ret:0
-	#Constants.
+	# Constants.
 	.z:0 1 2
 	.tmp:0
 	.val:0
 
 main:
-	#Set [c]=[a]+[b].
+	# Set [c]=[a]+[b].
 	0 ? addnum .c .a .b
-	#Add 48 to convert the numbers to ASCII digits.
+	# Add 48 to convert the numbers to ASCII digits.
 	0 ? addnum .a .a .asc0
 	0 ? addnum .b .b .asc0
 	0 ? addnum .c .c .asc0
-	#Print "[a]+[b]=[c]".
+	# Print "[a]+[b]=[c]".
 	0-2 .a     ?+1
 	0-2 .plus  ?+1
 	0-2 .b     ?+1
 	0-2 .equal ?+1
 	0-2 .c     ?+1
 	0-2 .eol   ?+1
-	#End the program.
+	# End the program.
 	0-1 0 0
-	#Constants.
+	# Constants.
 	.a:3
 	.b:5
 	.c:0
@@ -332,7 +332,7 @@ down to 30 instructions. I plan to present optimized mathematical functions in a
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Aug 2020 - Modified on 2 Aug 2021<br>
+<div id="footer">Created on 18 Aug 2020 - Modified on 25 Oct 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>

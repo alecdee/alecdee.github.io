@@ -1,10 +1,21 @@
-/*
-Author  : Alec Dee, akdee144@gmail.com
-Modified: 7 Mar 2022
+/*------------------------------------------------------------------------------
+
+
+editor.js - v1.02
+
+Copyright 2020 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
+
+
+--------------------------------------------------------------------------------
+TODO
+
+
 */
-/*jshint bitwise: false*/
-/*jshint eqeqeq: true  */
-/*jshint curly: true   */
+/* jshint bitwise: false */
+/* jshint eqeqeq: true   */
+/* jshint curly: true    */
+
 
 function UnlInitEditor() {
 	var runbutton=document.getElementById("unileq_run");
@@ -19,9 +30,9 @@ function UnlInitEditor() {
 	var unl=UnlCreate(output,graphics);
 	var running=0;
 	function update() {
-		//Our main event loop. Run the main unileq loop for 15ms and queue the next
-		//update for 12ms in the future. This will give the browser time to handle events
-		//and spend most of our time executing unileq instructions.
+		// Our main event loop. Run the main unileq loop for 15ms and queue the next
+		// update for 12ms in the future. This will give the browser time to handle events
+		// and spend most of our time executing unileq instructions.
 		var runtext;
 		if (unl.state!==UNL_RUNNING) {
 			running=0;
@@ -30,8 +41,8 @@ function UnlInitEditor() {
 				unl.Print(unl.statestr);
 			}
 		} else if (running===1) {
-			//There's no good unicode character for a pause button, so use 2 vertical bars
-			//instead.
+			// There's no good unicode character for a pause button, so use 2 vertical bars
+			// instead.
 			runtext="<span style='font-size:60%;vertical-align:middle'>&#9616;&#9616;</span>&nbsp;&nbsp;&nbsp;Pause";
 		} else {
 			runtext="&#9654;&nbsp;&nbsp;&nbsp;Resume";
@@ -40,12 +51,12 @@ function UnlInitEditor() {
 			runbutton.innerHTML=runtext;
 		}
 		if (running===1) {
-			//Put the next update on the event queue before running our main loop.
+			// Put the next update on the event queue before running our main loop.
 			setTimeout(update,12);
 			unl.Run(performance.now()+15);
 		}
 	}
-	//Setup the run button.
+	// Setup the run button.
 	runbutton.onclick=function() {
 		if (unl.state===UNL_RUNNING) {
 			running=1-running;
@@ -60,13 +71,13 @@ function UnlInitEditor() {
 	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Resume&nbsp;";
 	runbutton.style.width=runbutton.clientWidth.toString()+"px";
 	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Run";
-	//Setup the reset button.
+	// Setup the reset button.
 	resetbutton.onclick=function() {
 		unl.Clear();
 		running=0;
 		setTimeout(update,0);
 	};
-	//Setup the advanced menu.
+	// Setup the advanced menu.
 	advanced.onclick=function() {
 		if (menu.style.display==="none") {
 			menu.style.display="block";
@@ -79,16 +90,16 @@ function UnlInitEditor() {
 		if (code===9 || (code>=120 && code<=122)) {
 			e.preventDefault();
 			if (code===9) {
-				//Tab
+				// Tab
 				document.execCommand("insertText",false,"\t");
 			} else if (code===120) {
-				//F9
+				// F9
 				runbutton.onclick();
 			} else if (code===121) {
-				//F10
+				// F10
 				resetbutton.onclick();
 			} else if (code===122) {
-				//F11
+				// F11
 				keygrab.checked=false;
 				keygrab.onchange();
 			}
@@ -102,7 +113,7 @@ function UnlInitEditor() {
 		}
 	};
 	keygrab.onchange();
-	//Helper function to load files.
+	// Helper function to load files.
 	function loadfile(path) {
 		var xhr=new XMLHttpRequest();
 		xhr.onreadystatechange=function(){
@@ -123,7 +134,7 @@ function UnlInitEditor() {
 		xhr.open("GET",path,true);
 		xhr.send();
 	}
-	//Setup the example select menu.
+	// Setup the example select menu.
 	select.onchange=function() {
 		if (select.value==="") {
 			unl.Clear();
@@ -133,7 +144,7 @@ function UnlInitEditor() {
 			loadfile(select.value);
 		}
 	};
-	//Parse URL arguments.
+	// Parse URL arguments.
 	var regex=new RegExp(".*?\\?(file|demo|source)=(.*)","g");
 	var match=regex.exec(decodeURI(window.location.href));
 	if (match!==null) {
@@ -154,20 +165,20 @@ function UnlInitEditor() {
 			input.value=arg;
 		}
 	}
-	//If we're using IE, avoid text highlighting.
+	// If we're using IE, avoid text highlighting.
 	if (window.navigator.userAgent.match("(MSIE\\s|Trident/)")) {
 		input.wrap="off";
 		return;
 	}
-	//Setup editor highlighting. We do this by creating a textarea and then displaying
-	//a colored div directly under it.
+	// Setup editor highlighting. We do this by creating a textarea and then displaying
+	// a colored div directly under it.
 	var container=document.createElement("div");
 	var highlight=document.createElement("div");
 	input.parentNode.replaceChild(container,input);
 	container.appendChild(highlight);
 	container.appendChild(input);
-	//Copy the textarea attributes to the container div. We need to do this before
-	//changing the input attributes.
+	// Copy the textarea attributes to the container div. We need to do this before
+	// changing the input attributes.
 	var inputstyle=window.getComputedStyle(input);
 	var allow=new RegExp("(background|border|margin)","i");
 	for (var i=0;i<inputstyle.length;i++) {
@@ -178,8 +189,8 @@ function UnlInitEditor() {
 	}
 	container.style.position="relative";
 	container.style.overflow="hidden";
-	//Set the textarea to absolute positioning within the container and remove all
-	//decorations.
+	// Set the textarea to absolute positioning within the container and remove all
+	// decorations.
 	var caretcolor=inputstyle["caret-color"];
 	input.style.position="absolute";
 	input.style.left="0";
@@ -187,7 +198,7 @@ function UnlInitEditor() {
 	input.style.margin="0";
 	input.style.border="none";
 	input.style.background="none";
-	//Copy the textarea attributes to the highlight div.
+	// Copy the textarea attributes to the highlight div.
 	inputstyle=window.getComputedStyle(input);
 	var block=new RegExp("color","i");
 	for (var i=0;i<inputstyle.length;i++) {
@@ -198,7 +209,7 @@ function UnlInitEditor() {
 	}
 	highlight.style.resize="none";
 	highlight.style.overflow="hidden";
-	//Make the textarea text invisible, except for the caret.
+	// Make the textarea text invisible, except for the caret.
 	input.style.color="rgba(0,0,0,0)";
 	input.style["caret-color"]=caretcolor;
 	var updateposition=function() {
@@ -220,19 +231,19 @@ function UnlInitEditor() {
 }
 
 function UnlHighlightScroll(input) {
-	//Highlighting the whole source code can be slow, so highlight only the portion
-	//that we can see.
+	// Highlighting the whole source code can be slow, so highlight only the portion
+	// that we can see.
 	var str=input.value;
-	//Determine what lines are visible.
+	// Determine what lines are visible.
 	var len=str.length,lines=1;
 	for (var i=0;i<len;i++) {
 		lines+=str.charCodeAt(i)===10;
 	}
 	var vismin=(input.scrollTop/input.scrollHeight)*lines-1;
 	var vismax=vismin+(input.clientHeight/input.scrollHeight)*lines+2;
-	//console.log(vismin,vismax);
+	// console.log(vismin,vismax);
 	var comment=0;
-	//Find where the first visible line starts, and if it's a block comment.
+	// Find where the first visible line starts, and if it's a block comment.
 	var i=0,line=0,c;
 	while (i<len && line<vismin) {
 		c=str.charCodeAt(i++);
@@ -256,15 +267,15 @@ function UnlHighlightScroll(input) {
 		comment=0;
 	}
 	var pre="<br>".repeat(line-comment*2);
-	//Find where the visible lines end.
+	// Find where the visible lines end.
 	var j=i;
 	while (j<len && line<=vismax) {
 		if (str.charCodeAt(j++)===10) {
 			line++;
 		}
 	}
-	//Get the visible substring. If we're in a block comment, manually add a #| for
-	//the highlighter.
+	// Get the visible substring. If we're in a block comment, manually add a #| for
+	// the highlighter.
 	var sub=str.substring(i,j);
 	if (comment===1) {sub="#|\n\n"+sub;}
 	return pre+HighlightUnileq(sub);

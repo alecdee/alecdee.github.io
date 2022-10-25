@@ -546,21 +546,21 @@ we can use barycentric coordinates to determine if that projected point is insid
 boundaries.</p>
 <br>
 <div class="codeblock langpython">def intersect(face,raypos,raydir):
-	#First, project the ray onto the face's plane.
+	# First, project the ray onto the face's plane.
 	den=raydir*face.normal
 	if abs(den)&lt;=1e-20: return False
 	p=raypos-face.vertex[0]
 	dist=-(p*face.normal)/den
 	if dist&lt;0: return False
 	p+=raydir*dist
-	#Make sure the barycentric coordinates of the point are within the face.
+	# Make sure the barycentric coordinates of the point are within the face.
 	s=0.0
 	for bary in face.baryvec:
 		u=bary*p
 		s+=u
 		if u&lt;0.0 or s&gt;1.0:
 			return False
-	#We intersect the face at distance 'dist'.
+	# We intersect the face at distance 'dist'.
 	return True
 </div>
 <br>
@@ -599,7 +599,7 @@ more correct to say "rotate along the YZ plane" for instance.</p>
 elements can be accessed as a linear array, then we may rotate a matrix as shown below.</p>
 <br>
 <div class="codeblock langpython">def rotate(elem,n,angs):
-	#Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles.
+	# Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles.
 	angpos=0
 	for j in range(1,n):
 		for i in range(j):
@@ -701,8 +701,8 @@ vertex selector generates <i>(n-1)!</i> faces, this yields <i>2*n!</i> total fac
 combos,perm=1,[0]*sim
 for i in range(sim): combos*=i+1
 for f in range(2*dim):
-	#Given a fixed axis and side of the cube, generate the dim-1 dimensioned surface.
-	#Each surface will be made up of sim! simplexes.
+	# Given a fixed axis and side of the cube, generate the dim-1 dimensioned surface.
+	# Each surface will be made up of sim! simplexes.
 	axis=f&gt;&gt;1
 	base=(f&1)&lt;&lt;axis
 	for combo in range(combos):
@@ -710,8 +710,8 @@ for f in range(2*dim):
 			j=combo%(i+1)
 			combo//=i+1
 			perm[i],perm[j]=perm[j],1&lt;&lt;(i+(i&gt;=axis))
-		#Find the vertices of the simplex. If the number of permutation inversions is
-		#odd, then the sign of the normal will be negative.
+		# Find the vertices of the simplex. If the number of permutation inversions is
+		# odd, then the sign of the normal will be negative.
 		vertarr=[0]*dim
 		for i in range(sim): vertarr[i+1]=vertarr[i]+perm[i]
 		if vertarr[sim]&gt;=self.verts: continue
@@ -1472,7 +1472,7 @@ if disc&gt;=0:
 	cos1=math.sqrt(disc)
 	refractdir=ior*raydir+(ior*cos0-cos1)*face.normal
 else:
-	#reflect
+	# reflect
 </div>
 <br>
 <p>When the discriminant, <i>disc</i>, is less than 0, we have a phenomenon called total internal reflection.
@@ -1522,27 +1522,27 @@ the average probability that the ray will be refracted.</p>
 <div class="codeblock langpython">cos0=raydir*face.normal
 ior=inside_index/outside_index
 if cos0>0.0:
-	#We're inside the face and pointing out.
+	# We're inside the face and pointing out.
 	norm=-norm
 else:
-	#We're outside the face and pointing in.
+	# We're outside the face and pointing in.
 	cos0=-cos0
 	ior=1.0/ior
 disc=1.0-ior*ior*(1.0-cos0*cos0)
 if disc&gt;0:
 	cos1=math.sqrt(disc)
 	refractdir=ior*raydir+(ior*cos0-cos1)*face.normal
-	#Fresnel reflectance equations.
+	# Fresnel reflectance equations.
 	a=ior*cos1;rs=(cos0-a)/(cos0+a)
 	a=ior*cos0;rp=(a-cos1)/(a+cos1)
 	refractprob=1.0-(rs*rs+rp*rp)*0.5
 else:
-	#Total internal reflection.
+	# Total internal reflection.
 	refractprob=0.0
 if random()&lt;refractprob:
 	raydir=refractdir
 else:
-	#reflect
+	# reflect
 </div>
 <br>
 <p>Without invoking the wavelength of light, these are all the effects that we need to worry about for
@@ -1589,11 +1589,11 @@ distribution based off of the Beer-Lambert law. The distribution is</p>
 dist=-math.log(random())*material.scatterlength
 if face_dist&lt;=dist:
 	raypos+=raydir*face_dist
-	#exit object
+	# exit object
 else:
 	raypos+=raydir*dist
 	raydir=RandomVector()
-	#continue scattering
+	# continue scattering
 </div>
 <br>
 <p>In the image at the top of the page, the box to the right demonstrates subsurface scattering.</p>
@@ -1700,34 +1700,34 @@ are spheres and oriented bounding boxes.</p>
 </g>
 </svg>
 <br>
-<p>The building block of the BVH is a node. A node will contain information such as child nodes, child
-objects, and the bounding volume of everything it contains. Every BVH will have a root node that
-physically contains everything in the scene, and it is where every collision traversal will start.
-These nodes, when looked at as a hierarchy, make up the BVH. Our current problem is deciding how to
-construct these nodes so that we can make collision tests as efficient as possible.</p>
+<p>The building block of the BVH is a node. A node will contain information such as child nodes,
+child objects, and the bounding volume of everything it contains. Every BVH will have a root node
+that physically contains everything in the scene, and it is where every collision traversal will
+start. These nodes, when looked at as a hierarchy, make up the BVH. Our current problem is deciding
+how to construct these nodes so that we can make collision tests as efficient as possible.</p>
 <br>
 <h2>Construction</h2>
 <br>
-<p>We'll construct the BVH by first creating a node that contains all objects in the scene. We'll then
-attempt to partition the node into two sets of objects, and then further partition those sets. The
-difficult part lies in deciding how to partition the objects, and when to stop. It is important to
-note at the start that different BVH nodes are allowed to overlap, although we want to minimize
+<p>We'll construct the BVH by first creating a node that contains all objects in the scene. We'll
+then attempt to partition the node into two sets of objects, and then further partition those sets.
+The difficult part lies in deciding how to partition the objects, and when to stop. It is important
+to note at the start that different BVH nodes are allowed to overlap, although we want to minimize
 this.</p>
 <br>
 <p>For a given scene, there may be no universally optimal partitioning of the objects inside it.
 However, the surface area heuristic (SAH) is the most widely used method that is quick to calculate
 and produces good results. The SAH works by noting that the probability that a ray will hit a
-boundary is dependent on the surface area of that boundary. We want to partition the scene in two so
-that each partition balances its surface area with the number of objects it contains. In particular,
-we want to minimize the following function.</p>
+boundary is dependent on the surface area of that boundary. We want to partition the scene in two
+so that each partition balances its surface area with the number of objects it contains. In
+particular, we want to minimize the following function.</p>
 <br>
 <div class="codeblock">SAH = bvh_cost +  left_surface_area*left_objects
                + right_surface_area*right_objects</div>
 <br>
-<p>Here, <i>bvh_cost</i> is a placeholder value to estimate the cost of testing collision with a node's
-boundary during traversal; 0.1 is a typical value. We can demonstrate calculating the SAH below. The
-scene to the left shows a partitioning that's not optimal, the scene to the right shows a
-partitioning with a much lower SAH that looks much better.</p>
+<p>Here, <i>bvh_cost</i> is a placeholder value to estimate the cost of testing collision with a
+node's boundary during traversal; 0.1 is a typical value. We can demonstrate calculating the SAH
+below. The scene to the left shows a partitioning that's not optimal, the scene to the right shows
+a partitioning with a much lower SAH that looks much better.</p>
 <br>
 <svg version="1.1" viewBox="0 0 1000 390" class="diagram">
 <g transform="translate(50,50)">
@@ -1905,19 +1905,19 @@ split at <i>i=3</i>, which yields partitions <i>{0,1,2}</i> and <i>{3,4}</i>.</p
 <p>The following python code shows the algorithm taken from the ray tracer.</p>
 <br>
 <div class="codeblock langpython">def divideaxis(self,ltcost,left,right,lchild,rchild,axis):
-	#Sort nodes.
+	# Sort nodes.
 	nodearr=self.nodearr
 	sarr=nodearr[left:right]
 	sarr.sort(key=lambda x: x.bbmin[axis]+x.bbmax[axis])
 	nodearr[left:right]=sarr
 	mincost,minhalf=float("inf"),left
-	#Find the total cost and area for nodes to the left of index i.
+	# Find the total cost and area for nodes to the left of index i.
 	lchild.aabbinit()
 	for i in range(left,right):
 		ltcost[i]=lchild.area*lchild.cost
 		lchild.aabbmerge(nodearr[i])
-	#Find the total cost and area for the nodes to the right of i (including i). Then
-	#find the cost if we divided the nodes into [left,i) and [i,right).
+	# Find the total cost and area for the nodes to the right of i (including i). Then
+	# find the cost if we divided the nodes into [left,i) and [i,right).
 	rchild.aabbinit()
 	for i in range(right-1,left-1,-1):
 		rchild.aabbmerge(nodearr[i])
@@ -2012,7 +2012,7 @@ look worse.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 17 Mar 2019 - Modified on 21 Dec 2020<br>
+<div id="footer">Created on 17 Mar 2019 - Modified on 24 Oct 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

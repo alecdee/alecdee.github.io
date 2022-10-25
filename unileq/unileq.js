@@ -1,28 +1,10 @@
-/*
---------------------------------------------------------------------------------
-License
+/*------------------------------------------------------------------------------
 
 
-unileq.js - v1.23
+unileq.js - v1.24
 
-Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright 2020 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 
 --------------------------------------------------------------------------------
@@ -74,14 +56,14 @@ values, and the flow of the program will decide what gets executed.
 This example shows a "Hello, World!" program in assembly.
 
 
-     loop: len  one  exit            #Decrement [len]. If [len]<=1, exit.
-           0-2  txt  ?+1             #Print a letter.
-           ?-2  neg  loop            #Increment letter pointer.
+     loop: len  one  exit            # Decrement [len]. If [len]<=1, exit.
+           0-2  txt  ?+1             # Print a letter.
+           ?-2  neg  loop            # Increment letter pointer.
 
      exit: 0-1  0    0
 
-     txt:  72 101 108 108 111 44 32  #Hello,
-           87 111 114 108 100 33 10  #World!
+     txt:  72 101 108 108 111 44 32  # Hello,
+           87 111 114 108 100 33 10  # World!
      len:  len-txt+1
      neg:  0-1
      one:  1
@@ -94,8 +76,8 @@ The rules of the assembly language are given below.
      Single Line  |  Denoted by #
      Comment      |
                   |  Ex:
-                  |       #Hello,
-                  |       #World!
+                  |       # Hello,
+                  |       # World!
                   |
      -------------+--------------------------------------------------------
                   |
@@ -114,7 +96,7 @@ The rules of the assembly language are given below.
                   |
                   |  Ex:
                   |       ?
-                  |       ?+1     #Next address
+                  |       ?+1  # Next address
                   |
      -------------+--------------------------------------------------------
                   |
@@ -137,8 +119,8 @@ The rules of the assembly language are given below.
      Recall       |  declared by "Label:".
                   |
                   |  Ex:
-                  |       label:     #declaration
-                  |       label      #recall
+                  |       label:  # declaration
+                  |       label   # recall
                   |
      -------------+--------------------------------------------------------
                   |
@@ -147,7 +129,7 @@ The rules of the assembly language are given below.
                   |
                   |  Ex:
                   |        A:
-                  |       .B:     #Shorthand for A.B:
+                  |       .B:  # Shorthand for A.B:
                   |
      -------------+--------------------------------------------------------
                   |
@@ -182,7 +164,7 @@ The rules of the assembly language are given below.
                   |  A = -6: Sleep for mem[B]/2^32 seconds.
                   |
                   |  Ex:
-                  |       0-2  txt  ?+1     #A = -2. Print a letter.
+                  |       0-2  txt  ?+1  # A = -2. Print a letter.
                   |
 
 
@@ -227,31 +209,31 @@ Audio
 
 
 */
-/*jshint bitwise: false*/
-/*jshint eqeqeq: true  */
-/*jshint curly: true   */
+/* jshint bitwise: false */
+/* jshint eqeqeq: true   */
+/* jshint curly: true    */
 
 
-//--------------------------------------------------------------------------------
-//64 bit unsigned integers.
+//---------------------------------------------------------------------------------
+// 64 bit unsigned integers.
 
 
 function UnlU64Create(hi,lo) {
 	if (hi===undefined) {
-		//If arguments are empty, initialize to 0.
+		// If arguments are empty, initialize to 0.
 		hi=0;
 		lo=0;
 	} else if (lo===undefined) {
 		if (hi.hi!==undefined) {
-			//hi is another u64 object.
+			// hi is another u64 object.
 			lo=hi.lo;
 			hi=hi.hi;
 		} else if (hi>=0) {
-			//hi is a positive number.
+			// hi is a positive number.
 			lo=hi>>>0;
 			hi=(hi/0x100000000)>>>0;
 		} else {
-			//hi is a negative number.
+			// hi is a negative number.
 			lo=0x100000000-((-hi)>>>0);
 			hi=0x0ffffffff-(((-hi)/0x100000000)>>>0);
 			if (lo===0x100000000) {
@@ -264,8 +246,8 @@ function UnlU64Create(hi,lo) {
 }
 
 function UnlU64ToStr(n) {
-	//Convert a 64-bit number to its base 10 representation.
-	//Powers of 10 split into high 32 bits and low 32 bits.
+	// Convert a 64-bit number to its base 10 representation.
+	// Powers of 10 split into high 32 bits and low 32 bits.
 	var pot=[
 		0x8ac72304,0x89e80000,0x0de0b6b3,0xa7640000,
 		0x01634578,0x5d8a0000,0x002386f2,0x6fc10000,
@@ -299,33 +281,33 @@ function UnlU64ToStr(n) {
 }
 
 function UnlU64Cmp(a,b) {
-	//if a<b, return -1
-	//if a=b, return  0
-	//if a>b, return  1
+	// if a<b, return -1
+	// if a=b, return  0
+	// if a>b, return  1
 	if (a.hi!==b.hi) {return a.hi<b.hi?-1:1;}
 	if (a.lo!==b.lo) {return a.lo<b.lo?-1:1;}
 	return 0;
 }
 
 function UnlU64Set(a,b) {
-	//a=b
+	// a=b
 	a.lo=b.lo;
 	a.hi=b.hi;
 }
 
 function UnlU64Zero(n) {
-	//n=0
+	// n=0
 	n.lo=0;
 	n.hi=0;
 }
 
 function UnlU64IsZero(n) {
-	//n==0
+	// n==0
 	return n.lo===0 && n.hi===0;
 }
 
 function UnlU64Neg(r,a) {
-	//r=-a
+	// r=-a
 	r.lo=0x100000000-a.lo;
 	r.hi=0x0ffffffff-a.hi;
 	if (r.lo>=0x100000000) {
@@ -337,8 +319,8 @@ function UnlU64Neg(r,a) {
 }
 
 function UnlU64Sub(r,a,b) {
-	//r=a-b
-	//return true if a<=b
+	// r=a-b
+	// return true if a<=b
 	var lo,hi;
 	lo=a.lo-b.lo;
 	hi=a.hi-b.hi;
@@ -356,7 +338,7 @@ function UnlU64Sub(r,a,b) {
 }
 
 function UnlU64Add(r,a,b) {
-	//r=a+b
+	// r=a+b
 	r.lo=a.lo+b.lo;
 	r.hi=a.hi+b.hi;
 	if (r.lo>=0x100000000) {
@@ -369,7 +351,7 @@ function UnlU64Add(r,a,b) {
 }
 
 function UnlU64Mul(r,a,b) {
-	//r=a*b
+	// r=a*b
 	var a0=a.lo&0xffff,a1=a.lo>>>16;
 	var a2=a.hi&0xffff,a3=a.hi>>>16;
 	var b0=b.lo&0xffff,b1=b.lo>>>16;
@@ -385,7 +367,7 @@ function UnlU64Mul(r,a,b) {
 }
 
 function UnlU64Inc(n) {
-	//n++
+	// n++
 	if ((++n.lo)>=0x100000000) {
 		n.lo=0;
 		if ((++n.hi)>=0x100000000) {
@@ -395,7 +377,7 @@ function UnlU64Inc(n) {
 }
 
 function UnlU64Dec(n) {
-	//n--
+	// n--
 	if ((--n.lo)<0) {
 		n.lo=0xffffffff;
 		if ((--n.hi)<0) {
@@ -405,8 +387,8 @@ function UnlU64Dec(n) {
 }
 
 
-//--------------------------------------------------------------------------------
-//Labels.
+//---------------------------------------------------------------------------------
+// Labels.
 
 
 function UnlLabelAlloc() {
@@ -423,8 +405,8 @@ function UnlLabelAlloc() {
 }
 
 function UnlLabelCmp(ls,rs) {
-	//Compare two labels from their last character to their first along with any
-	//scope characters.
+	// Compare two labels from their last character to their first along with any
+	// scope characters.
 	var lv=null,rv=null,lc,rc,data=ls.data;
 	var llen=ls.len,rlen=rs.len;
 	if (llen!==rlen) {return llen<rlen?-1:1;}
@@ -449,8 +431,8 @@ function UnlHashCreate() {
 }
 
 function UnlLabelInit(map,lbl,scope,data,pos,len) {
-	//Initialize a label and return a match if we find one.
-	//Count .'s to determine what scope we should be in.
+	// Initialize a label and return a match if we find one.
+	// Count .'s to determine what scope we should be in.
 	var s="";
 	for (var i=0;i<len;i++) {
 		s+=data[pos+i];
@@ -463,12 +445,12 @@ function UnlLabelInit(map,lbl,scope,data,pos,len) {
 	var scopelen=scope!==null?scope.len:0;
 	lbl.scope=scope;
 	lbl.depth=depth+1;
-	//Offset the data address by the parent scope's depth.
+	// Offset the data address by the parent scope's depth.
 	var dif=scopelen-depth+(depth>0);
 	lbl.data=data;
 	lbl.pos=pos-dif;
 	lbl.len=len+dif;
-	//Compute the hash of the label. Use the scope's hash to speed up computation.
+	// Compute the hash of the label. Use the scope's hash to speed up computation.
 	for (i=scopelen;i<lbl.len;i++) {
 		hash+=data.charCodeAt(lbl.pos+i)+i;
 		hash&=0xffffffff;
@@ -477,7 +459,7 @@ function UnlLabelInit(map,lbl,scope,data,pos,len) {
 		hash^=(hash&0xff)*0x00d75b4b;
 	}
 	lbl.hash=hash;
-	//Search for a match.
+	// Search for a match.
 	var match=map.map[hash&map.mask];
 	while (match!==null && UnlLabelCmp(match,lbl)!==0) {
 		match=match.next;
@@ -501,8 +483,8 @@ function UnlLabelAdd(map,lbl) {
 }
 
 
-//--------------------------------------------------------------------------------
-//Unileq architecture interpreter.
+//---------------------------------------------------------------------------------
+// Unileq architecture interpreter.
 
 
 var UNL_RUNNING     =0;
@@ -513,7 +495,7 @@ var UNL_MAX_PARSE   =1<<30;
 
 function UnlCreate(textout,canvas) {
 	var st={
-		//State variables
+		// State variables
 		state:   0,
 		statestr:"",
 		ip:      UnlU64Create(),
@@ -521,13 +503,13 @@ function UnlCreate(textout,canvas) {
 		meml:    null,
 		alloc:   0,
 		sleep:   null,
-		//Input/Output
+		// Input/Output
 		output:  textout,
 		outbuf:  "",
 		canvas:  canvas,
 		canvctx :null,
 		canvdata:null,
-		//Functions
+		// Functions
 		Clear:   function(){return UnlClear(st);},
 		Print:   function(str){return UnlPrint(st,str);},
 		ParseAssembly:function(str){return UnlParseAssembly(st,str);},
@@ -540,7 +522,7 @@ function UnlCreate(textout,canvas) {
 }
 
 function UnlClear(st) {
-	//Clear the interpreter state.
+	// Clear the interpreter state.
 	st.state=UNL_COMPLETE;
 	st.statestr="";
 	UnlU64Zero(st.ip);
@@ -561,7 +543,7 @@ function UnlClear(st) {
 }
 
 function UnlPrint(st,str) {
-	//Print to output and autoscroll to bottom. If output is null, print to console.
+	// Print to output and autoscroll to bottom. If output is null, print to console.
 	var output=st.output;
 	if (output!==null) {
 		str=output.value+str;
@@ -580,7 +562,7 @@ function UnlPrint(st,str) {
 }
 
 function UnlParseAssembly(st,str) {
-	//Convert unileq assembly language into a unileq program.
+	// Convert unileq assembly language into a unileq program.
 	UnlClear(st);
 	st.state=UNL_RUNNING;
 	var i=0,j=0,len=str.length;
@@ -590,7 +572,7 @@ function UnlParseAssembly(st,str) {
 	function  ISOP(c) {return c===43 || c===45;}
 	function   NEXT() {return (c=i++<len?str.charCodeAt(i-1):0);}
 	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
-	//Process the string in 2 passes. The first pass is needed to find label values.
+	// Process the string in 2 passes. The first pass is needed to find label values.
 	var map=UnlHashCreate();
 	if (map===null) {err="Unable to allocate hash map";}
 	var lbl0=UnlLabelAlloc();
@@ -605,12 +587,12 @@ function UnlParseAssembly(st,str) {
 		while (c!==0 && err===null) {
 			var n=0,token=0;
 			if (c===13 || c===10 || c===9 || c===32) {
-				//Whitespace.
+				// Whitespace.
 				NEXT();
 				continue;
 			}
 			if (c===35) {
-				//Comment. If next='|', use the multi-line format.
+				// Comment. If next='|', use the multi-line format.
 				var mask=0,eoc=10,i0=i;
 				if (NEXT()===124) {mask=255;eoc=31779;NEXT();}
 				while (c!==0 && n!==eoc) {n=((n&mask)<<8)+c;NEXT();}
@@ -619,7 +601,7 @@ function UnlParseAssembly(st,str) {
 			}
 			j=i;
 			if (ISOP(c)) {
-				//Operator. Decrement addr since we're modifying the previous value.
+				// Operator. Decrement addr since we're modifying the previous value.
 				if (op!==0 ) {err="Double operator";}
 				if (op===58) {err="Operating on declaration";}
 				if (UnlU64IsZero(addr)) {err="Leading operator";}
@@ -627,7 +609,7 @@ function UnlParseAssembly(st,str) {
 				op=c;
 				NEXT();
 			} else if (CNUM(c)<10) {
-				//Number. If it starts with "0x", use hexadecimal.
+				// Number. If it starts with "0x", use hexadecimal.
 				token=10;
 				UnlU64Zero(val);
 				if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
@@ -638,16 +620,16 @@ function UnlParseAssembly(st,str) {
 					NEXT();
 				}
 			} else if (c===63) {
-				//Current address token.
+				// Current address token.
 				token=1;
 				UnlU64Set(val,addr);
 				NEXT();
 			} else if (ISLBL(c)) {
-				//Label.
+				// Label.
 				while (ISLBL(c)) {NEXT();}
 				lbl=UnlLabelInit(map,lbl0,scope,str,j-1,i-j);
 				if (c===58) {
-					//Label declaration.
+					// Label declaration.
 					if (pass===0) {
 						if (lbl!==null) {err="Duplicate label declaration";}
 						UnlU64Set(lbl0.addr,addr);
@@ -668,7 +650,7 @@ function UnlParseAssembly(st,str) {
 				i++;
 			}
 			if (token!==0) {
-				//Add a new value to memory.
+				// Add a new value to memory.
 				if (op===43) {UnlU64Add(val,acc,val);}
 				else if (op===45) {UnlU64Sub(val,acc,val);}
 				else if (pass!==0) {
@@ -690,14 +672,14 @@ function UnlParseAssembly(st,str) {
 		}
 	}
 	if (err!==null) {
-		//We've encountered a parsing error.
+		// We've encountered a parsing error.
 		st.state=UNL_ERROR_PARSER;
 		st.statestr="Parser: "+err+"\n";
 		if (i-- && j--)
 		{
 			var line=1;
 			var window="",under="";
-			//Find the boundaries of the line we're currently parsing.
+			// Find the boundaries of the line we're currently parsing.
 			var s0=0,s1=j,k;
 			for (k=0;k<j;k++) {
 				if (str[k]==="\n") {
@@ -706,10 +688,10 @@ function UnlParseAssembly(st,str) {
 				}
 			}
 			while (s1<len && str[s1]!=="\n") {s1++;}
-			//Trim whitespace.
+			// Trim whitespace.
 			while (s0<s1 && str[s0  ]<=" ") {s0++;}
 			while (s1>s0 && str[s1-1]<=" ") {s1--;}
-			//Extract the line and underline the error.
+			// Extract the line and underline the error.
 			s0=j>s0+30?j-30:s0;
 			for (k=0;k<61;k++,s0++) {
 				c=s0<s1 && k<60?str[s0]:"";
@@ -722,7 +704,7 @@ function UnlParseAssembly(st,str) {
 }
 
 function UnlGetMem(st,addr) {
-	//Return the memory value at addr.
+	// Return the memory value at addr.
 	var i=addr.lo;
 	if (addr.hi===0 && i<st.alloc) {
 		return UnlU64Create(st.memh[i],st.meml[i]);
@@ -731,16 +713,16 @@ function UnlGetMem(st,addr) {
 }
 
 function UnlSetMem(st,addr,val) {
-	//Write val to the memory at addr.
+	// Write val to the memory at addr.
 	var pos=addr.lo;
 	if (addr.hi!==0 || pos>=st.alloc) {
-		//If we're writing to an address outside of our memory, attempt to resize it or
-		//error out.
+		// If we're writing to an address outside of our memory, attempt to resize it or
+		// error out.
 		if (UnlU64IsZero(val)) {return;}
-		//Find the maximum we can allocate.
+		// Find the maximum we can allocate.
 		var alloc=1,memh=null,meml=null;
 		while (alloc<=pos) {alloc+=alloc;}
-		//Attempt to allocate.
+		// Attempt to allocate.
 		if (addr.hi===0 && alloc>pos) {
 			try {
 				memh=new Uint32Array(alloc);
@@ -773,7 +755,7 @@ function UnlDrawImage(st,imghi,imglo) {
 	if (canvas===null || canvas===undefined) {
 		return;
 	}
-	//Get the image data.
+	// Get the image data.
 	if (imghi>0 || imglo>0xffffffff) {
 		return;
 	}
@@ -787,7 +769,7 @@ function UnlDrawImage(st,imghi,imglo) {
 	if (width>65536 || height>65536) {
 		return;
 	}
-	//Resize the canvas.
+	// Resize the canvas.
 	if (canvas.width!==width || canvas.height!==height || st.canvdata===null) {
 		canvas.width=width;
 		canvas.height=height;
@@ -797,7 +779,7 @@ function UnlDrawImage(st,imghi,imglo) {
 	if (canvas.style.display==="none") {
 		canvas.style.display="block";
 	}
-	//Copy the ARGB data to the RGBA canvas.
+	// Copy the ARGB data to the RGBA canvas.
 	var pixels=width*height*4;
 	var dstdata=st.canvdata.data;
 	var hi,lo;
@@ -855,29 +837,29 @@ function UnlDrawImage(st,imghi,imglo) {
 }*/
 
 function UnlRun(st,stoptime) {
-	//Run unileq while performance.now()<stoptime.
+	// Run unileq while performance.now()<stoptime.
 	//
-	//This version of UnlRun() unrolls several operations to speed things up.
-	//Depending on the platform, it's 4 to 10 times faster than standard.
+	// This version of UnlRun() unrolls several operations to speed things up.
+	// Depending on the platform, it's 4 to 10 times faster than standard.
 	if (st.state!==UNL_RUNNING) {
 		return;
 	}
 	if (st.sleep!==null) {
-		//If sleeping for longer than the time we have, abort.
+		// If sleeping for longer than the time we have, abort.
 		if (st.sleep>=stoptime) {
 			return;
 		}
-		//If we're sleeping for more than 4ms, defer until later.
+		// If we're sleeping for more than 4ms, defer until later.
 		var sleep=st.sleep-performance.now();
 		if (sleep>4) {
 			setTimeout(UnlRun,sleep-2,st,stoptime);
 			return;
 		}
-		//Busy wait.
+		// Busy wait.
 		while (performance.now()<st.sleep) {}
 		st.sleep=null;
 	}
-	//Performance testing.
+	// Performance testing.
 	/*if (st.ip.hi===0 && st.ip.lo===0) {
 		this.time=performance.now();
 	}*/
@@ -890,16 +872,16 @@ function UnlRun(st,stoptime) {
 	var io=0x100000000-32;
 	var timeiters=0;
 	while (true) {
-		//Periodically check if we've run for too long.
+		// Periodically check if we've run for too long.
 		if (--timeiters<=0) {
 			if (performance.now()>=stoptime) {
 				break;
 			}
 			timeiters=2048;
 		}
-		//Load a, b, and c.
+		// Load a, b, and c.
 		if (iphi===0 && iplo<alloc2) {
-			//Inbounds read.
+			// Inbounds read.
 			ahi=memh[iplo  ];
 			alo=meml[iplo++];
 			bhi=memh[iplo  ];
@@ -907,7 +889,7 @@ function UnlRun(st,stoptime) {
 			chi=memh[iplo  ];
 			clo=meml[iplo++];
 		} else {
-			//Out of bounds read. Use UnlGetMem to read a, b, and c.
+			// Out of bounds read. Use UnlGetMem to read a, b, and c.
 			tmp0.hi=iphi;tmp0.lo=iplo;
 			tmp1=UnlGetMem(st,tmp0);ahi=tmp1.hi;alo=tmp1.lo;UnlU64Inc(tmp0);
 			tmp1=UnlGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;UnlU64Inc(tmp0);
@@ -915,9 +897,9 @@ function UnlRun(st,stoptime) {
 			iphi=tmp0.hi;iplo=tmp0.lo;
 			timeiters-=3;
 		}
-		//Input
+		// Input
 		if (bhi===0) {
-			//Inbounds. Read mem[b] directly.
+			// Inbounds. Read mem[b] directly.
 			if (blo<alloc) {
 				mbhi=memh[blo];
 				mblo=meml[blo];
@@ -926,30 +908,30 @@ function UnlRun(st,stoptime) {
 				mblo=0;
 			}
 		} else if (bhi<0xffffffff || blo<io) {
-			//Out of bounds. Use UnlGetMem to read mem[b].
+			// Out of bounds. Use UnlGetMem to read mem[b].
 			tmp0.hi=bhi;tmp0.lo=blo;
 			tmp2=UnlGetMem(st,tmp0);
 			mbhi=tmp2.hi;mblo=tmp2.lo;
 			timeiters-=1;
 		} else if (blo===0xfffffffc) {
-			//Timing frequency. 2^32 = 1 second.
+			// Timing frequency. 2^32 = 1 second.
 			mbhi=1;
 			mblo=0;
 		} else if (blo===0xfffffffb) {
-			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
+			// Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			var date=performance.timing.navigationStart+performance.now();
 			mbhi=(date/1000)>>>0;
 			mblo=((date%1000)*4294967.296)>>>0;
 			timeiters-=2;
 		} else {
-			//We couldn't find a special address to read.
+			// We couldn't find a special address to read.
 			mbhi=0;
 			mblo=0;
 		}
-		//Output
+		// Output
 		if (ahi===0 && alo<alloc) {
-			//Execute a normal unileq instruction.
-			//Inbounds. Read and write to mem[a] directly.
+			// Execute a normal unileq instruction.
+			// Inbounds. Read and write to mem[a] directly.
 			mblo=meml[alo]-mblo;
 			if (mblo<0) {
 				mblo+=0x100000000;
@@ -968,7 +950,7 @@ function UnlRun(st,stoptime) {
 			memh[alo]=mbhi;
 			continue;
 		} else if (ahi<0xffffffff || alo<io) {
-			//Out of bounds. Use UnlSetMem to modify mem[a].
+			// Out of bounds. Use UnlSetMem to modify mem[a].
 			tmp0.hi=ahi;tmp0.lo=alo;
 			tmp2=UnlGetMem(st,tmp0);
 			tmp1.hi=mbhi;tmp1.lo=mblo;
@@ -987,22 +969,22 @@ function UnlRun(st,stoptime) {
 			timeiters-=2;
 			continue;
 		}
-		//Special addresses.
+		// Special addresses.
 		iphi=chi;
 		iplo=clo;
 		if (alo===0xffffffff) {
-			//Exit.
+			// Exit.
 			st.state=UNL_COMPLETE;
 			break;
 		} else if (alo===0xfffffffe) {
-			//Print to stdout.
+			// Print to stdout.
 			UnlPrint(st,String.fromCharCode(mblo&255));
 			timeiters-=1;
 		} else if (alo===0xfffffffa) {
-			//Sleep.
+			// Sleep.
 			var sleep=mbhi*1000+mblo*(1000.0/4294967296.0);
 			var sleeptill=performance.now()+sleep;
-			//If sleeping for longer than the time we have or more than 4ms, abort.
+			// If sleeping for longer than the time we have or more than 4ms, abort.
 			if (sleep>4 || sleeptill>=stoptime) {
 				st.sleep=sleeptill;
 				if (sleeptill<stoptime) {
@@ -1010,17 +992,17 @@ function UnlRun(st,stoptime) {
 				}
 				break;
 			}
-			//Busy wait.
+			// Busy wait.
 			while (performance.now()<sleeptill) {}
 			timeiters=0;
 		} else if (alo===0xfffffff9) {
-			//Draw an image.
+			// Draw an image.
 			UnlDrawImage(st,mbhi,mblo);
 		}
 	}
 	st.ip.hi=iphi;
 	st.ip.lo=iplo;
-	//Performance testing.
+	// Performance testing.
 	/*if (st.state!==UNL_RUNNING) {
 		var time=performance.now()-this.time;
 		UnlPrint(st,"time: "+time);

@@ -1,24 +1,8 @@
 """
 Fraction.py - v1.01
 
-Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright 2020 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 --------------------------------------------------------------------------------
 Continued fractions:
@@ -64,9 +48,9 @@ class Fraction(object):
 	def __abs__(a):
 		return Fraction(abs(a.n),a.d)
 
-	#----------------------------------------
-	#Comparisons
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Comparisons
+	#---------------------------------------------------------------------------------
 
 	def __eq__(a,b):
 		if isinstance(b,Fraction):
@@ -80,9 +64,9 @@ class Fraction(object):
 			return a.n*b.d<b.n*a.d
 		return a.n<b*a.d
 
-	#----------------------------------------
-	#Algebra
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Algebra
+	#---------------------------------------------------------------------------------
 
 	def __add__(a,b):
 		if not isinstance(b,Fraction): b=Fraction(b)
@@ -128,9 +112,9 @@ class Fraction(object):
 		d=b//a
 		return b-d*a
 
-	#----------------------------------------
-	#Exponentiation
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Exponentiation
+	#---------------------------------------------------------------------------------
 
 	def __pow__(self,exp):
 		n,d=self.n,self.d
@@ -141,9 +125,9 @@ class Fraction(object):
 			exp=-exp
 		return Fraction(n**exp,d**exp)
 
-	#----------------------------------------
-	#Misc
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Misc
+	#---------------------------------------------------------------------------------
 
 	@staticmethod
 	def approx(val,dmax,dmin=None):
@@ -155,32 +139,32 @@ class Fraction(object):
 		assert(dmax>=1 and dmin<=dmax)
 		orig=abs(val)
 		if dmin<=1:
-			#Create an initial Farey interval with lower bound floor(val) and upper bound
-			#+inf. Note that n and d will always be coprime.
+			# Create an initial Farey interval with lower bound floor(val) and upper bound
+			# +inf. Note that n and d will always be coprime.
 			print("orig: ",orig)
 			nl,dl=int(orig),1
 			nu,du=1,0
 			fmin=Fraction(nl,dl)
 			emin=abs(fmin-orig)
 			while True:
-				#Find a fraction between the lower and upper bounds.
+				# Find a fraction between the lower and upper bounds.
 				n,d=nl+nu,dl+du
 				if d>dmax:
 					break
 				f=Fraction(n,d)
 				err=abs(f-orig)
-				#If this is the best approximation.
+				# If this is the best approximation.
 				if emin>err:
 					emin=err
 					fmin=f
-				#Refine the interval.
+				# Refine the interval.
 				if f<orig:
 					nl,dl=n,d
 				else:
 					nu,du=n,d
 		else:
-			#Based on an algorithm by Fyodor Menshikov and Zilin Jiang.
-			#First, we find the Farey intervals that will fit in [0,max-min].
+			# Based on an algorithm by Fyodor Menshikov and Zilin Jiang.
+			# First, we find the Farey intervals that will fit in [0,max-min].
 			gap=dmax-dmin
 			nl,dl=int(orig),1
 			nu,du=1,0
@@ -195,9 +179,9 @@ class Fraction(object):
 					nl,dl=n,d
 				else:
 					nu,du=n,d
-			#Start our initial approximation at x/dmin for the x closest to orig. Then, loop
-			#through the Farey intervals and add the smallest one that makes the
-			#approximation more accurate. If no interval increases accuracy, we are done.
+			# Start our initial approximation at x/dmin for the x closest to orig. Then, loop
+			# through the Farey intervals and add the smallest one that makes the
+			# approximation more accurate. If no interval increases accuracy, we are done.
 			nmin=int(2*orig*dmin+1)//2
 			fmin=Fraction(nmin,dmin)
 			emin=abs(fmin-orig)
@@ -215,9 +199,9 @@ class Fraction(object):
 					nmin,dmin=n,d
 					i=-1
 				i+=1
-			#If there are two numerators that are the same distance to the desired value,
-			#take the smaller one. Ex: if orig=5/2, then 2/1 and 3/1 are the same distance,
-			#so we take 2/1.
+			# If there are two numerators that are the same distance to the desired value,
+			# take the smaller one. Ex: if orig=5/2, then 2/1 and 3/1 are the same distance,
+			# so we take 2/1.
 			f=Fraction(fmin.n-1,fmin.d)
 			if emin>=abs(f-orig):
 				fmin=f
@@ -226,7 +210,7 @@ class Fraction(object):
 		return fmin
 
 	def changeden(self,den):
-		#Given n0/d0 and d1, find n1 such that n0/d0~=n1/d1.
+		# Given n0/d0 and d1, find n1 such that n0/d0~=n1/d1.
 		n,d=self.n,self.d
 		if n<0:
 			n=-((-2*n*den+d)//(2*d))

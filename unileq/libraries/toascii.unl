@@ -2,7 +2,8 @@
 
 ASCII Converter - v1.03
 
-Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+Copyright 2022 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 --------------------------------------------------------------------------------
 About
@@ -15,14 +16,14 @@ the output.
 0 0 toascii
 
 toascii:
-	#enter text:
+	# enter text:
 	0 ? print 101 110 116 101 114 32 116 101 120 116 58 32 0
-	#Wait for input.
+	# Wait for input.
 	.tmp0   0-3     ?+1
 	0 ? print 97 115 99 105 105 32 32 32 32 32 58 32 0
-	#Loop through stdin and print ascii character codes.
+	# Loop through stdin and print ascii character codes.
 .loop:
-	#If we've read the eol character, exit.
+	# If we've read the eol character, exit.
 	.tmp1   .tmp1   ?+1
 	.tmp1   .tmp0   ?+1
 	.tmp0   .eol    ?+1
@@ -34,32 +35,32 @@ toascii:
 .exit:
 	0-2     .tmp1   ?+1
 	0-1     0       0
-	#Variables
+	# Variables
 	.tmp0:0
 	.tmp1:0
 	.eol:0-10
 
 
 print:
-	#Call  : 0 ? print char0 char1 char2 ... 0
-	#Effect: Prints a string.
+	# Call  : 0 ? print char0 char1 char2 ... 0
+	# Effect: Prints a string.
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1
 	0       0       ?+2
 	.ret:   .tmp
 .loop:
-	#Get the next character.
+	# Get the next character.
 	.tmp    .ptr:0  ?+1
 	.ptr    .z-1    ?+1
 	.char   .char   ?+1
 	.char   .tmp    ?+1
-	#If [char]=0, we've reached the end of the string.
+	# If [char]=0, we've reached the end of the string.
 	.char   .z      .ret
-	#Print [char].
+	# Print [char].
 	0-2     .char   ?+1
 	.tmp    .tmp    .loop
-	#Variables
+	# Variables
 	0-2 0-1 .z:0 1
 	.num:0
 	.tmp:0
@@ -67,17 +68,17 @@ print:
 
 
 uint.print:
-	#Call  : 0 ? uint.print num
-	#Effect: Prints a number in an arbitrary base.
-	#This function works even if unileq's underlying integers are not a power of two.
-	#Setup stack pointer.
+	# Call  : 0 ? uint.print num
+	# Effect: Prints a number in an arbitrary base.
+	# This function works even if unileq's underlying integers are not a power of two.
+	# Setup stack pointer.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1
 	.tmp    .z-2    ?+1
 	0       .tmp    ?+1
 	.arg2   0       ?+1
 	.arg3   0       ?+1
-	#Get [num].
+	# Get [num].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
 	.p0     .p0     ?+1
@@ -87,7 +88,7 @@ uint.print:
 	.num    .num    ?+1
 	.num    .nnum   ?+1
 .notunary:
-	#Calculate the most significant digit and how many digits are in [num].
+	# Calculate the most significant digit and how many digits are in [num].
 	.den    .den    ?+1
 	.lden   .lden   ?+1
 	.base   .base   ?+1
@@ -96,12 +97,12 @@ uint.print:
 	.chr    .z-1    ?+1
 .firstloop:
 	.digits .z-1    ?+1
-	#num-=den
+	# num-=den
 	.chr    .base   ?+1
 	.num    .den   .firstdone
 	.num    .z+1    ?+1
 	.chr    .z-2    ?-8
-	#den=base*lden-1
+	# den=base*lden-1
 	.lden   .lden   ?+1
 	.lden   .den    ?+1
 	.den    .den    ?+1
@@ -111,7 +112,7 @@ uint.print:
 	.num    .num    ?+1
 	.num    .nnum   .firstloop
 .firstdone:
-	#Correct [num], [base], and [den].
+	# Correct [num], [base], and [den].
 	.chr    .nbase  ?+1
 	.base   .z+2    ?+1
 	.tmp    .tmp    ?+1
@@ -120,7 +121,7 @@ uint.print:
 	.den    .den    ?+1
 	.den    .lden   .printdigit
 .nextloop:
-	#num=num*base
+	# num=num*base
 	.z+1    .base   ?+1
 	.num    .lden   ?+1
 	.nnum   .nnum   ?+1
@@ -128,18 +129,18 @@ uint.print:
 	.num    .nnum   ?+1
 	.z+1    .z-2    ?-5
 .printdigit:
-	#Print a digit.
+	# Print a digit.
 	.chr    .nhex   ?+1
 	0-2     .chr:0  ?+1
 	.digits .z+1    .ret
-	#digit=num/den
+	# digit=num/den
 	.chr    .chr    ?+1
 	.num    .den    .nextloop
 	.num    .z+1    ?+1
 	.chr    .z-2    ?-8
 .ret:
 	0       0       .arg3:3
-	#Variables
+	# Variables
 	0-2 0-1 .z:0 1 2
 	.nnum:0
 	.num:0

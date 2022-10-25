@@ -1,24 +1,8 @@
 """
 GameOfLife.py - v1.01
 
-Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright 2020 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 """
 
 class GameOfLife(object):
@@ -30,31 +14,31 @@ class GameOfLife(object):
 	A dead cell with 3 live neighbors becomes alive by reproduction.
 	All other cells stay the same.
 	"""
-	#Cells are added to the processing queue if their state has changed.
+	# Cells are added to the processing queue if their state has changed.
 	#
-	#Cell state queries are sped up by using coordinate hashing with a hash table of
-	#linked lists.
+	# Cell state queries are sped up by using coordinate hashing with a hash table of
+	# linked lists.
 	#
-	#Cell states are stored in a single integer so we can advance their state with a
-	#single table lookup. Their format is:
+	# Cell states are stored in a single integer so we can advance their state with a
+	# single table lookup. Their format is:
 	#
-	#     state=[3-6:count][2:in queue][1:prev][0:alive]
+	#      state=[3-6:count][2:in queue][1:prev][0:alive]
 
 	class Cell(object):
 		def __init__(self): pass
 
 	def __init__(self):
-		#Processing queue and coordinate hash table.
+		# Processing queue and coordinate hash table.
 		self.queue=None
 		self.deleted=None
 		self.hashsize=1<<16
 		self.hashmask=self.hashsize-1
 		self.hashtable=[None]*self.hashsize
-		#Neighbors that contribute to a cell's count.
+		# Neighbors that contribute to a cell's count.
 		self.neighbors=((-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1))
-		#mnrule is used to manage whether to queue or delete the cell and set prev=alive.
-		#We want the queue bit to be 0 as often as possible to avoid requeuing cells.
-		#carule is the cellular automata rule.
+		# mnrule is used to manage whether to queue or delete the cell and set prev=alive.
+		# We want the queue bit to be 0 as often as possible to avoid requeuing cells.
+		# carule is the cellular automata rule.
 		mnrule=[0]*72
 		carule=[0]*72
 		for i in range(72):
@@ -79,7 +63,7 @@ class GameOfLife(object):
 		self.__init__()
 
 	def hashcoords(self,x,y):
-		#Hash the coordinates to a single integer.
+		# Hash the coordinates to a single integer.
 		m=0xffffffff
 		h=0x8fa1526f
 		h=((h^x)+0xaaa6d553)&m
@@ -94,7 +78,7 @@ class GameOfLife(object):
 		return h&self.hashmask
 
 	def makecell(self,x,y):
-		#Return the cell at the given coordinates, or make a new one.
+		# Return the cell at the given coordinates, or make a new one.
 		hash=self.hashcoords(x,y)
 		hashtable=self.hashtable
 		next=hashtable[hash]
@@ -102,22 +86,22 @@ class GameOfLife(object):
 		while cell and (cell.x!=x or cell.y!=y):
 			cell=cell.next
 		if cell is None:
-			#Make a new cell. Use a previously deleted one if possible.
+			# Make a new cell. Use a previously deleted one if possible.
 			cell=self.deleted
 			if cell: self.deleted=cell.queue
 			else: cell=self.Cell()
 			cell.x=x
 			cell.y=y
 			cell.state=0
-			#Queue for state processing.
+			# Queue for state processing.
 			cell.queue=None
-			#Doubly linked pointers for the hash table.
+			# Doubly linked pointers for the hash table.
 			cell.hash=hash
 			cell.prev=None
 			cell.next=next
 			if next: next.prev=cell
 			hashtable[hash]=cell
-		#If it's not queued, add it.
+		# If it's not queued, add it.
 		if (cell.state&4)==0:
 			cell.state|=4
 			cell.queue=self.queue
@@ -130,8 +114,8 @@ class GameOfLife(object):
 		neighbors=self.neighbors
 		while generations>0:
 			generations-=1
-			#Management loop. If a cell has been updated, update its neighbors. Also check if
-			#the cell should be requeued or deleted.
+			# Management loop. If a cell has been updated, update its neighbors. Also check if
+			# the cell should be requeued or deleted.
 			rule=self.mnrule
 			cell=self.queue
 			self.queue=None
@@ -139,12 +123,12 @@ class GameOfLife(object):
 				state=rule[cell.state]
 				inc=((state|4)-cell.state)<<2
 				cell.state=state
-				#Update neighbors.
+				# Update neighbors.
 				if inc:
 					x,y=cell.x,cell.y
 					for n in neighbors:
 						makecell(x+n[0],y+n[1]).state+=inc
-				#Delete or requeue cell.
+				# Delete or requeue cell.
 				qnext=cell.queue
 				if state==0:
 					prev,next=cell.prev,cell.next
@@ -157,7 +141,7 @@ class GameOfLife(object):
 					cell.queue=self.queue
 					self.queue=cell
 				cell=qnext
-			#Cellular automata loop.
+			# Cellular automata loop.
 			rule=self.carule
 			cell=self.queue
 			while cell:
@@ -187,7 +171,7 @@ class GameOfLife(object):
 		fmt   values: points, plaintext, lif, rle, file, and None.
 		If fmt=None, the format will be guessed."""
 		if fmt==None:
-			#Guess what format we're using. Never guess "file".
+			# Guess what format we're using. Never guess "file".
 			for fmt in ("rle","lif","plaintext","points"):
 				try:
 					return self.setcells(pat,xy,trans,fmt)
@@ -195,12 +179,12 @@ class GameOfLife(object):
 					pass
 			raise ValueError("Unable to determine pattern type")
 		if fmt=="file":
-			#Read the file as one string, then guess what format it's in.
+			# Read the file as one string, then guess what format it's in.
 			with open(pat,"r") as f:
 				return self.setcells(f.read(),xy,trans)
 		points=[]
 		if fmt=="points":
-			#An array of living cell coordinates.
+			# An array of living cell coordinates.
 			a=d=1;b=c=0
 			if trans&4: a=-1
 			if trans&8: d=-1
@@ -217,7 +201,7 @@ class GameOfLife(object):
 					points.append((px,py))
 			except (TypeError,IndexError):
 				raise ValueError("Not an array of points")
-			#Plot the points.
+			# Plot the points.
 			setcell=self.setcell
 			for p in points: setcell(p,1)
 			return
@@ -225,7 +209,7 @@ class GameOfLife(object):
 			raise ValueError("Pattern must be a string")
 		lines=pat.split("\n")
 		if fmt=="plaintext":
-			#A plaintext grid of cells. !=comment, .=dead, O=alive
+			# A plaintext grid of cells. !=comment, .=dead, O=alive
 			dy=0
 			for line in lines:
 				s="".join(line.split())
@@ -237,7 +221,7 @@ class GameOfLife(object):
 					dx+=1
 				dy+=1
 		elif fmt=="lif":
-			#Life 1.06 file format.
+			# Life 1.06 file format.
 			if not lines or lines[0]!="#Life 1.06":
 				raise ValueError("Invalid Life 1.06 header")
 			for i in range(1,len(lines)):
@@ -249,7 +233,7 @@ class GameOfLife(object):
 					raise ValueError("Unable to parse life 1.06 pattern")
 				points.append(coord)
 		elif fmt=="rle":
-			#Run length encoding.
+			# Run length encoding.
 			head,data="",""
 			for line in lines:
 				s="".join(line.lower().split())
@@ -299,30 +283,30 @@ class GameOfLife(object):
 			x,y=xy;w,h=wh
 			if w<0: x+=w;w=-w
 			if h<0: y+=h;h=-h
-		#Retrieve an array of points for all living cells.
+		# Retrieve an array of points for all living cells.
 		points=[]
 		getcell=self.getcell
 		for dy in range(h):
 			for dx in range(w):
 				if getcell((x+dx,y+dy)): points.append((dx,dy))
 		if fmt=="points":
-			#A list of points.
+			# A list of points.
 			return points
 		elif fmt=="plaintext":
-			#A plaintext grid of cells. !=comment, .=dead, O=alive
+			# A plaintext grid of cells. !=comment, .=dead, O=alive
 			w+=1
 			ret=["."]*(w*h)
 			for i in range(w-1,w*h,w): ret[i]="\n"
 			for p in points: ret[p[1]*w+p[0]]="O"
 			return "".join(ret)
 		elif fmt=="lif":
-			#Life 1.06 file format.
+			# Life 1.06 file format.
 			ret="#Life 1.06\n"
 			for p in points: ret+=" ".join(map(str,p))+"\n"
 			return ret
 		elif fmt=="rle":
-			#Run length encoding.
-			#class r notation used for access within addnum.
+			# Run length encoding.
+			# class r notation used for access within addnum.
 			class r:
 				s="x = {0}, y = {1}, rule = B3/S23\n".format(w,h)
 				e=len(s)
@@ -344,7 +328,7 @@ class GameOfLife(object):
 			return r.s+"!\n"
 		raise ValueError("Format "+str(fmt)+" unrecognized")
 
-	#Important patterns.
+	# Important patterns.
 	pattern_glider="x=3,y=3,rule=B3/S23\nbob$2bo$3o!"
 	pattern_ship="x=5,y=4,rule=B3/S23\no2bob$4bo$o3bo$b4o!"
 	pattern_eater="x=4,y=4,rule=B3/S23\n2o2b$obob$2bob$2b2o!"
@@ -353,7 +337,7 @@ class GameOfLife(object):
 		"o3b2o14b$2o8bo3bob2o4bobo11b$10bo5bo7bo11b$11bo3bo20b$12b2o!"
 
 if __name__=="__main__":
-	#Example usage.
+	# Example usage.
 	if "raw_input" in dir(__builtins__): input=raw_input
 	life=GameOfLife()
 	life.setcells(life.pattern_gosper,(10,4))

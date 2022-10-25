@@ -2,24 +2,8 @@
 
 WBTree.py - v1.01
 
-Copyright (C) 2022 by Alec Dee - alecdee.github.io - akdee144@gmail.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright 2022 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 
 --------------------------------------------------------------------------------
@@ -53,7 +37,7 @@ See if there's better criteria for double rotations.
 
 
 class WBTree(object):
-	#Searching constants.
+	# Searching constants.
 	EQ,EQG,LT,LE,GT,GE=0,1,2,3,4,5
 
 
@@ -67,17 +51,17 @@ class WBTree(object):
 
 
 		def next(node):
-			#Given a node N, find the next ordered node. Ex: next(3)=4.
+			# Given a node N, find the next ordered node. Ex: next(3)=4.
 			#
-			#           4
-			#          / \
-			#         /   \
-			#        2     6
-			#       / \   / \
-			#      1   3 5   7
+			#            4
+			#           / \
+			#          /   \
+			#         2     6
+			#        / \   / \
+			#       1   3 5   7
 			#
-			#If N has a right child, R, the left-most child of R is the next node.
-			#Otherwise, the nearest parent of N with N on the left is the next node.
+			# If N has a right child, R, the left-most child of R is the next node.
+			# Otherwise, the nearest parent of N with N on the left is the next node.
 			child=node.right
 			if child:
 				while child: node,child=child,child.left
@@ -88,17 +72,17 @@ class WBTree(object):
 
 
 		def prev(node):
-			#Given a node N, find the previous ordered node. Ex: prev(5)=4.
+			# Given a node N, find the previous ordered node. Ex: prev(5)=4.
 			#
-			#           4
-			#          / \
-			#         /   \
-			#        2     6
-			#       / \   / \
-			#      1   3 5   7
+			#            4
+			#           / \
+			#          /   \
+			#         2     6
+			#        / \   / \
+			#       1   3 5   7
 			#
-			#If N has a left child, L, the right-most child of L is the next node.
-			#Otherwise, the nearest parent of N with N on the right is the next node.
+			# If N has a left child, L, the right-most child of L is the next node.
+			# Otherwise, the nearest parent of N with N on the right is the next node.
 			child=node.left
 			if child:
 				while child: node,child=child,child.right
@@ -109,13 +93,13 @@ class WBTree(object):
 
 
 		def rotleft(a):
-			#Raise z, lower x, and maintain the sorted order of the nodes.
+			# Raise z, lower x, and maintain the sorted order of the nodes.
 			#
-			#       A                B
-			#      / \              / \
-			#     x   B     ->     A   z
-			#        / \          / \
-			#       y   z        x   y
+			#        A                B
+			#       / \              / \
+			#      x   B     ->     A   z
+			#         / \          / \
+			#        y   z        x   y
 			#
 			b=a.right
 			r=b.left
@@ -130,13 +114,13 @@ class WBTree(object):
 
 
 		def rotright(a):
-			#Raise x, lower z, and maintain the sorted order of the nodes.
+			# Raise x, lower z, and maintain the sorted order of the nodes.
 			#
-			#         A            B
-			#        / \          / \
-			#       B   z   ->   x   A
-			#      / \              / \
-			#     x   y            y   z
+			#          A            B
+			#         / \          / \
+			#        B   z   ->   x   A
+			#       / \              / \
+			#      x   y            y   z
 			#
 			b=a.left
 			l=b.right
@@ -158,7 +142,7 @@ class WBTree(object):
 
 
 		def index(node):
-			#Returns the node's index within the tree. Ex: tree[node.index()]=node.
+			# Returns the node's index within the tree. Ex: tree[node.index()]=node.
 			i=-1
 			prev=node.right
 			while node:
@@ -170,13 +154,13 @@ class WBTree(object):
 
 
 	def __init__(self,cmp=None,unique=False):
-		#cmp(l,r) is expected to be a function where
+		# cmp(l,r) is expected to be a function where
 		#
-		#     cmp(l,r)<0 if l<r
-		#     cmp(l,r)=0 if l=r
-		#     cmp(l,r)>0 if l>r
+		#      cmp(l,r)<0 if l<r
+		#      cmp(l,r)=0 if l=r
+		#      cmp(l,r)>0 if l>r
 		#
-		#If unique is True, then duplicate values will overwrite eachother.
+		# If unique is True, then duplicate values will overwrite eachother.
 		def defcmp(l,r):
 			if l<r: return -1
 			if l>r: return 1
@@ -191,12 +175,12 @@ class WBTree(object):
 
 
 	def __len__(self):
-		#Return the number of nodes in the tree.
+		# Return the number of nodes in the tree.
 		return self.root.weight if self.root else 0
 
 
 	def __getitem__(self,i):
-		#Index nodes like an array.
+		# Index nodes like an array.
 		node=self.root
 		weight=node.weight if node else 0
 		if i<0: i+=weight
@@ -215,7 +199,7 @@ class WBTree(object):
 
 
 	def __iter__(self):
-		#Iterate over all nodes in ascending order.
+		# Iterate over all nodes in ascending order.
 		node=self.first()
 		while node:
 			yield node
@@ -223,28 +207,28 @@ class WBTree(object):
 
 
 	def first(self):
-		#Return the smallest node in the tree.
+		# Return the smallest node in the tree.
 		node,ret=self.root,None
 		while node: ret,node=node,node.left
 		return ret
 
 
 	def last(self):
-		#Return the greatest node in the tree.
+		# Return the greatest node in the tree.
 		node,ret=self.root,None
 		while node: ret,node=node,node.right
 		return ret
 
 
 	def find(self,value,mode=EQ):
-		#Search for a specific value or inequality.
+		# Search for a specific value or inequality.
 		#
-		#     EQ : Return the least    node=value.
-		#     EQG: Return the greatest node=value.
-		#     LT : Return the greatest node<value.
-		#     LE : Return the greatest node<=value.
-		#     GT : Return the least    node>value.
-		#     GE : Return the least    node>=value.
+		#      EQ : Return the least    node=value.
+		#      EQG: Return the greatest node=value.
+		#      LT : Return the greatest node<value.
+		#      LE : Return the greatest node<=value.
+		#      GT : Return the least    node>value.
+		#      GE : Return the least    node>=value.
 		#
 		node,ret=self.root,None
 		unique,cmp=self.unique,self.cmp
@@ -269,8 +253,8 @@ class WBTree(object):
 
 
 	def add(self,value):
-		#Find a leaf node to add the new value to. Then rebalance from the new node on
-		#up. By traversing right when cmp<=0, this algorithm is stable.
+		# Find a leaf node to add the new value to. Then rebalance from the new node on
+		# up. By traversing right when cmp<=0, this algorithm is stable.
 		prev,node=None,self.root
 		unique=0 if self.unique else None
 		c,cmp=0,self.cmp
@@ -294,7 +278,7 @@ class WBTree(object):
 
 
 	def remove(self,value):
-		#Remove a node given a value.
+		# Remove a node given a value.
 		node=self.find(value)
 		if node is None: raise KeyError("Value not in tree: "+str(value))
 		self.removenode(node)
@@ -302,39 +286,39 @@ class WBTree(object):
 
 
 	def removenode(self,node):
-		#Remove a specific node. We can remove a node by swapping it with its successor
-		#to maintain order and stability sorting-wise. Then, rebalance from the successor
-		#on up.
+		# Remove a specific node. We can remove a node by swapping it with its successor
+		# to maintain order and stability sorting-wise. Then, rebalance from the successor
+		# on up.
 		#
-		#          Case 1          |          Case 2           |          Case 3
-		#                          |                           |
-		#  N has no right child.   |  X is the right child of  |  X is a distant child of
-		#  Balance from D up.      |  N. Balance from X up.    |  N. Balance from C up.
-		#                          |                           |
-		#    B              B      |     N              X      |    N              X
-		#   / \            / \     |    / \            / \     |   / \            / \
-		#  A   D     ->   A   D    |   A   X     ->   A   B    |  A   C          A   C
-		#     / \            / \   |      / \                  |     / \    ->      / \
-		#    C   N          C   X  |     *   B                 |    X   D          B   D
-		#       / \                |                           |   / \
-		#      X   *               |                           |  *   B
+		#           Case 1          |          Case 2           |          Case 3
+		#                           |                           |
+		#   N has no right child.   |  X is the right child of  |  X is a distant child of
+		#   Balance from D up.      |  N. Balance from X up.    |  N. Balance from C up.
+		#                           |                           |
+		#     B              B      |     N              X      |    N              X
+		#    / \            / \     |    / \            / \     |   / \            / \
+		#   A   D     ->   A   D    |   A   X     ->   A   B    |  A   C          A   C
+		#      / \            / \   |      / \                  |     / \    ->      / \
+		#     C   N          C   X  |     *   B                 |    X   D          B   D
+		#        / \                |                           |   / \
+		#       X   *               |                           |  *   B
 		#
 		p=node.parent
 		l,r=node.left,node.right
 		if r is None:
-			#Case 1
+			# Case 1
 			bal,next,l=p,l,None
 		elif r.left:
-			#Case 3
+			# Case 3
 			next=r
 			while next.left: bal,next=next,next.left
 			c=next.right
 			bal.left=c
 			if c: c.parent=bal
 		else:
-			#Case 2
+			# Case 2
 			bal,next,r=r,r,None
-		#Replace node with next.
+		# Replace node with next.
 		if p is None: self.root=next
 		elif p.left is node: p.left=next
 		else: p.right=next
@@ -346,8 +330,8 @@ class WBTree(object):
 
 
 	def rebalance(self,next):
-		#Rebalance from next upward. If 2 children differ in weight by a ratio of 2.5 or
-		#more, we can rotate to rebalance.
+		# Rebalance from next upward. If 2 children differ in weight by a ratio of 2.5 or
+		# more, we can rotate to rebalance.
 		def Weight(n): return n.weight if n else 0
 		while next:
 			node,orig=next,next
@@ -355,15 +339,15 @@ class WBTree(object):
 			l,r=node.left,node.right
 			lw,rw=Weight(l),Weight(r)
 			if rw*5+2<lw*2:
-				#Leaning to the left.
+				# Leaning to the left.
 				if Weight(l.left)*5<lw*2: node.left=l.rotleft()
 				node=node.rotright()
 			elif lw*5+2<rw*2:
-				#Leaning to the right.
+				# Leaning to the right.
 				if Weight(r.right)*5<rw*2: node.right=r.rotright()
 				node=node.rotleft()
 			else:
-				#Balanced.
+				# Balanced.
 				node.weight=lw+rw+1
 				continue
 			if next is None: self.root=node
@@ -372,7 +356,7 @@ class WBTree(object):
 
 
 if __name__=="__main__":
-	#Example usage.
+	# Example usage.
 
 	tree=WBTree()
 	tree.add((5,"Friday"))

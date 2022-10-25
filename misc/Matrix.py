@@ -1,24 +1,8 @@
 """
 Matrix.py - v1.08
 
-Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright 2020 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 --------------------------------------------------------------------------------
 Standards
@@ -62,7 +46,7 @@ from copy import deepcopy
 
 class VecInterface(object):
 	"""A helper class to allow rows and columns to be treated as vectors."""
-	#Keep class definition here for compatibility with pickle.
+	# Keep class definition here for compatibility with pickle.
 
 	def __init__(self,elem,step,start,count,l):
 		self.arr=[Vector(elem,False,i*step,start,count) for i in range(l)]
@@ -88,9 +72,9 @@ class Matrix(object):
 	Makes no assumptions about element types.
 	"""
 
-	#----------------------------------------
-	#Management
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Management
+	#---------------------------------------------------------------------------------
 
 	def __init__(self,rows=None,cols=None,copy=True):
 		if hasattr(rows,"__getitem__"):
@@ -120,7 +104,7 @@ class Matrix(object):
 			rows,cols,elem=0,0,[]
 		self.elem,self.elems=elem,rows*cols
 		self.rows,self.cols=rows,cols
-		#Allow rows and columns to function as vectors.
+		# Allow rows and columns to function as vectors.
 		self.row=VecInterface(elem,cols,1,cols,rows)
 		self.col=VecInterface(elem,1,cols,rows,cols)
 
@@ -147,12 +131,12 @@ class Matrix(object):
 		cell=[[0]*cols for r in range(rows)]
 		for r in range(rows):
 			for c in range(cols):
-				#Convert the element value into a string and split it by eol's.
+				# Convert the element value into a string and split it by eol's.
 				s=self[r][c]
 				if isinstance(s,float):
 					s="{0:.6f}".format(s)
 				s=str(s).split("\n")
-				#Find the dimensions of the string.
+				# Find the dimensions of the string.
 				h,w=len(s),max(map(len,s))
 				cell[r][c]=(h,w,s)
 				rpad[r]=max(rpad[r],h)
@@ -161,7 +145,7 @@ class Matrix(object):
 		if rpad and max(rpad)>1:
 			rsep="\n["+" "*(sum(cpad)+cols*3-1)+"]"
 			csep=("   "," , ")
-		#Generate the output line-by-line.
+		# Generate the output line-by-line.
 		r,line,ret=0,0,""
 		while r<rows:
 			rp=rpad[r]
@@ -180,9 +164,9 @@ class Matrix(object):
 			if r<rows: ret+="\n"
 		return ret
 
-	#----------------------------------------
-	#Helper Functions
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Helper Functions
+	#---------------------------------------------------------------------------------
 
 	_zero=0
 	_one=1
@@ -230,9 +214,9 @@ class Matrix(object):
 		a.col.arr=b.col.arr
 		return a
 
-	#----------------------------------------
-	#Basic
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Basic
+	#---------------------------------------------------------------------------------
 
 	def __eq__(a,b):
 		rows,cols=a.rows,a.cols
@@ -245,7 +229,7 @@ class Matrix(object):
 					return False
 			return True
 		elif b==0 or b==1:
-			#For identity and 0-matrix comparisons.
+			# For identity and 0-matrix comparisons.
 			unit=[Matrix._zero,Matrix._one]
 			unit[1]=unit[b]
 			for r in range(rows):
@@ -285,31 +269,31 @@ class Matrix(object):
 			elem[i]=zero()
 		return a
 
-	#----------------------------------------
-	#Algebra
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Algebra
+	#---------------------------------------------------------------------------------
 
 	def __add__(a,b):
-		#Return A+B as a separate matrix.
+		# Return A+B as a separate matrix.
 		a.checkdims(b.rows,b.cols)
 		ae,be=a.elem,b.elem
 		return Matrix([ae[i]+be[i] for i in range(a.elems)],(a.rows,a.cols),False)
 
 	def __iadd__(a,b):
-		#Calculate A+=B.
+		# Calculate A+=B.
 		a.checkdims(b.rows,b.cols)
 		ae,be=a.elem,b.elem
 		for i in range(a.elems): ae[i]+=be[i]
 		return a
 
 	def __sub__(a,b):
-		#Return A-B as a separate matrix.
+		# Return A-B as a separate matrix.
 		a.checkdims(b.rows,b.cols)
 		ae,be=a.elem,b.elem
 		return Matrix([ae[i]-be[i] for i in range(a.elems)],(a.rows,a.cols),False)
 
 	def __isub__(a,b):
-		#Calculate A-=B.
+		# Calculate A-=B.
 		a.checkdims(b.rows,b.cols)
 		ae,be=a.elem,b.elem
 		for i in range(a.elems): ae[i]-=be[i]
@@ -320,12 +304,12 @@ class Matrix(object):
 
 	def __mul__(a,b):
 		if isinstance(b,Vector):
-			#Vector A*v.
+			# Vector A*v.
 			return Vector([u*b for u in a.row],False)
 		elif not isinstance(b,Matrix):
-			#If b is not a matrix, perform a scalar multiplication.
+			# If b is not a matrix, perform a scalar multiplication.
 			return Matrix([e*b for e in a.elem],(a.rows,a.cols),False)
-		#a*b yields (rows(a),cols(b)). Need cols(a)=rows(b).
+		# a*b yields (rows(a),cols(b)). Need cols(a)=rows(b).
 		if a.cols!=b.rows:
 			raise AttributeError("A*B needs cols(A)=rows(B): "+str(a.cols)+","+str(b.rows))
 		m=Matrix(a.rows,b.cols)
@@ -333,7 +317,7 @@ class Matrix(object):
 		brows,bcols,belems=b.rows,b.cols,b.elems-1
 		aval,bval=0,0
 		for i in range(m.elems):
-			#Multiply row r of A with column c of B.
+			# Multiply row r of A with column c of B.
 			sum=melem[i]
 			while bval<=belems:
 				sum+=aelem[aval]*belem[bval]
@@ -349,7 +333,7 @@ class Matrix(object):
 		return a.replace(a*b)
 
 	def __rmul__(a,b):
-		#We will only get here if b is not a matrix.
+		# We will only get here if b is not a matrix.
 		return Matrix([b*e for e in a.elem],(a.rows,a.cols),False)
 
 	def __truediv__(a,b):
@@ -361,10 +345,10 @@ class Matrix(object):
 		return a.replace(a/b)
 
 	def __rtruediv__(a,b):
-		#We will only get here if b is not a matrix.
+		# We will only get here if b is not a matrix.
 		return b*a.inv()
 
-	#python2 mappings for a/b.
+	# python2 mappings for a/b.
 	__div__=__truediv__
 	__idiv__=__itruediv__
 	__rdiv__=__rtruediv__
@@ -379,9 +363,9 @@ class Matrix(object):
 
 	__rfloordiv__=__rtruediv__
 
-	#----------------------------------------
-	#Exponentiation
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Exponentiation
+	#---------------------------------------------------------------------------------
 
 	def inv(a):
 		"""Returns the multiplicative inverse of A."""
@@ -393,7 +377,7 @@ class Matrix(object):
 		elem=ret.elem
 		perm=list(range(cols))
 		for i in range(rows):
-			#Find a row with an invertible element in column i.
+			# Find a row with an invertible element in column i.
 			dval=i*cols
 			sval=dval
 			inv=None
@@ -403,20 +387,20 @@ class Matrix(object):
 				sval+=cols
 			if inv is None:
 				raise ZeroDivisionError("Unable to find an invertible element.")
-			#Swap the desired row with row i. Then put row i in reduced echelon form.
+			# Swap the desired row with row i. Then put row i in reduced echelon form.
 			if sval!=dval:
 				for c in range(cols):
 					elem[sval+c],elem[dval+c]=elem[dval+c],elem[sval+c]
 			perm[i],perm[j]=perm[j],perm[i]
-			#Put the row into reduced echelon form. Since entry (i,i)=1 and (i,i')=1*inv,
-			#set (i,i)=inv.
+			# Put the row into reduced echelon form. Since entry (i,i)=1 and (i,i')=1*inv,
+			# set (i,i)=inv.
 			for c in range(cols):
 				if c==i: continue
 				elem[dval+c]*=inv
 			elem[dval+i]=inv
-			#Perform row operations with row i to clear column i for all other rows in A.
-			#Entry (j,i') will be 0 in the augmented matrix, and (i,i') will be inv, hence
-			#(j,i')=(j,i')-(j,i)*(i,i')=-(j,i)*inv.
+			# Perform row operations with row i to clear column i for all other rows in A.
+			# Entry (j,i') will be 0 in the augmented matrix, and (i,i') will be inv, hence
+			# (j,i')=(j,i')-(j,i)*(i,i')=-(j,i)*inv.
 			for r in range(rows):
 				if r==i: continue
 				sval=r*cols
@@ -425,7 +409,7 @@ class Matrix(object):
 					if c==i: continue
 					elem[sval+c]-=elem[dval+c]*mul
 				elem[sval+i]=-elem[dval+i]*mul
-		#Re-order columns due to swapped rows.
+		# Re-order columns due to swapped rows.
 		tmp=[0]*cols
 		for r in range(rows):
 			dval=r*cols
@@ -436,19 +420,19 @@ class Matrix(object):
 		return ret
 
 	def __pow__(a,exp):
-		#exp=-1,0,+1 should evaluate in one operation.
-		#Need A=(V^-1)*P*V decomposition or ln(A) for non integer exp.
+		# exp=-1,0,+1 should evaluate in one operation.
+		# Need A=(V^-1)*P*V decomposition or ln(A) for non integer exp.
 		iexp=int(exp)
 		if abs(iexp-exp)>=1e-20:
 			raise NotImplementedError("Exponent must be an integer: "+str(exp))
 		rows,cols=a.rows,a.cols
 		if rows!=cols:
 			raise AttributeError("Can only raise square matrices to powers: ("+str(rows)+","+str(cols)+")")
-		#A^0 always returns the identity - even if A^-1 doesn't exist.
+		# A^0 always returns the identity - even if A^-1 doesn't exist.
 		if rows==0 or iexp==0:
 			return Matrix(rows,rows).one()
 		if iexp<0:
-			#A^-n=(A^-1)^n.
+			# A^-n=(A^-1)^n.
 			iexp=-iexp
 			val=a.inv()
 		else:
@@ -462,9 +446,9 @@ class Matrix(object):
 			iexp>>=1
 		return val
 
-	#----------------------------------------
-	#Misc
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Misc
+	#---------------------------------------------------------------------------------
 
 	def T(a):
 		"""Transposition of A."""
@@ -475,13 +459,13 @@ class Matrix(object):
 		"""Returns the determinant of A."""
 		cols=a.cols
 		if a.rows!=cols:
-			#It may be acceptable to return sqrt(abs(A^t*A)) here. This would coincide with
-			#finding the magnitude of a column vector.
+			# It may be acceptable to return sqrt(abs(A^t*A)) here. This would coincide with
+			# finding the magnitude of a column vector.
 			raise AttributeError("Determinant is only defined for square matrices: ("+str(a.rows)+","+str(cols)+")")
 		if cols==0:
-			#The empty matrix has a determinant of 1.
+			# The empty matrix has a determinant of 1.
 			return Matrix.getone()
-		#Copy the matrix. Use the upper triangular form to compute the determinant.
+		# Copy the matrix. Use the upper triangular form to compute the determinant.
 		m=Matrix(a)
 		elem,elems=m.elem,m.elems
 		getinverse=Matrix.getinverse
@@ -506,8 +490,8 @@ class Matrix(object):
 				mul=elem[sval+i]
 				for c in range(i+1,cols):
 					elem[sval+c]-=elem[dval+c]*mul
-		#We have the matrix in upper triangular form. Multiply the diagonals to get the
-		#determinant.
+		# We have the matrix in upper triangular form. Multiply the diagonals to get the
+		# determinant.
 		det=elem[0]
 		for i in range(1,cols):
 			det=det*elem[i*cols+i]
@@ -519,7 +503,7 @@ class Matrix(object):
 		ret=Matrix(a)
 		elem=ret.elem
 		for i in range(min(rows,cols)):
-			#Find a row with an invertible element in column i.
+			# Find a row with an invertible element in column i.
 			dval=i*cols
 			sval=dval
 			inv=None
@@ -529,14 +513,14 @@ class Matrix(object):
 				sval+=cols
 			if inv is None:
 				raise ZeroDivisionError("Unable to find an invertible element.")
-			#Swap the desired row with row i.
+			# Swap the desired row with row i.
 			if sval!=dval:
 				for c in range(i,cols):
 					elem[sval+c],elem[dval+c]=elem[dval+c],elem[sval+c]
-			#Put the row into reduced echelon form.
+			# Put the row into reduced echelon form.
 			for c in range(i,cols):
 				elem[dval+c]*=inv
-			#Perform row operations with row i to clear column i for all other rows in A.
+			# Perform row operations with row i to clear column i for all other rows in A.
 			for r in range(rows):
 				if r==i: continue
 				sval=r*cols
@@ -545,23 +529,23 @@ class Matrix(object):
 					elem[sval+c]-=elem[dval+c]*mul
 		return ret
 
-	#----------------------------------------
-	#Geometry
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Geometry
+	#---------------------------------------------------------------------------------
 
 	def ortho(a):
 		"""Returns the orthonormal basis of the matrix. Non orthogonal rows are
 		sorted to the bottom."""
-		#Returns the orthonormal basis of the matrix. Zero-rows are sorted to the bottom.
-		#Orthonormal matrices have the following properties:
+		# Returns the orthonormal basis of the matrix. Zero-rows are sorted to the bottom.
+		# Orthonormal matrices have the following properties:
 		#
-		#     det(A)=+-1
-		#     A^-1=A^t
-		#     A row vector, u, is normal if u*u=1.
-		#     Two row vectors, u and v, are orthographic if u*v=0.
-		#     All row vectors are orthonormal iff all columns are orthonormal.
+		#      det(A)=+-1
+		#      A^-1=A^t
+		#      A row vector, u, is normal if u*u=1.
+		#      Two row vectors, u and v, are orthographic if u*v=0.
+		#      All row vectors are orthonormal iff all columns are orthonormal.
 		#
-		#We use the Gram-Schmidt process to orthogonalize the matrix.
+		# We use the Gram-Schmidt process to orthogonalize the matrix.
 		rows,cols=a.rows,a.cols
 		ret=Matrix(a)
 		if rows==0 or cols==0:
@@ -571,15 +555,15 @@ class Matrix(object):
 		for i in range(rows):
 			dval,sval=0,i*cols
 			for r in range(rank):
-				#Get the projection of u onto the previous vectors.
-				#ui-(ui*uj)*uj/(uj*uj)
+				# Get the projection of u onto the previous vectors.
+				# ui-(ui*uj)*uj/(uj*uj)
 				norm=zero()
 				for c in range(cols):
 					norm+=elem[sval+c]*elem[dval+c]
 				for c in range(cols):
 					elem[sval+c]-=elem[dval+c]*norm
 				dval+=cols
-			#Normalize u. If it is a non-zero vector, move it up.
+			# Normalize u. If it is a non-zero vector, move it up.
 			norm=zero()
 			for c in range(cols):
 				norm+=elem[sval+c]*elem[sval+c]
@@ -596,23 +580,23 @@ class Matrix(object):
 		return ret
 
 	def rotate(a,angs):
-		#Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles. In 3D,
-		#angles are expected in ZYX order.
+		# Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles. In 3D,
+		# angles are expected in ZYX order.
 		#
-		#Rotation is about a plane, not along an axis. For a 2D space, we may only rotate
-		#about the XY plane, thus there is 1 axis of rotation. Given an angle, a, we have
-		#the rotation matrix:
+		# Rotation is about a plane, not along an axis. For a 2D space, we may only rotate
+		# about the XY plane, thus there is 1 axis of rotation. Given an angle, a, we have
+		# the rotation matrix:
 		#
-		#     M = [ cos(a) -sin(a) ]
-		#         [ sin(a)  cos(a) ]
+		#      M = [ cos(a) -sin(a) ]
+		#          [ sin(a)  cos(a) ]
 		#
-		#For a 3D space, we have rotations about the XY, XZ, and YZ planes. Given angles
-		#a, b, and c, we have the rotation matrix:
+		# For a 3D space, we have rotations about the XY, XZ, and YZ planes. Given angles
+		# a, b, and c, we have the rotation matrix:
 		#
-		#                  XY                       XZ                       YZ
-		#         [ cos(a) -sin(a)  0 ]   [  cos(b)  0  sin(b) ]   [ 1    0       0    ]
-		#     M = [ sin(a)  cos(a)  0 ] * [    0     1    0    ] * [ 0  cos(c) -sin(c) ]
-		#         [   0       0     1 ]   [ -sin(b)  0  cos(b) ]   [ 0  sin(c)  cos(c) ]
+		#                   XY                       XZ                       YZ
+		#          [ cos(a) -sin(a)  0 ]   [  cos(b)  0  sin(b) ]   [ 1    0       0    ]
+		#      M = [ sin(a)  cos(a)  0 ] * [    0     1    0    ] * [ 0  cos(c) -sin(c) ]
+		#          [   0       0     1 ]   [ -sin(b)  0  cos(b) ]   [ 0  sin(c)  cos(c) ]
 		#
 		if not hasattr(angs,"__len__"):
 			angs=(angs,)
@@ -622,16 +606,16 @@ class Matrix(object):
 		elem,ang=ret.elem,0
 		for j in range(1,dim):
 			for i in range(j):
-				#We have
-				#(i,i)=cos   (i,j)=-sin
-				#(j,i)=sin   (j,j)=cos
+				# We have
+				# (i,i)=cos   (i,j)=-sin
+				# (j,i)=sin   (j,j)=cos
 				cs=math.cos(angs[ang])
 				sn=math.sin(angs[ang])
 				ang+=1
-				#For each row r:
-				#(r,i)=(r,i)*cos+(r,j)*sin
-				#(r,j)=(r,j)*cos-(r,i)*sin
-				#(r,c)=(r,c) otherwise
+				# For each row r:
+				# (r,i)=(r,i)*cos+(r,j)*sin
+				# (r,j)=(r,j)*cos-(r,i)*sin
+				# (r,c)=(r,c) otherwise
 				ival,jval=i,j
 				for r in range(dim):
 					t0,t1=elem[ival],elem[jval]
@@ -647,9 +631,9 @@ class Vector(object):
 	Makes no assumptions about element types.
 	"""
 
-	#----------------------------------------
-	#Management
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Management
+	#---------------------------------------------------------------------------------
 
 	def __init__(self,x=None,copy=True,start=0,step=1,elems=None):
 		"""
@@ -703,9 +687,9 @@ class Vector(object):
 		if ul!=vl:
 			raise AttributeError("Vector lengths different: "+str(ul)+"!="+str(vl))
 
-	#----------------------------------------
-	#Basic
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Basic
+	#---------------------------------------------------------------------------------
 
 	def __eq__(u,v):
 		if not isinstance(v,Vector):
@@ -745,9 +729,9 @@ class Vector(object):
 			u[i]=zero()
 		return u
 
-	#----------------------------------------
-	#Algebra
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Algebra
+	#---------------------------------------------------------------------------------
 
 	def __add__(u,v):
 		u.checkdims(v)
@@ -774,18 +758,18 @@ class Vector(object):
 		"""Returns the scalar dot product if v is a vector: u.x*v.x+u.y*v.y+...
 		Returns the elementwise scalar product otherwise: (u.x*v,u.y*v,...)"""
 		if isinstance(v,Vector):
-			#Vector dot product u*v=u.x*v.x+u.y*v.y+...
+			# Vector dot product u*v=u.x*v.x+u.y*v.y+...
 			u.checkdims(v)
 			s=Matrix.getzero()
 			for i in range(len(u)):
 				x=u[i]*v[i]
 				s=s+x if i else x
 			return s
-		#Elementwise scalar product u*s.
+		# Elementwise scalar product u*s.
 		return Vector([x*v for x in u],False)
 
 	def __rmul__(u,v):
-		#Make sure to use the scalar on the left side (s*u instead of u*s).
+		# Make sure to use the scalar on the left side (s*u instead of u*s).
 		return Vector([v*x for x in u],False)
 
 	def __imul__(u,v):
@@ -799,7 +783,7 @@ class Vector(object):
 		for i in range(len(u)): u[i]/=v
 		return u
 
-	#python2 mappings for a/b.
+	# python2 mappings for a/b.
 	__div__=__truediv__
 	__idiv__=__itruediv__
 
@@ -826,9 +810,9 @@ class Vector(object):
 			ret[i]=abs(m)*(1,-1)[i&1]
 		return ret
 
-	#----------------------------------------
-	#Misc
-	#----------------------------------------
+	#---------------------------------------------------------------------------------
+	# Misc
+	#---------------------------------------------------------------------------------
 
 	def sqr(u):
 		return u*u
@@ -852,32 +836,32 @@ class Vector(object):
 		return math.acos((u*v)/(abs(u)*abs(v)))
 
 	def randomangle(ret,norm,ang):
-		#Generate a random vector R such that acos(R*N)<=ang.
+		# Generate a random vector R such that acos(R*N)<=ang.
 		#
-		#We do this by generating a random unit vector on the dim-1 sphere that's
-		#perpendicular to N. We then rotate the random vector towards N along the
-		#plane between the two unit vectors.
+		# We do this by generating a random unit vector on the dim-1 sphere that's
+		# perpendicular to N. We then rotate the random vector towards N along the
+		# plane between the two unit vectors.
 		#
-		#Given
+		# Given
 		#
-		#     R=rand vec
-		#     C=cos(rand()*ang)
-		#     P=(N+(R-N)*u)/|N+(R-N)*u|
+		#      R=rand vec
+		#      C=cos(rand()*ang)
+		#      P=(N+(R-N)*u)/|N+(R-N)*u|
 		#
-		#We want u such that N*P=C.
+		# We want u such that N*P=C.
 		dim=len(ret)
 		if dim<2:
 			for i in range(dim): ret[i]=norm[i]
 			return
-		#Generate a random vector that's not colinear with norm.
+		# Generate a random vector that's not colinear with norm.
 		while True:
 			ret.randomize()
 			dot=ret*norm
 			if dot>-0.9999 and dot<0.9999: break
-		#Make ret perpendicular to norm. ret=ret-norm*(ret*norm).
+		# Make ret perpendicular to norm. ret=ret-norm*(ret*norm).
 		ret=ret-norm*dot
 		ret.normalize()
-		#Randomly rotate towards norm. ret=norm+(ret-norm)*u.
+		# Randomly rotate towards norm. ret=norm+(ret-norm)*u.
 		while True:
 			cs =cos(random.random()*ang)
 			sn2=1.0-cs*cs

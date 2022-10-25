@@ -24,10 +24,10 @@ meant to explain range encoding, the model we use will be kept simple.</p>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Implementation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Implementation</h1>
-<p>We provide two implementations of our range encoder: <a href="./RangeEncoder.py">RangeEncoder.py</a>
-in python, and <a href="./range_c99.zip">range_c99.zip</a> in C. Both implementations are similar in
-layout and produce identical outputs. When called from the command line, they will use an adaptive
-order-0 model to compress or decompress a file.</p>
+<p>We provide two implementations of our range encoder:
+<a href="./RangeEncoder.py">RangeEncoder.py</a> in python, and <a href="./testing.zip">range.c</a>
+in C. Both implementations are similar in layout and produce identical outputs. When called from the
+command line, they will use an adaptive order-0 model to compress or decompress a file.</p>
 <br>
 <p>Python</p>
 <br>
@@ -39,8 +39,9 @@ python3 RangeEncoder.py -d compress.dat decompress.bmp</div>
 <div class="consoleblock">.\range_win.exe -c image.bmp compress.dat
 .\range_win.exe -d compress.dat decompress.bmp</div>
 <br>
-<p>And below are our results from compressing the <a href="http://corpus.canterbury.ac.nz/descriptions/#calgary">calgary corpus</a>.
-Indeed, our compression ratios are on par with similarly equipped range/arithmetic encoders.</p>
+<p>And below are our results from compressing the
+<a href="http://corpus.canterbury.ac.nz/descriptions/#calgary">calgary corpus</a>. Indeed, our
+compression ratios are on par with similarly equipped range/arithmetic encoders.</p>
 <br>
 <table class="datatable headerrow">
 <tr><td>File</td><td>Original Size</td><td>Compressed Size</td><td>% Smaller</td></tr>
@@ -881,19 +882,19 @@ its entirety:</p>
 <div class="codeblock langpython">norm=1&lt;&lt;bits
 half=norm//2
 
-#Shift the range. Expects 0&lt;range&lt;=norm.
+# Shift the range. Expects 0&lt;range&lt;=norm.
 while range&lt;=half:
 	output_bit(low&gt;&gt;(bits-1))
 	low&=half-1
 	low+=low
 	range+=range
 
-#Scale the range. Expects norm/2&lt;range&lt;=norm.
+# Scale the range. Expects norm/2&lt;range&lt;=norm.
 off=(range*intlow)//intden
 low+=off
 range=(range*inthigh)//intden-off
 
-#If we need to carry.
+# If we need to carry.
 if low&gt;=norm:
 	low-=norm
 	carry_bit()</div>
@@ -908,7 +909,7 @@ encoder's state will also be tracked with the integers <i>low</i> and <i>range</
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Shifting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <h2>Shifting</h2>
 <br>
-<div class="codeblock langpython">#Shift the range. Expects 0&lt;range&lt;=norm.
+<div class="codeblock langpython"># Shift the range. Expects 0&lt;range&lt;=norm.
 while range&lt;=half:
 	output_bit(low&gt;&gt;(bits-1))
 	low&=half-1
@@ -936,7 +937,7 @@ any number base.</p>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scaling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <h2>Scaling</h2>
 <br>
-<div class="codeblock langpython">#Scale the range. Expects norm/2&lt;range&lt;=norm.
+<div class="codeblock langpython"># Scale the range. Expects norm/2&lt;range&lt;=norm.
 off=(range*intlow)//intden
 low+=off
 range=(range*inthigh)//intden-off</div>
@@ -1051,7 +1052,7 @@ low*m+off+&lfloor;(range*m*H)/D&rfloor;-off &lt;= low*m+range*m
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Carrying ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <h2>Carrying</h2>
 <br>
-<div class="codeblock langpython">#If we need to carry.
+<div class="codeblock langpython"># If we need to carry.
 if low&gt;=norm:
 	low-=norm
 	carry_bit()</div>
@@ -1136,17 +1137,17 @@ Thus, the decoding operation looks like so</p>
 <div class="codeblock langpython">norm=1&lt;&lt;bits
 half=norm//2
 
-#Shift the range. Expects 0&lt;range&lt;=norm.
+# Shift the range. Expects 0&lt;range&lt;=norm.
 while range&lt;=half:
 	low+=low+input_bit()
 	range+=range
 
-#Scale the range. Expects norm/2&lt;range&lt;=norm.
+# Scale the range. Expects norm/2&lt;range&lt;=norm.
 off=(range*intlow)//intden
 low-=off
 range=(range*inthigh)//intden-off
 
-#Output a value in intlow&lt;=code&lt;inthigh.
+# Output a value in intlow&lt;=code&lt;inthigh.
 decode=(low*intden+intden-1)//range</div>
 <br>
 <p>Our main challenge, to ensure proper decoding, is to prove that <i>decode</i> will in fact satisfy
@@ -1271,7 +1272,7 @@ overflow, or 'carrying'. In reality, they're both different ways of performing t
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 27 Apr 2018 - Modified on 13 Jul 2022<br>
+<div id="footer">Created on 27 Apr 2018 - Modified on 24 Oct 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

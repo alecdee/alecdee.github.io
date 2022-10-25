@@ -3,7 +3,8 @@
 
 String Library - v1.04
 
-Author: Alec Dee - alecdee.github.io - akdee144@gmail.com
+Copyright 2022 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 
 --------------------------------------------------------------------------------
@@ -24,10 +25,10 @@ string.print char0 char1 char2 ... 0
 String formatting escape codes
 string.uint    [num]
 string.uintfmt [num], [base], [padding], [padchar]
-string.uintcon [num], base, padding, padchar
+string.uintinl [num], base, padding, padchar
 string.int     [num]
 string.intfmt  [num], [base], [padding], [padchar], [sign]
-string.intcon  [num], base, padding, padchar, sign
+string.intinl  [num], base, padding, padchar, sign
 
 
 --------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ Version History
 
 
 --------------------------------------------------------------------------------
-ASCII Table
+ASCII Reference Table
 
 
   0  00  NUL |  26  1a      |  52  34   4  |  78  4e   N  | 104  68   h
@@ -88,53 +89,53 @@ TODO
 
 
 string.print:
-	#Call  : 0 ? string.print char0 char1 char2 ... 0
-	#Effect: Prints a zero terminated ASCII string. If an escape code is used,
-	#the next value(s) are expected to be numbers or formatting.
-	#Use [0] to get the calling address.
+	# Call  : 0 ? string.print char0 char1 char2 ... 0
+	# Effect: Prints a zero terminated ASCII string. If an escape code is used,
+	#       : the next value(s) are expected to be numbers or formatting.
+	# Use [0] to get the calling address.
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1
 	0       0       ?+2
 	.ret:   .tmp
 .loop:
-	#Get the next character.
+	# Get the next character.
 	.tmp    .ptr:0  ?+1
 	.ptr    .z-1    ?+1
 	.char   .char   ?+1
 	.char   .tmp    ?+1
-	#If [char]=0, we've reached the end of the string.
+	# If [char]=0, we've reached the end of the string.
 	.char   .z      .ret
-	#If [tmp]<=[escape], then we want to print a non-character.
+	# If [tmp]<=[escape], then we want to print a non-character.
 	.tmp    .esc    .escprint
-	#Print [char].
+	# Print [char].
 	0-2     .char   ?+1
 	.tmp    .tmp    .loop
 .escprint:
-	#Print something other than a character.
+	# Print something other than a character.
 	0       .ptr    ?+1
 	0       .z-2    ?+1
-	#Determine what type of value we're printing.
+	# Determine what type of value we're printing.
 	.tmp    .z      .str
 	.tmp    .nesc   .invalid
-	.tmp    .z+1    .intcon
+	.tmp    .z+1    .intinl
 	.tmp    .z+1    .intfmt
 	.tmp    .z+1    .int
-	.tmp    .z+1    .uintcon
+	.tmp    .z+1    .uintinl
 	.tmp    .z+1    .uintfmt
 	.tmp    .z+1    .uint
 	.tmp    .z+1    .strfmt
 .invalid:
-	#INVALID FORMAT
+	# Print "INVALID FORMAT"
 	.tmp    .tmp    ?+1
 	0       0       ?+1
 	0 ? string.print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
 	0-1     0       ?-2
 .str:
-	#Reserved for string printing.
+	# Reserved for string printing.
 	0-1     0       ?-2
 .strfmt:
-	#Reserved for string printing.
+	# Reserved for string printing.
 	0-1     0       ?-2
 .uint:
 	mem.getargs.0 ? mem.getargs ?+8 1 .ptr 0 0
@@ -144,7 +145,7 @@ string.print:
 	mem.getargs.0 ? mem.getargs ?+14 1 ?+13 1 ?+12 1 ?+11 1 .ptr 0 0
 	0 ? uint.print 0 0 0 0
 	.tmp    .tmp    .loop
-.uintcon:
+.uintinl:
 	mem.getargs.0 ? mem.getargs ?+14 1 ?+13 0 ?+12 0 ?+11 0 .ptr 0 0
 	0 ? uint.print 0 0 0 0
 	.tmp    .tmp    .loop
@@ -156,32 +157,32 @@ string.print:
 	mem.getargs.0 ? mem.getargs ?+16 1 ?+15 1 ?+14 1 ?+13 1 ?+12 1 .ptr 0 0
 	0 ? int.print 0 0 0 0 0
 	.tmp    .tmp    .loop
-.intcon:
+.intinl:
 	mem.getargs.0 ? mem.getargs ?+16 1 ?+15 0 ?+14 0 ?+13 0 ?+12 0 .ptr 0 0
 	0 ? int.print 0 0 0 0 0
 	.tmp    .tmp    .loop
-	#Variables
+	# Variables
 	0-2 0-1 .z:0 1
 	.tmp:0
 	.char:0
 	.esc:0-string.escstart
 	.nesc:string.escstart-string.escend
-	#Formatting defaults
+	# Formatting defaults
 	.base:10
 	.padchr:32
 
 
-#String formatting escape codes. Define here so string.escstart >= 256.
+# String formatting escape codes. Define here so string.escstart >= 256.
 
 string.escstart:
-string.str:     0  #Reserved
-string.strfmt:  1  #Reserved
-string.uint:    2  #[num]
-string.uintfmt: 3  #[num], [base], [padding], [pad char]
-string.uintcon: 4  #[num], base, padding, pad char
-string.int:     5  #[num]
-string.intfmt:  6  #[num], [base], [padding], [pad char], [sign]
-string.intcon:  7  #[num], base, padding, pad char, sign
+string.str:     0  # Reserved
+string.strfmt:  1  # Reserved
+string.uint:    2  # [num]
+string.uintfmt: 3  # [num], [base], [padding], [pad char]
+string.uintinl: 4  # [num], base, padding, pad char
+string.int:     5  # [num]
+string.intfmt:  6  # [num], [base], [padding], [pad char], [sign]
+string.intinl:  7  # [num], base, padding, pad char, sign
 string.escend:
 
 

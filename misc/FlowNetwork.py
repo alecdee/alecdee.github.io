@@ -1,24 +1,8 @@
 """
 FlowNetwork.py - v1.02
 
-Copyright (C) 2020 by Alec Dee - alecdee.github.io - akdee144@gmail.com
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright 2020 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
 
 --------------------------------------------------------------------------------
 Uses Dinic's Blocking Flow.
@@ -94,7 +78,7 @@ class FlowNetwork(object):
 		edge.cap=cap
 		edge.next=v.edge
 		v.edge=edge
-		#If we're not a back edge, create a back edge.
+		# If we're not a back edge, create a back edge.
 		if self.edges&1:
 			back=self.addedge(dst,src,cap)
 			edge.back=back
@@ -119,7 +103,7 @@ class FlowNetwork(object):
 					top.queue=dst
 					top=dst
 				e=e.next
-			#Go to the next vertex. Reset the queue for use in DFS.
+			# Go to the next vertex. Reset the queue for use in DFS.
 			next=src.queue
 			src.queue=None
 			src=next
@@ -127,30 +111,30 @@ class FlowNetwork(object):
 
 	def dfs(self):
 		"""Non-recursive DFS."""
-		#If we're using floating point values, we can increase numerical stability when
-		#augmenting the path by taking taking res-=df;flow=cap-res;. Since df is capped
-		#by res, the smallest res that limits the path will be set to res-df=0, and the
-		#flow will correctly equal cap. If we instead took flow+=df;res=cap-flow; we may
-		#have the case where df is small and flow is large. Thus flow+df might be rounded
-		#down. If we instead took flow+=df;res-=df;, then differences in magnitude over
-		#several operations may cause flow+res!=cap.
+		# If we're using floating point values, we can increase numerical stability when
+		# augmenting the path by taking taking res-=df;flow=cap-res;. Since df is capped
+		# by res, the smallest res that limits the path will be set to res-df=0, and the
+		# flow will correctly equal cap. If we instead took flow+=df;res=cap-flow; we may
+		# have the case where df is small and flow is large. Thus flow+df might be rounded
+		# down. If we instead took flow+=df;res-=df;, then differences in magnitude over
+		# several operations may cause flow+res!=cap.
 		sink=self.sink
 		src=self.source
 		src.df=0x7fffffff
 		while src:
 			if src is sink:
-				#Hit the sink. Go up. Use continue here in case sink=source.
+				# Hit the sink. Go up. Use continue here in case sink=source.
 				src=src.queue
 				continue
 			e=src.work
 			if not e:
-				#No edges left. Go up.
+				# No edges left. Go up.
 				src.df=0
 				src=src.queue
 				continue
 			dst=e.dst
 			if dst.queue is src:
-				#We have just returned up from dst.
+				# We have just returned up from dst.
 				dst.queue=None
 				if dst.df>0:
 					e.res-=dst.df
@@ -159,9 +143,9 @@ class FlowNetwork(object):
 					src=src.queue
 					continue
 			elif e.res>0 and src.level+1==dst.level:
-				#dfs down.
+				# dfs down.
 				dst.queue=src
-				dst.df=min(src.df,e.res)#src.df if src is self.source or src.df<e.res else e.res#
+				dst.df=min(src.df,e.res)# src.df if src is self.source or src.df<e.res else e.res#
 				src=dst
 				continue
 			src.work=e.next

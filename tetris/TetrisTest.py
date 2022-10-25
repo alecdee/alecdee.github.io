@@ -1,4 +1,4 @@
-#Logging
+# Logging
 """
 def tetlog(s):
 	try:
@@ -57,7 +57,7 @@ prof=Profiler()
 
 import sys,time,random
 randrange=random.randrange
-#import itertools
+# import itertools
 if sys.version_info[0]<=2:
 	range=xrange
 	input=raw_input
@@ -65,7 +65,7 @@ sys.path.insert(0,"../")
 from Tetris import Tetris
 
 def tetrisprint(tet):
-	#Print the tetris grid so it may be reconstructed later.
+	# Print the tetris grid so it may be reconstructed later.
 	tdict=tet.__dict__
 	fields=("width","height","drop","dropx","dropy",
 	        "spawnframes","lockframes","clearframes",
@@ -87,24 +87,24 @@ def piecelayouttest():
 	height=20
 	for width in range(21):
 		for spawn in range(7):
-			#Force the grid to spawn our test piece.
+			# Force the grid to spawn our test piece.
 			tet=Tetris(width,height)
 			tet.next=spawn*4
 			tet.advance()
 			if tet.drop//4!=spawn:
 				printerr("piece changed")
-			#Spawning should only fail for small grids.
+			# Spawning should only fail for small grids.
 			if width<=0 or (width==1 and spawn!=Tetris.I):
 				if (tet.state&Tetris.GAMEOVER)==0:
 					printerr("should be gameover")
 				continue
 			if (tet.state&Tetris.GAMEOVER)!=0:
 				printerr("should not be gameover")
-			#The drop coordinates should always be in bounds.
+			# The drop coordinates should always be in bounds.
 			dropx,dropy=tet.dropx,tet.dropy
 			if dropx<0 or dropx>=width or dropy<0 or dropy>=height:
 				printerr("drop oob: {0}, {1}".format(dropx,dropy))
-			#Get the piece bounding box.
+			# Get the piece bounding box.
 			piece=tet.PIECE[tet.drop]
 			minx,maxx=width,0
 			miny,maxy=tet.height,0
@@ -115,10 +115,10 @@ def piecelayouttest():
 				maxx=max(maxx,x)
 				miny=min(miny,y)
 				maxy=max(maxy,y)
-			#Make sure the entire piece is in bounds.
+			# Make sure the entire piece is in bounds.
 			if minx<0 or maxx>=width or miny<0 or maxy>=height:
 				printerr("block oob")
-			#The piece should be centered and flush with the ceiling.
+			# The piece should be centered and flush with the ceiling.
 			if maxy!=height-1:
 				printerr("not aligned top")
 			left=minx
@@ -136,7 +136,7 @@ def heaptest():
 	objtrials=1000
 	objrate=16
 	for trial in range(trials):
-		#Set up the heap.
+		# Set up the heap.
 		tet=Tetris()
 		tet.aimakecopy()
 		tet=tet.aicopy
@@ -148,7 +148,7 @@ def heaptest():
 			if tet.aiheap!=count:
 				print("bad counts")
 				exit()
-			#Test the top values.
+			# Test the top values.
 			if count:
 				i=0
 				for j in range(1,count):
@@ -158,7 +158,7 @@ def heaptest():
 				if top.sort!=val:
 					print("top!=val: {0}, {1}".format(top.sort,val))
 					exit()
-			#Add or remove a value.
+			# Add or remove a value.
 			if randrange(10)==0: objrate=randrange(33)
 			if randrange(32)<objrate:
 				val=randrange(100)
@@ -173,11 +173,11 @@ def heaptest():
 
 def stresstest():
 	print("tetris stress test")
-	#Random frames.
-	#advance by a non-integer number of frames
-	#check for infinite loops
-	#make sure suggestmoves leads to suggestposition
-	#make sure no fields are added that aren't in __init__.
+	# Random frames.
+	# advance by a non-integer number of frames
+	# check for infinite loops
+	# make sure suggestmoves leads to suggestposition
+	# make sure no fields are added that aren't in __init__.
 	trials=100
 	samples=1000
 	def clear(): sys.stdout.write("\r"+" "*25+"\r")
@@ -267,8 +267,8 @@ def stresstest():
 	print("passed")
 
 def linetest():
-	#Count how many lines the AI can clear for grids of size (10,20).
-	#Height is measured after placing a piece and clearing lines.
+	# Count how many lines the AI can clear for grids of size (10,20).
+	# Height is measured after placing a piece and clearing lines.
 	trials=1
 	def stats():
 		print("Lines {0}, Time {1:>6f}".format(tet.cleared,time.time()-tstart))
@@ -285,23 +285,23 @@ def linetest():
 		height=0
 		linecount=tet.linecount
 		while (tet.state&Tetris.GAMEOVER)==0:
-			#Advance the state and record the current height.
+			# Advance the state and record the current height.
 			while (tet.state&mask)==0:
 				tet.advance()
 			while height>0  and linecount[height-1]==0: height-=1
 			while height<20 and linecount[height]!=0  : height+=1
 			heightcount[height]+=1
-			#Advance the AI.
+			# Advance the AI.
 			if (tet.state&Tetris.GAMEOVER)==0:
 				tet.drop,tet.dropx,tet.dropy=tet.suggestposition()
 				tet.state=state
-			#Print progress.
+			# Print progress.
 			if tet.cleared>=tmark:
 				tmark+=1024
 				stats()
 		stats()
 
-#piecelayouttest()
-#heaptest()
-#stresstest()
+# piecelayouttest()
+# heaptest()
+# stresstest()
 linetest()

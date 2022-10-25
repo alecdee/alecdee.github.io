@@ -42,14 +42,14 @@
 	</div>
 	<canvas id="unileq_canvas" style="display:none;background:#000000;width:100%;margin-top:1rem"></canvas>
 	<textarea id="unileq_output" style="box-sizing:border-box;width:100%;height:14rem;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
-	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one  exit            #Decrement [len]. If [len]&lt;=1, exit.
-      0-2  txt  ?+1             #Print a letter.
-      ?-2  neg  loop            #Increment letter pointer.
+	<textarea id="unileq_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one  exit            # Decrement [len]. If [len]&lt;=1, exit.
+      0-2  txt  ?+1             # Print a letter.
+      ?-2  neg  loop            # Increment letter pointer.
 
 exit: 0-1  0    0
 
-txt:  72 101 108 108 111 44 32  #Hello,
-      87 111 114 108 100 33 10  #World!
+txt:  72 101 108 108 111 44 32  # Hello,
+      87 111 114 108 100 33 10  # World!
 len:  len-txt+1
 neg:  0-1
 one:  1
@@ -106,8 +106,8 @@ executed.</p>
 <tr><td>Single Line Comment</td><td>Denoted by <i>#</i>.<br>
 <br>
 Ex:<br>
-<div class="codeblock langunileq">#Hello,
-#World!
+<div class="codeblock langunileq"># Hello,
+# World!
 </div>
 </td></tr>
 <tr><td>Multi Line Comment</td><td>Denoted by <i>#|</i> and terminated with <i>|#</i>.<br>
@@ -123,7 +123,7 @@ Ex:<br>
 <br>
 Ex:<br>
 <div class="codeblock langunileq">?
-?+1     #Next address
+?+1  # Next address
 </div>
 </td></tr>
 <tr><td>Label Declaration</td><td>Denoted by a name followed by a colon. Declarations mark the
@@ -142,8 +142,8 @@ label3:
 <i>Label:</i>.<br>
 <br>
 Ex:<br>
-<div class="codeblock langunileq">label:     #declaration
-label      #recall
+<div class="codeblock langunileq">label:  # declaration
+label   # recall
 </div>
 </td></tr>
 <tr><td>Sublabel</td><td>Denoted by a period in front of a label. Shorthand for placing a label
@@ -151,7 +151,7 @@ under another label's scope.<br>
 <br>
 Ex:<br>
 <div class="codeblock langunileq"> A:
-.B:     #Shorthand for A.B:
+.B:  # Shorthand for A.B:
 </div>
 </td></tr>
 <tr><td>Number</td><td>Inserts the number's value. A number must be in decimal or hexadecimal
@@ -182,7 +182,7 @@ writing from special addresses.<br>
 <i>A = -6</i>: Sleep for <i>mem[B]/2^32</i> seconds.<br>
 <br>
 Ex:<br>
-<div class="codeblock langunileq">0-2  txt  ?+1     #A = -2. Print a letter.
+<div class="codeblock langunileq">0-2  txt  ?+1  # A = -2. Print a letter.
 </div>
 </td></tr>
 </table>
@@ -193,14 +193,14 @@ Ex:<br>
 <p>We can show how the unileq assembly language and architecture work with a simple program that
 prints "Hello, World!" to the screen:</p>
 <br>
-<div class="codeblock langunileq">loop: len  one  exit            #Decrement [len]. If [len]&lt;=1, exit.
-      0-2  txt  ?+1             #Print a letter.
-      ?-2  neg  loop            #Increment letter pointer.
+<div class="codeblock langunileq">loop: len  one  exit            # Decrement [len]. If [len]&lt;=1, exit.
+      0-2  txt  ?+1             # Print a letter.
+      ?-2  neg  loop            # Increment letter pointer.
 
 exit: 0-1  0    0
 
-txt:  72 101 108 108 111 44 32  #Hello,
-      87 111 114 108 100 33 10  #World!
+txt:  72 101 108 108 111 44 32  # Hello,
+      87 111 114 108 100 33 10  # World!
 len:  len-txt+1
 neg:  0-1
 one:  1
@@ -295,21 +295,21 @@ sets <i>[tmp]=0</i>.</p>
 the instruction. They simply serve to force the instruction pointer to go to the next instruction
 regardless of whether or not the instruction would jump.</p>
 <br>
-<div class="codeblock langunileq">tmp  tmp  ?+1  #[tmp]=0
-tmp  b    ?+1  #[tmp]=-[b]
-a    a    ?+1  #[a]=0
-a    tmp  ?+1  #[a]=-(-[tmp])=[b]
+<div class="codeblock langunileq">tmp  tmp  ?+1  # [tmp]=0
+tmp  b    ?+1  # [tmp]=-[b]
+a    a    ?+1  # [a]=0
+a    tmp  ?+1  # [a]=-(-[tmp])=[b]
 </div>
 <br>
 <p>Jump to <i>jmp</i> if <i>[a]=[b]</i>.</p>
 <br>
-<div class="codeblock langunileq">tmp1  tmp1  ?+1  #[tmp1]=0
-tmp1  b     ?+1  #[tmp1]=-[b]
-tmp2  tmp2  ?+1  #[tmp2]=0
-tmp2  tmp1  ?+1  #[tmp2]=-[tmp1]=[b]
-tmp2  a     ?+1  #[tmp2]=[b]-[a]
-tmp1  tmp1  ?+1  #[tmp1]=0
-tmp2  tmp1  jmp  #if [tmp2]&lt;=0, then [a]=[b], so jump
+<div class="codeblock langunileq">tmp1  tmp1  ?+1  # [tmp1]=0
+tmp1  b     ?+1  # [tmp1]=-[b]
+tmp2  tmp2  ?+1  # [tmp2]=0
+tmp2  tmp1  ?+1  # [tmp2]=-[tmp1]=[b]
+tmp2  a     ?+1  # [tmp2]=[b]-[a]
+tmp1  tmp1  ?+1  # [tmp1]=0
+tmp2  tmp1  jmp  # if [tmp2]&lt;=0, then [a]=[b], so jump
 </div>
 <br>
 <p>We can print the character "A" to the screen by writing it to the special address <i>-2</i>. We
@@ -321,13 +321,13 @@ char: 65
 <br>
 <p>Increment <i>[a]</i>. This will always jump to the jump address.</p>
 <br>
-<div class="codeblock langunileq">a  neg  ?+1  #[a]=[a]-[neg]=[a]-(-1)=[a]+1
+<div class="codeblock langunileq">a  neg  ?+1  # [a]=[a]-[neg]=[a]-(-1)=[a]+1
 neg: 0-1
 </div>
 <br>
 <p>Decrement <i>[a]</i>.</p>
 <br>
-<div class="codeblock langunileq">a  one  ?+1  #[a]=[a]-[one]=[a]-1
+<div class="codeblock langunileq">a  one  ?+1  # [a]=[a]-[one]=[a]-1
 one: 1
 </div>
 <br>
@@ -336,30 +336,30 @@ one: 1
 <br>
 <div class="codeblock langunileq">tmp  tmp    ?+1
 tmp  A      ?+1
-tmp  B      ?+1  #[tmp]=-[A]-[B]
+tmp  B      ?+1  # [tmp]=-[A]-[B]
 ptr  ptr    ?+1
-ptr  tmp    ?+1  #[ptr]=[A]+[B]
+ptr  tmp    ?+1  # [ptr]=[A]+[B]
 tmp  tmp    ?+1
-tmp  ptr:0  ?+1  #[tmp]=-[[A]+[B]]
+tmp  ptr:0  ?+1  # [tmp]=-[[A]+[B]]
 C    C      ?+1
-C    tmp    ?+1  #[C]=[[A]+[B]]
+C    tmp    ?+1  # [C]=[[A]+[B]]
 </div>
 <br>
 <p>Set <i>[[A]+[B]]=[C]</i>. This is the same as assigning a value to an array, as in
 <i>arr[i]=C</i>. Assume <i>[p0]=[p1]=[p2]</i>.</p>
 <br>
 <div class="codeblock langunileq">p0    A     ?+1
-p0    B     ?+1  #[p0]=[p0]-[A]-[B]
-p1    p0    ?+1  #[p1]=[A]+[B]
-p2    p0    ?+1  #[p2]=[A]+[B]
+p0    B     ?+1  # [p0]=[p0]-[A]-[B]
+p1    p0    ?+1  # [p1]=[A]+[B]
+p2    p0    ?+1  # [p2]=[A]+[B]
 tmp   tmp   ?+1
 tmp   p1    ?+1
 p0    p0    ?+1
-p0    tmp   ?+1  #[p0]=[A]+[B]
+p0    tmp   ?+1  # [p0]=[A]+[B]
 tmp   tmp   ?+1
 tmp   C     ?+1
-p0:0  p1:0  ?+1  #[[A]+[B]]=0
-p2:0  tmp   ?+1  #[[A]+[B]]=[C]
+p0:0  p1:0  ?+1  # [[A]+[B]]=0
+p2:0  tmp   ?+1  # [[A]+[B]]=[C]
 </div>
 <br>
 <p>If we allow a unileq instruction to be atomic, we can actually create a spinlock. When the lock
@@ -369,13 +369,13 @@ subtract <i>[z]=0</i> from <i>z</i>, which will fail to jump, and the thread wil
 next instruction, <i>z z lock</i>. When the owning thread is done with the lock, it just needs to
 subtract <i>[z+1]=1</i> from <i>[lock]</i> to allow the lock to be acquired by a new thread.</p>
 <br>
-<div class="codeblock langunileq">lock: lock+1  z-1  crit  #acquire lock
-      z       z    lock  #failed to acquire, try again
+<div class="codeblock langunileq">lock: lock+1  z-1  crit  # acquire lock
+      z       z    lock  # failed to acquire, try again
 crit:                    #
-                         #critical section
+                         # critical section
                          #
-      lock+1  z+1  ?+1   #reopen spinlock
-      z       z    jmp   #jump
+      lock+1  z+1  ?+1   # reopen spinlock
+      z       z    jmp   # jump
       0-1 z:0 1
 </div>
 </div>
@@ -427,8 +427,8 @@ operands in my head. Thus I decided swap the roles of <i>A</i> and <i>B</i>.</p>
 unileq programs require some amount of self modification to do anything useful at all. This can most
 easily be seen in the "Hello, World!" program in the section above. Specifically, the lines</p>
 <br>
-<div class="codeblock langunileq">0-2  text  ?+1   #Print a letter.
-?-2  neg   loop  #Increment letter pointer.</div>
+<div class="codeblock langunileq">0-2  text  ?+1   # Print a letter.
+?-2  neg   loop  # Increment letter pointer.</div>
 <br>
 <p>Here we must modify part of an instruction where <i>text</i> is in order to print successive
 characters in a string.</p>
@@ -476,7 +476,7 @@ pos1: 1
 reg0: 0
 reg1: 0
 reg2: 0
-#...
+# ...
 start:
 </div>
 <br>
@@ -566,7 +566,7 @@ the <a href="./unileq.c">unileq.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 7 Sep 2022<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 24 Oct 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
