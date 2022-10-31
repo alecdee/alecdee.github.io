@@ -52,10 +52,10 @@ message and exit if it's not.
           File     |  Line
      --------------+--------
        string.unl  |    39
-         uint.unl  |   227
-          int.unl  |  1885
-       random.unl  |  2995
-       memory.unl  |  3602
+         uint.unl  |   242
+          int.unl  |  1906
+       random.unl  |  3016
+       memory.unl  |  3623
 
 
 |#
@@ -155,6 +155,21 @@ ASCII Reference Table
 --------------------------------------------------------------------------------
 TODO
 
+
+rename string.print to io.print
+io.readline
+string.create
+string.free
+string.length
+string.getchar
+string.setchar
+string.split
+string.trim
+
+string structure
+	0 ptr
+	1 len
+char[i] = [[string.ptr] + i]
 
 |#
 
@@ -442,6 +457,12 @@ Optimize uint.mul to have same time complexity as uint.div
 
 Optimize or/and/xor. Simplify top bit setting by changing .done jump destination
 when terminating loop.
+
+replace uint.print with uint.tostring
+	uint.writestring dst idx len retlen num base padding padchar
+		if dst=0, set len=0
+	uint.readstring ret str idx len base
+	skip any whitespace
 
 
 |#

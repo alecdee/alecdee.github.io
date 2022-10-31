@@ -184,6 +184,12 @@ Optimize uint.mul to have same time complexity as uint.div
 Optimize or/and/xor. Simplify top bit setting by changing .done jump destination
 when terminating loop.
 
+replace uint.print with uint.tostring
+	uint.writestring dst idx len retlen num base padding padchar
+		if dst=0, set len=0
+	uint.readstring ret str idx len base
+	skip any whitespace
+
 
 |#
 

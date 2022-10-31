@@ -85,6 +85,21 @@ ASCII Reference Table
 TODO
 
 
+rename string.print to io.print
+io.readline
+string.create
+string.free
+string.length
+string.getchar
+string.setchar
+string.split
+string.trim
+
+string structure
+	0 ptr
+	1 len
+char[i] = [[string.ptr] + i]
+
 |#
 
 

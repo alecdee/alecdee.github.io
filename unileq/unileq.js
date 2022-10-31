@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-unileq.js - v1.24
+unileq.js - v1.25
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -388,102 +388,6 @@ function UnlU64Dec(n) {
 
 
 //---------------------------------------------------------------------------------
-// Labels.
-
-
-function UnlLabelAlloc() {
-	return {
-		next:null,
-		scope:null,
-		data:null,
-		pos:0,
-		len:0,
-		hash:0,
-		depth:0,
-		addr:UnlU64Create()
-	};
-}
-
-function UnlLabelCmp(ls,rs) {
-	// Compare two labels from their last character to their first along with any
-	// scope characters.
-	var lv=null,rv=null,lc,rc,data=ls.data;
-	var llen=ls.len,rlen=rs.len;
-	if (llen!==rlen) {return llen<rlen?-1:1;}
-	for (var i=llen-1;i!==-1;i--) {
-		if (i<llen) {lv=ls;ls=ls.scope;llen=ls!==null?ls.len:0;}
-		if (i<rlen) {rv=rs;rs=rs.scope;rlen=rs!==null?rs.len:0;}
-		if (lv===rv) {return 0;}
-		lc=data[i+lv.pos];
-		rc=data[i+rv.pos];
-		if (lc!==rc) {return lc<rc?-1:1;}
-	}
-	return 0;
-}
-
-function UnlHashCreate() {
-	var mask=(1<<20)-1;
-	var map=new Array(mask+1);
-	for (var i=0;i<=mask;i++) {
-		map[i]=null;
-	}
-	return {mask:mask,map:map};
-}
-
-function UnlLabelInit(map,lbl,scope,data,pos,len) {
-	// Initialize a label and return a match if we find one.
-	// Count .'s to determine what scope we should be in.
-	var s="";
-	for (var i=0;i<len;i++) {
-		s+=data[pos+i];
-	}
-	var depth=0;
-	while (depth<len && data[pos+depth]==='.') {depth++;}
-	while (scope!==null && scope.depth>depth) {scope=scope.scope;}
-	depth=scope!==null?scope.depth:0;
-	var hash=scope!==null?scope.hash:0;
-	var scopelen=scope!==null?scope.len:0;
-	lbl.scope=scope;
-	lbl.depth=depth+1;
-	// Offset the data address by the parent scope's depth.
-	var dif=scopelen-depth+(depth>0);
-	lbl.data=data;
-	lbl.pos=pos-dif;
-	lbl.len=len+dif;
-	// Compute the hash of the label. Use the scope's hash to speed up computation.
-	for (i=scopelen;i<lbl.len;i++) {
-		hash+=data.charCodeAt(lbl.pos+i)+i;
-		hash&=0xffffffff;
-		hash=((hash>>9)|((hash&0x1ff)<<23));
-		hash^=hash>>14;
-		hash^=(hash&0xff)*0x00d75b4b;
-	}
-	lbl.hash=hash;
-	// Search for a match.
-	var match=map.map[hash&map.mask];
-	while (match!==null && UnlLabelCmp(match,lbl)!==0) {
-		match=match.next;
-	}
-	return match;
-}
-
-function UnlLabelAdd(map,lbl) {
-	var dst=UnlLabelAlloc();
-	dst.scope=lbl.scope;
-	dst.data=lbl.data;
-	dst.pos=lbl.pos;
-	dst.len=lbl.len;
-	dst.hash=lbl.hash;
-	dst.depth=lbl.depth;
-	UnlU64Set(dst.addr,lbl.addr);
-	var hash=dst.hash&map.mask;
-	dst.next=map.map[hash];
-	map.map[hash]=dst;
-	return dst;
-}
-
-
-//---------------------------------------------------------------------------------
 // Unileq architecture interpreter.
 
 
@@ -502,12 +406,13 @@ function UnlCreate(textout,canvas) {
 		memh:    null,
 		meml:    null,
 		alloc:   0,
+		lblroot: UnlCreateLabel(),
 		sleep:   null,
 		// Input/Output
 		output:  textout,
 		outbuf:  "",
 		canvas:  canvas,
-		canvctx :null,
+		canvctx: null,
 		canvdata:null,
 		// Functions
 		Clear:   function(){return UnlClear(st);},
@@ -529,6 +434,7 @@ function UnlClear(st) {
 	st.memh=null;
 	st.meml=null;
 	st.alloc=0;
+	st.lblroot=UnlCreateLabel();
 	st.sleep=null;
 	if (st.output!==null) {
 		st.output.value="";
@@ -573,11 +479,8 @@ function UnlParseAssembly(st,str) {
 	function   NEXT() {return (c=i++<len?str.charCodeAt(i-1):0);}
 	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
 	// Process the string in 2 passes. The first pass is needed to find label values.
-	var map=UnlHashCreate();
-	if (map===null) {err="Unable to allocate hash map";}
-	var lbl0=UnlLabelAlloc();
 	for (var pass=0;pass<2 && err===null;pass++) {
-		var scope=null,lbl=null;
+		var scope=st.lblroot;
 		var addr=UnlU64Create(),val=UnlU64Create(),acc=UnlU64Create();
 		var tmp0=UnlU64Create(),tmp1=UnlU64Create();
 		op=0;
@@ -627,23 +530,23 @@ function UnlParseAssembly(st,str) {
 			} else if (ISLBL(c)) {
 				// Label.
 				while (ISLBL(c)) {NEXT();}
-				lbl=UnlLabelInit(map,lbl0,scope,str,j-1,i-j);
+				var lbl=UnlAddLabel(st,scope,str,j-1,i-j);
+				if (lbl===null) {err="Unable to allocate label";break;}
+				UnlU64Set(val,lbl.addr);
+				var isset=val.hi!==0xffffffff || val.lo!==0xffffffff;
 				if (c===58) {
 					// Label declaration.
 					if (pass===0) {
-						if (lbl!==null) {err="Duplicate label declaration";}
-						UnlU64Set(lbl0.addr,addr);
-						lbl=UnlLabelAdd(map,lbl0);
-						if (lbl===null) {err="Unable to allocate label";}
+						if (isset) {err="Duplicate label declaration";}
+						UnlU64Set(lbl.addr,addr);
 					}
-					scope=lbl;
+					if (str[j-1]!=='.') {scope=lbl;}
 					if (ISOP(op)) {err="Operating on declaration";}
 					op=c;
 					NEXT();
 				} else {
 					token=1;
-					if (lbl!==null) {UnlU64Set(val,lbl.addr);}
-					else if (pass!==0) {err="Unable to find label";}
+					if (pass!==0 && !isset) {err="Unable to find label";}
 				}
 			} else {
 				err="Unexpected token";
@@ -701,6 +604,48 @@ function UnlParseAssembly(st,str) {
 			st.statestr="Parser: "+err+"\nLine  : "+line+"\n\n\t"+window+"\n\t"+under+"\n\n";
 		}
 	}
+}
+
+function UnlCreateLabel() {
+	var lbl={
+		addr: UnlU64Create(-1),
+		child:new Array(16).fill(null)
+	};
+	return lbl;
+}
+
+function UnlAddLabel(st,scope,data,idx,len) {
+	// Add a label if it's new.
+	// If the label starts with a '.', make it a child of the last non '.' label.
+	var lbl=data[idx]==='.'?scope:st.lblroot;
+	for (var i=0;i<len;i++) {
+		var c=data.charCodeAt(idx+i);
+		for (var j=4;j>=0;j-=4) {
+			var val=(c>>>j)&15;
+			var parent=lbl;
+			lbl=parent.child[val];
+			if (lbl===null) {
+				lbl=UnlCreateLabel();
+				parent.child[val]=lbl;
+			}
+		}
+	}
+	return lbl;
+}
+
+function UnlFindLabel(st,label) {
+	// Returns the given label's address. Returns null if no label was found.
+	var lbl=st.lblroot,len=label.length;
+	if (lbl===null) {return null;}
+	for (var i=0;i<len;i++) {
+		var c=label.charCodeAt(i);
+		for (var j=4;j>=0;j-=4) {
+			var val=(c>>>j)&15;
+			lbl=lbl.child[val];
+			if (lbl===null) {return null;}
+		}
+	}
+	return UnlU64Create(lbl.addr);
 }
 
 function UnlGetMem(st,addr) {

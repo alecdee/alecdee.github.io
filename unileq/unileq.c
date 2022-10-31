@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-unileq.c - v1.43
+unileq.c - v1.45
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -175,6 +175,9 @@ Notes
 Linux  : gcc -O3 unileq.c -o unileq
 Windows: cl /O2 unileq.c
 
+Keep under 20k bytes.
+Find a better form of label scoping.
+
 
 */
 
@@ -206,124 +209,36 @@ typedef unsigned char uchar;
 #define UNL_ERROR_MEMORY 3
 #define UNL_MAX_PARSE    (1<<30)
 
+typedef struct UnlLabel {
+	u64 addr;
+	u32 child[16];
+} UnlLabel;
+
 typedef struct UnlState {
 	u64 *mem,alloc,ip;
 	u32 state;
 	char statestr[256];
+	UnlLabel* lblarr;
+	u32 lblalloc,lblpos;
 } UnlState;
+
 
 UnlState* UnlCreate(void);
 void UnlFree(UnlState* st);
-void UnlParseAssembly(UnlState* st,const char* str);
-void UnlParseFile(UnlState* st,const char* path);
 void UnlClear(UnlState* st);
+
+void UnlParseAssembly(UnlState* st,const char* str);
+u32  UnlAddLabel(UnlState* st,u32 scope,const uchar* data,u32 len);
+u64  UnlFindLabel(UnlState* st,const char* label);
+void UnlParseFile(UnlState* st,const char* path);
+
 void UnlPrintState(UnlState* st);
 u64  UnlGetIP(UnlState* st);
 void UnlSetIP(UnlState* st,u64 ip);
 u64  UnlGetMem(UnlState* st,u64 addr);
 void UnlSetMem(UnlState* st,u64 addr,u64 val);
+
 void UnlRun(UnlState* st,u32 iters);
-
-
-//---------------------------------------------------------------------------------
-// Hash map for labels.
-
-
-typedef struct UnlLabel {
-	struct UnlLabel *next,*scope;
-	const uchar* data;
-	u64 addr;
-	u32 hash,len,depth;
-} UnlLabel;
-
-u32 UnlLabelCmp(UnlLabel* l,UnlLabel* r) {
-	// Compare two labels from their last character to their first along with any
-	// scope characters. Return 0 if they're equal.
-	UnlLabel *lv=0,*rv=0;
-	if (l->len!=r->len || l->hash!=r->hash) {return 1;}
-	for (u32 i=l->len-1;i!=(u32)-1;i--) {
-		if (l && i<l->len) {lv=l;l=l->scope;}
-		if (r && i<r->len) {rv=r;r=r->scope;}
-		if (lv==rv) {return 0;}
-		if (lv->data[i]!=rv->data[i]) {return 1;}
-	}
-	return 0;
-}
-
-typedef struct UnlHashMap {
-	UnlLabel** map;
-	u32 mask;
-} UnlHashMap;
-
-UnlHashMap* UnlHashCreate(void) {
-	UnlHashMap* map=(UnlHashMap*)malloc(sizeof(UnlHashMap));
-	if (map) {
-		map->mask=(1<<20)-1;
-		map->map=(UnlLabel**)malloc((map->mask+1)*sizeof(UnlLabel*));
-		if (map->map) {
-			for (u32 i=0;i<=map->mask;i++) {map->map[i]=0;}
-			return map;
-		}
-		free(map);
-	}
-	return 0;
-}
-
-void UnlHashFree(UnlHashMap* map) {
-	if (map) {
-		for (u32 i=0;i<=map->mask;i++) {
-			UnlLabel *lbl,*next=map->map[i];
-			while ((lbl=next)!=0) {
-				next=lbl->next;
-				free(lbl);
-			}
-		}
-		free(map->map);
-		free(map);
-	}
-}
-
-UnlLabel* UnlLabelInit(UnlHashMap* map,UnlLabel* lbl,UnlLabel* scope,const uchar* data,u32 len) {
-	// Initialize a label and return a match if we find one.
-	// Count .'s to determine what scope we should be in.
-	u32 depth=0;
-	while (depth<len && data[depth]=='.') {depth++;}
-	while (scope && scope->depth>depth) {scope=scope->scope;}
-	depth=scope?scope->depth:0;
-	u32 hash=scope?scope->hash:0;
-	u32 scopelen=scope?scope->len:0;
-	lbl->scope=scope;
-	lbl->depth=depth+1;
-	// Offset the data address by the parent scope's depth.
-	u32 dif=scopelen-depth+(depth>0);
-	lbl->data=data-dif;
-	lbl->len=len+dif;
-	// Compute the hash of the label. Use the scope's hash to speed up computation.
-	for (u32 i=scopelen;i<lbl->len;i++) {
-		hash+=lbl->data[i]+i;
-		hash+=hash<<17;hash^=hash>>11;
-		hash+=hash<< 5;hash^=hash>> 7;
-		hash+=hash<< 9;hash^=hash>>14;
-		hash+=hash<<10;hash^=hash>> 6;
-		hash+=hash<< 7;hash^=hash>> 9;
-	}
-	lbl->hash=hash;
-	// Search for a match.
-	UnlLabel* match=map->map[hash&map->mask];
-	while (match && UnlLabelCmp(match,lbl)) {match=match->next;}
-	return match;
-}
-
-UnlLabel* UnlLabelAdd(UnlHashMap* map,UnlLabel* lbl) {
-	UnlLabel* dst=(UnlLabel*)malloc(sizeof(UnlLabel));
-	if (dst) {
-		memcpy(dst,lbl,sizeof(UnlLabel));
-		u32 hash=dst->hash&map->mask;
-		dst->next=map->map[hash];
-		map->map[hash]=dst;
-	}
-	return dst;
-}
 
 
 //---------------------------------------------------------------------------------
@@ -335,6 +250,7 @@ UnlState* UnlCreate(void) {
 	UnlState* st=(UnlState*)malloc(sizeof(UnlState));
 	if (st) {
 		st->mem=0;
+		st->lblarr=0;
 		UnlClear(st);
 	}
 	return st;
@@ -345,6 +261,19 @@ void UnlFree(UnlState* st) {
 		UnlClear(st);
 		free(st);
 	}
+}
+
+void UnlClear(UnlState* st) {
+	st->state=UNL_RUNNING;
+	st->statestr[0]=0;
+	st->ip=0;
+	free(st->mem);
+	st->mem=0;
+	st->alloc=0;
+	free(st->lblarr);
+	st->lblarr=0;
+	st->lblalloc=0;
+	st->lblpos=0;
 }
 
 void UnlParseAssembly(UnlState* st,const char* str) {
@@ -364,10 +293,8 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 	}
 	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
 	// Process the string in 2 passes. The first pass is needed to find label values.
-	UnlHashMap* map=UnlHashCreate();
-	if (map==0) {err="Unable to allocate hash map";}
 	for (u32 pass=0;pass<2 && err==0;pass++) {
-		UnlLabel *scope=0,*lbl,lbl0;
+		u32 scope=0,lbl;
 		u64 addr=0,val=0,acc=0;
 		op=0;
 		i=0;
@@ -410,23 +337,22 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 			} else if (ISLBL(c)) {
 				// Label.
 				while (ISLBL(c)) {NEXT;}
-				lbl=UnlLabelInit(map,&lbl0,scope,ustr+(j-1),i-j);
+				lbl=UnlAddLabel(st,scope,ustr+(j-1),i-j);
+				if (lbl==0) {err="Unable to allocate label";break;}
+				val=st->lblarr[lbl].addr;
 				if (c==':') {
 					// Label declaration.
 					if (pass==0) {
-						if (lbl) {err="Duplicate label declaration";}
-						lbl0.addr=addr;
-						lbl=UnlLabelAdd(map,&lbl0);
-						if (lbl==0) {err="Unable to allocate label";}
+						if (val+1) {err="Duplicate label declaration";}
+						st->lblarr[lbl].addr=addr;
 					}
-					scope=lbl;
+					if (ustr[j-1]!='.') {scope=lbl;}
 					if (ISOP(op)) {err="Operating on declaration";}
 					op=c;
 					NEXT;
 				} else {
 					token=1;
-					if (lbl) {val=lbl->addr;}
-					else if (pass) {err="Unable to find label";}
+					if (pass && val+1==0) {err="Unable to find label";}
 				}
 			} else {
 				err="Unexpected token";
@@ -478,7 +404,60 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 		}
 		snprintf(st->statestr,sizeof(st->statestr),fmt,err,line,window,under);
 	}
-	UnlHashFree(map);
+}
+
+u32 UnlAddLabel(UnlState* st,u32 scope,const uchar* data,u32 len) {
+	// Add a label if it's new. Return its position in the label array.
+	UnlLabel* arr=st->lblarr;
+	u32 pos=st->lblpos;
+	if (arr==0) {
+		// Initialize the root label.
+		arr=(UnlLabel*)malloc(sizeof(UnlLabel));
+		if (arr==0) {return 0;}
+		st->lblalloc=1;
+		pos=1;
+		memset(arr,0,sizeof(UnlLabel));
+		arr[0].addr=(u64)-1;
+	}
+	// If the label starts with a '.', make it a child of the last non '.' label.
+	u32 lbl=data[0]=='.'?scope:0;
+	for (u32 i=0;i<len;i++) {
+		uchar c=data[i];
+		for (u32 j=4;j<8;j-=4) {
+			u32 val=(u32)((c>>j)&15);
+			u32 parent=lbl;
+			lbl=arr[parent].child[val];
+			if (lbl==0) {
+				if (pos>=st->lblalloc) {
+					st->lblalloc<<=1;
+					arr=(UnlLabel*)realloc(arr,st->lblalloc*sizeof(UnlLabel));
+					if (arr==0) {i=len;break;}
+				}
+				lbl=pos++;
+				arr[parent].child[val]=lbl;
+				memset(arr+lbl,0,sizeof(UnlLabel));
+				arr[lbl].addr=(u64)-1;
+			}
+		}
+	}
+	st->lblarr=arr;
+	st->lblpos=pos;
+	return lbl;
+}
+
+u64 UnlFindLabel(UnlState* st,const char* label) {
+	// Returns the given label's address. Returns -1 if no label was found.
+	if (st->lblarr==0) {return (u64)-1;}
+	uchar c;
+	u32 lbl=0;
+	for (u32 i=0;(c=(uchar)label[i])!=0;i++) {
+		for (u32 j=4;j<8;j-=4) {
+			u32 val=(u32)((c>>j)&15);
+			lbl=st->lblarr[lbl].child[val];
+			if (lbl==0) {return (u64)-1;}
+		}
+	}
+	return st->lblarr[lbl].addr;
 }
 
 void UnlParseFile(UnlState* st,const char* path) {
@@ -508,15 +487,6 @@ void UnlParseFile(UnlState* st,const char* path) {
 		free(str);
 	}
 	fclose(in);
-}
-
-void UnlClear(UnlState* st) {
-	st->state=UNL_RUNNING;
-	st->statestr[0]=0;
-	st->ip=0;
-	free(st->mem);
-	st->mem=0;
-	st->alloc=0;
 }
 
 void UnlPrintState(UnlState* st) {
@@ -660,7 +630,6 @@ int main(int argc,char** argv) {
 			len:  len-text\
 		");
 	} else {
-		// Load a file.
 		UnlParseFile(unl,argv[1]);
 	}
 	// Main loop.
