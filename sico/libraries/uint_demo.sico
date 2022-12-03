@@ -2,35 +2,43 @@
 
 demo:
 
-	# Use ASCII character codes.
-	# Message must end with a '0'.
+	# Multiplication
+	# ret0 = mul0 * mul1 >> 64
+	# ret1 = mul0 * mul1 & (2^64-1)
+	0 ? uint.mul .ret0 .ret1 .mul0 .mul1
+	0 ? string.print string.uint .mul0 32 42 32 string.uint .mul1 32 61 32 string.uint .ret1 10 0
 
-	# test
-	0 ? string.print 116 101 115 116 10 0
+	# Division
+	# ret0 = num / den
+	# ret1 = num % den
+	0 ? uint.div .ret0 .ret1 .num .den
+	0 ? string.print string.uint .num 32 47 32 string.uint .den 32 32 61 32 string.uint .ret0 32 114 101 109 97 105 110 100 101 114 32 string.uint .ret1 10 0
 
-	# a = [a]
-	0 ? string.print 97 32 61 32 string.uint .a 10 0
+	# Bitwise AND
+	# ret0 = and0 & and1
+	0 ? uint.and .ret0 .and0 .and1
+	0 ? string.print 32 string.uint .and0 32 38 32 string.uint .and1 32 32 61 32 string.uint .ret0 10 0
 
-	# b = [b]
-	0 ? string.print 98 32 61 32 string.uint .b 10 0
-
-	# [a], [b]
-	0 ? string.print string.uint .a 44 32 string.uint .b 10 0
-
-	# done
-	0 ? string.print 100 111 110 101 10 0
-
-	0-1 0 ?-2
+	0-1 0 0
 
 	# Variables
-	.a: 10
-	.b: 0-1
+	.ret0: 0
+	.ret1: 0
+
+	.mul0: 457
+	.mul1: 135
+
+	.num:  933
+	.den:  51
+
+	.and0: 90
+	.and1: 17
 
 
 #|==============================================================================
 
 
-Unileq Master Library
+SICO Master Library
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -39,19 +47,19 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-master.unl contains all basic libraries for ease of use in other projects.
+master.sico contains all basic libraries for ease of use in other projects.
 
-This library should be included after any other unl files. Display an error
+This library should be included after any other sico files. Display an error
 message and exit if it's not.
 
 
-          File     |  Line
-     --------------+--------
-       string.unl  |    39
-         uint.unl  |   242
-          int.unl  |  1906
-       random.unl  |  3016
-       memory.unl  |  3623
+          File      |  Line
+     ---------------+--------
+       string.sico  |    39
+         uint.sico  |   291
+          int.sico  |  2207
+       random.sico  |  3570
+       memory.sico  |  4177
 
 
 |#
@@ -68,7 +76,7 @@ message and exit if it's not.
 #|==============================================================================
 
 
-String Library - v1.04
+String Library - v1.05
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -78,7 +86,7 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-string.unl currently only provides the print function. In the future, it will
+string.sico currently only provides the print function. In the future, it will
 also provide string manipulation functions.
 
 
@@ -94,8 +102,8 @@ string.uint    [num]
 string.uintfmt [num], [base], [padding], [padchar]
 string.uintinl [num], base, padding, padchar
 string.int     [num]
-string.intfmt  [num], [base], [padding], [padchar], [sign]
-string.intinl  [num], base, padding, padchar, sign
+string.intfmt  [num], [base], [sign], [padding], [padchar]
+string.intinl  [num], base, sign, padding, padchar
 
 
 --------------------------------------------------------------------------------
@@ -114,6 +122,8 @@ Version History
      Renamed print to string.print for consistency.
 1.04
      Updated comments.
+1.05
+     Modified string.print to use uint.writestring instead of uint.print.
 
 
 --------------------------------------------------------------------------------
@@ -160,7 +170,10 @@ string.length
 string.getchar
 string.setchar
 string.split
-string.trim
+string.strip
+string.padleft
+string.padright
+string.padsign   # pad's left but skips +-, so "-31" becomes "-0031"
 
 string structure
 	0 ptr
@@ -178,8 +191,12 @@ string.print:
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1
-	0       0       ?+2
-	.ret:   .tmp
+	0       0       .loop
+.ret:
+	0 ? mem.free .mem
+	.mem    .mem    ?+1
+	.memlen .memlen ?+1
+	.tmp
 .loop:
 	# Get the next character.
 	.tmp    .ptr:0  ?+1
@@ -197,6 +214,9 @@ string.print:
 	# Print something other than a character.
 	0       .ptr    ?+1
 	0       .z-2    ?+1
+	.padchr .padchr ?+1
+	.padchr .paddef ?+1
+	.retry  .retry  ?+1
 	# Determine what type of value we're printing.
 	.tmp    .z      .str
 	.tmp    .nesc   .invalid
@@ -220,28 +240,60 @@ string.print:
 	# Reserved for string printing.
 	0-1     0       ?-2
 .uint:
-	mem.getargs.0 ? mem.getargs ?+8 1 .ptr 0 0
-	0 ? uint.print 0 .base .z .padchr
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 .base
+	.tmp    .tmp    .write
 .uintfmt:
-	mem.getargs.0 ? mem.getargs ?+14 1 ?+13 1 ?+12 1 ?+11 1 .ptr 0 0
-	0 ? uint.print 0 0 0 0
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 1 .pad 2 .padchr 2 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 0
+	.tmp    .tmp    .write
 .uintinl:
-	mem.getargs.0 ? mem.getargs ?+14 1 ?+13 0 ?+12 0 ?+11 0 .ptr 0 0
-	0 ? uint.print 0 0 0 0
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 0 .pad 1 .padchr 1 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 0
+	.tmp    .tmp    .write
 .int:
-	mem.getargs.0 ? mem.getargs ?+8 1 .ptr 0 0
-	0 ? int.print 0 .base .z .padchr .z
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 .base .z
+	.tmp    .tmp    .write
 .intfmt:
-	mem.getargs.0 ? mem.getargs ?+16 1 ?+15 1 ?+14 1 ?+13 1 ?+12 1 .ptr 0 0
-	0 ? int.print 0 0 0 0 0
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 1 ?+18 1 .pad 2 .padchr 2 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
+	.tmp    .tmp    .write
 .intinl:
-	mem.getargs.0 ? mem.getargs ?+16 1 ?+15 0 ?+14 0 ?+13 0 ?+12 0 .ptr 0 0
-	0 ? int.print 0 0 0 0 0
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 0 ?+18 0 .pad 1 .padchr 1 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
+	.tmp    .tmp    .write
+.write:
+	# If [retlen]<[memlen] we need to resize [mem] and retry.
+	.retlen .memlen .lenok
+	.tmp    .retlen ?+1
+	.memlen .tmp    ?+1
+	0 ? mem.realloc .mem .mem .memlen
+	.mem    .z      .invalid
+	.tmp    .tmp    .retry:0
+.lenok:
+	.tmp    .memlen ?+1
+	.retlen .tmp    ?+1
+	# Print padding.
+	.pad    .retlen ?+10
+	0-2     .padchr ?+1
+	.pad    .z+1    ?+7
+	0-2     .padchr ?-5
+	.pad    .pad    ?+1
+	# Print [mem].
+	.tmp    .tmp    ?+1
+	.tmp    .mem    ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+4
+	.retlen .z+1    ?+7
+	0-2     .p0:0   ?+1
+	.p0     .z-1    ?-8
 	.tmp    .tmp    .loop
 	# Variables
 	0-2 0-1 .z:0 1
@@ -249,9 +301,14 @@ string.print:
 	.char:0
 	.esc:0-string.escstart
 	.nesc:string.escstart-string.escend
+	.mem:0
+	.memlen:0
+	.retlen:0
 	# Formatting defaults
 	.base:10
-	.padchr:32
+	.pad:0
+	.padchr:0
+	.paddef:0-32
 
 
 # String formatting escape codes. Define here so string.escstart >= 256.
@@ -271,7 +328,7 @@ string.escend:
 #|==============================================================================
 
 
-Unsigned Integer Operations - v5.03
+Unsigned Integer Operations - v5.04
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -281,13 +338,13 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-uint.unl provides functions for performing most of the common unsigned integer
+uint.sico provides functions for performing most of the common unsigned integer
 operations. In particular, it handles: comparisons, arithmetic, and bitwise
 operations.
 
-Unileq typically uses integers modulo 2^64. However, string printing, integer
-arithmetic, and comparisons will work with any modulo. Bitwise functions, on
-the other hand, require integers modulo 2^n.
+SICO typically uses integers modulo 2^64. However: string, integer arithmetic,
+and comparison functions will work with any modulo. Bitwise functions, on the
+other hand, require integers modulo 2^n.
 
 The 0 address will always be 0 upon function return, even if one of the return
 value addresses is 0.
@@ -300,7 +357,8 @@ Worst case time complexity:
        Function  |    Complexity     |  Instructions
                  |                   |   (64 bits)
      ------------+-------------------+----------------
-         print   |  --               |       --
+         write   |  --               |     2303
+         read    |  --               |     1456
           cmp    |  29               |       29
           min    |  34               |       34
           max    |  34               |       34
@@ -315,7 +373,7 @@ Worst case time complexity:
           shr    |  31 +  8.00*bits  |      543
           not    |  26               |       26
           and    |  37 +  7.00*bits  |      485
-           or    |  38 +  7.00*bits  |      486
+          or     |  38 +  7.00*bits  |      486
           xor    |  39 +  7.00*bits  |      487
 
 
@@ -324,7 +382,8 @@ Index
 
 
 Strings
-uint.print [num] [base] [padding] [padchar]
+uint.writestring [str] [strlen] [stridx] retidx [num] [base]
+uint.readstring  [str] [strlen] [stridx] retidx retnum [base]
 
 Comparisons
 uint.cmp [a] [b] lt eq gt
@@ -437,6 +496,10 @@ Version History
 5.03
      Updated comments.
      Removed a few instructions from uint.div and uint.gcd.
+5.04
+     Replaced uint.print with uint.writestring. This will allow the integer and
+     string libraries to interact more naturally.
+     Added uint.readstring.
 
 
 --------------------------------------------------------------------------------
@@ -444,21 +507,18 @@ TODO
 
 
 Optimize uint.mul to have same time complexity as uint.div
-	Unroll first loop iteration and simplify loop?
-	See if 2*fib0+fib1<MOD limit works better than fib0+fib1<MOD.
-	Calculate inverse (~high or ~low) instead to flip carrying operation.
 	We don't need to shift hval0 or hval1 in loop. We know that if 1 is added
 	to hval0, it will end up as hval0+fib0 at the end of the loop. Just add/sub
 	fib0 or fib1 to hval0 and hval1 when a carry occurs.
+	Unroll first loop iteration and simplify loop?
+	See if 2*fib0+fib1<MOD limit works better than fib0+fib1<MOD.
+	Calculate inverse (~high or ~low) instead to flip carrying operation.
 
 Optimize or/and/xor. Simplify top bit setting by changing .done jump destination
 when terminating loop.
 
-replace uint.print with uint.tostring
-	uint.writestring dst idx len retlen num base padding padchar
-		if dst=0, set len=0
-	uint.readstring ret str idx len base
-	skip any whitespace
+Expand uint.writestring to allow base 36. Get rid of translation table.
+Simplify [char] to value translation in uint.readstring.
 
 
 |#
@@ -468,10 +528,25 @@ replace uint.print with uint.tostring
 # Strings
 
 
-uint.print:
-	# Call  : 0 ? uint.print num base padding padchar
+uint.writestring:
+	# Call  : 0 ? uint.writestring str strlen stridx retidx num base
 	#
-	# Effect: Prints a number in an arbitrary base.
+	# Effect: Writes a signed integer to a string.
+	#       : [base] <= 16
+	#       : The first character is written to [str]+[stridx].
+	#       : The function does not write after [str]+[strlen]-1 or if [str]=0,
+	#       : but [retidx] will still be updated.
+	#       : [retidx] = [stridx] + (length of the integer string)
+	#       : If [retidx]>[strlen], then the string needs to be resized.
+	#       : If retidx=0, then [retidx] is not written to.
+	#       : Base = 0: c0*0^0 + c1*0^1 + c2*0^2 + ... = c0
+	#       : Base = 1: c0*1^0 + c1*1^1 + c2*1^2 + ... = hash marks
+	#       : Base > 1: regular number
+	#
+	# Time  : Base = 0: 82
+	#       : Base = 1: 80 + 9*MOD
+	#       : Base > 1: 63 + (23 + 6*base)*digits = 2303
+	#       : digits = ceil(ln(MOD)/ln(base))
 	#
 	# Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
@@ -483,136 +558,370 @@ uint.print:
 	.arg4   0       ?+1
 	.arg5   0       ?+1
 	.arg6   0       ?+1
-	# Get [num].
+	.arg7   0       ?+1
+	.arg8   0       ?+1
+	0       0       ?+1
+	# Get [str].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
-	.p0     .p0     ?+1
-	.p0     .tmp    ?+1
-	.nnum   .nnum   ?+1
-	.nnum   .p0:0   ?+1
-	.num    .num    ?+1
-	.num    .nnum   ?+1
-	# Get [pad].
-	.tmp    .tmp    ?+1
-	.tmp    .arg4:4 ?+1
 	.p2     .p2     ?+1
 	.p2     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p2:0   ?+1
-	.pad    .pad    ?+1
-	.pad    .tmp    ?+1
-	# Get [padchr].
+	.str    .str    ?+1
+	.str    .tmp    ?+1
+	# Get [stridx].
 	.tmp    .tmp    ?+1
-	.tmp    .arg5:5 ?+1
+	.tmp    .arg4:4 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.nidx   .nidx   ?+1
+	.nidx   .p4:0   ?+1
+	# Get [strlen]. If [str]=0 or [strlen]<=[stridx], set [strlen]=0.
+	.str    .z      .len0
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
 	.p3     .p3     ?+1
 	.p3     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p3:0   ?+1
-	.padchr .padchr ?+1
-	.padchr .tmp    ?+1
+	.strlen .strlen ?+1
+	.strlen .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .nidx   ?+1
+	.strlen .tmp    .len0
+	.strlen .z-1    ?+4
+.len0:
+	.strlen .strlen ?+1
+	# Get retidx.
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
+	# Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg6:6 ?+1
+	.p6     .p6     ?+1
+	.p6     .tmp    ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .p6:0   ?+1
+	.num    .num    ?+1
+	.num    .nnum   ?+1
 	# Get [base].
 	.tmp    .tmp    ?+1
-	.tmp    .arg3:3 ?+1
-	.p1     .p1     ?+1
-	.p1     .tmp    ?+1
+	.tmp    .arg7:7 ?+1
+	.p7     .p7     ?+1
+	.p7     .tmp    ?+1
 	.nbase  .nbase  ?+1
-	.nbase  .p1:0   ?+1
+	.nbase  .p7:0   ?+1
+	# Set string pointers.
+	.nidx   .str    ?+1
+	.str0   .str0   ?+1
+	.str0   .nidx   ?+1
+	.str1   .str1   ?+1
+	.str1   .nidx   ?+1
+	.str2   .str2   ?+1
+	.str2   .nidx   ?+1
+	.wret   .wret   ?+1
+	# Make sure [base] <= 16.
+	.nbase  .z      .base0loop
 	.base   .base   ?+1
 	.base   .nbase  ?+1
-	.nbase  .base   ?+1
-	# Make sure 1 <= [base] <= 16.
-	.base   .z      ?+7
-	.base   .z+1    .unary
-	.base   .mxbase .notunary
-	0-1     0       ?-2
-.unary:
-	# [base] = 1. Print 1's like hash marks.
-	# Pad while [pad] > [num].
-	.pad    .num    .unarypaddone
-	0-2     .padchr ?+1
-	.pad    .z+1    .unarypaddone
-	0-2     .padchr ?-5
-.unarypaddone:
-	# Print 1's while [num] > 0.
+	.base   .nbase  ?+1
+	.nbase  .n17    .ret
+	.nbase  .z15    .base1skip
+.base1loop:
+	# [base] = 1. Print hash marks.
 	.num    .z      .ret
-	0-2     .hex+2  ?+1
+	.wret   .wretb1 ?+4
 	.num    .z+1    .ret
-	0-2     .hex+2  ?-5
-.notunary:
+	.nchar  .hex+2  .write
+.base0loop:
+	# [base] = 0. [char]=[num].
+	.wret   .wretb0 ?+1
+	.nchar  .num    .write
+.base1skip:
 	# Calculate the most significant digit and how many digits are in [num].
+	.nbase  .nbase  ?+1
+	.nbase  .base   ?+1
 	.den    .den    ?+1
-	.lden   .lden   ?+1
-	.base   .base   ?+1
-	.base   .nbase  ?+1
+	.den    .z-1    ?+1
 	.chr    .chr    ?+1
 	.chr    .z-1    ?+1
-.firstloop:
+.msdloop:
 	.digits .z-1    ?+1
-	# num-=den
 	.chr    .base   ?+1
-	.num    .den   .firstdone
-	.num    .z+1    ?+1
-	.chr    .z-2    ?-8
-	# den=base*lden-1
-	.lden   .lden   ?+1
-	.lden   .den    ?+1
+	# Loop: num -= den
+	.num    .den    .msddone
+	.chr    .z-2    ?-5
+	# den = den*base
+	.nden   .nden   ?+1
+	.nden   .den    ?+1
 	.den    .den    ?+1
 	.den    .nnum   ?+1
 	.den    .num    ?+1
-	.den    .z+1    ?+1
 	.num    .num    ?+1
-	.num    .nnum   .firstloop
-.firstdone:
-	# Print padding.
-	.pad    .digits ?+10
-	0-2     .padchr ?+1
-	.pad    .z+1    ?+4
-	0-2     .padchr ?-5
-	# Correct [num], [base], and [den].
-	.chr    .nbase  ?+1
-	.base   .z+2    ?+1
+	.num    .nnum   .msdloop
+.msddone:
+	# num += den if num>0. If the original [num]=0, skip any correction.
+	.nnum   .z      .nextloop-6
 	.tmp    .tmp    ?+1
-	.tmp    .den    ?+1
-	.num    .tmp    ?+1
+	.num    .z      ?+4
+	.tmp    .den    ?+4
+	.chr    .z-2    ?+4
+	.num    .tmp    .msdloop+12
 	.den    .den    ?+1
-	.den    .lden   .printdigit
+	.den    .nden   ?+1
+	.base   .z+2    ?+1
+	.chr    .nbase  ?+1
+	.wret   .wret0  .nextwrite
 .nextloop:
-	# num=num*base
+	.digits .z+1    .ret
+	# digit = num/den
+	.chr    .chr    ?+1
+	.num    .den    ?+4
+	.chr    .z-2    ?-5
+	# num = num*base
+	.num    .z      ?+7
+	.num    .nden   ?+1
+	.nnum   .nnum   ?+4
+	.chr    .z-2    ?-5
 	.z+1    .base   ?+1
-	.num    .lden   ?+1
-	.nnum   .nnum   ?+1
 	.nnum   .num    ?+1
 	.num    .nnum   ?+1
 	.z+1    .z-2    ?-5
-.printdigit:
-	# Print a digit.
+.nextwrite:
+	# Write a digit.
 	.chr    .nhex   ?+1
-	0-2     .chr:0  ?+1
-	.digits .z+1    .ret
-	# digit=num/den
-	.chr    .chr    ?+1
-	.num    .den    .nextloop
-	.num    .z+1    ?+1
-	.chr    .z-2    ?-8
+	.nchar  .chr:0  .write
+.write:
+	# Mini function to write a character to the string.
+	.strlen .z+1    .writeskip
+	.str0:0 .str1:0 ?+1
+	.str2:0 .nchar  ?+1
+	.str2   .z-1    ?+1
+	.str1   .z-1    ?+4
+.writeskip:
+	.strlen .strlen ?+1
+	.str0   .z-1    ?+1
+	.nchar  .nchar  .wret:0
 .ret:
-	0       0       .arg6:6
+	# return [retidx] = [str0] - [str]
+	.str0   .ret0:0 ?+1
+	.str    .str0   ?+1
+	.ret1:0 .str    ?+1
+	0       0       .arg8:8
 	# Variables
 	0-2 0-1 .z:0 1 2
+	.n17:0-17
+	.z15:15
 	.tmp:0
 	.nnum:0
 	.num:0
-	.mxbase:16-1
 	.nbase:0
 	.base:0
-	.pad:0
-	.padchr:32
 	.digits:0
 	.den:0
-	.lden:0
+	.nden:0
+	.nchar:0
+	.nidx:0
+	.strlen:0
+	.str:0
 	.hex:
 		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
 		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
 	.nhex:0-.hex
+	.wretb0:0-.ret
+	.wretb1:0-.base1loop-6
+	.wret0:0-.nextloop
+
+
+uint.readstring:
+	# Call  : 0 ? uint.readstring str strlen stridx retidx retnum base
+	#
+	# Effect: Converts a string into an unsigned integer.
+	#       : [base] <= 36
+	#       : [retnum] = return value.
+	#       : The first character is read from [str]+[stridx].
+	#       : The function does not read after [str]+[strlen]-1 or if [str]=0,
+	#       : but [retidx] will still be updated.
+	#       : [retidx] = [stridx] + (number of read characters)
+	#       : If retidx=0, then [retidx] is not written to.
+	#
+	# Time  : Base = 1: 94 + 19*MOD
+	#       : Base > 1: 112 + (17 + 2*base)*digits = 1456
+	#       : digits = ceil(ln(MOD)/ln(base))
+	#
+	# Use [0] to get the calling address.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	.tmp    .z-2    ?+1
+	0       .tmp    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	.arg6   0       ?+1
+	.arg7   0       ?+1
+	.arg8   0       ?+1
+	0       0       ?+1
+	# Get [str].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.p2     .p2     ?+1
+	.p2     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p2:0   ?+1
+	.str    .str    ?+1
+	.str    .tmp    ?+1
+	# Get [stridx].
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p4:0   ?+1
+	.stridx .stridx ?+1
+	.stridx .tmp    ?+1
+	# Set string pointers.
+	.tmp    .str    ?+1
+	.str0   .str0   ?+1
+	.str0   .tmp    ?+1
+	# Get retidx.
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
+	# Get retnum.
+	.tmp    .tmp    ?+1
+	.tmp    .arg6:6 ?+1
+	.ret2   .ret2   ?+1
+	.ret2   .tmp    ?+1
+	.ret3   .ret3   ?+1
+	.ret3   .tmp    ?+1
+	.num    .num    ?+1
+	# Get [strlen]. If [str]=0 or [strlen]<=[stridx], return.
+	.str    .z      .ret+3
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p3     .p3     ?+1
+	.p3     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p3:0   ?+1
+	.strlen .strlen ?+1
+	.strlen .tmp    ?+1
+	.strlen .stridx .ret+3
+	.strlen .z-1    ?+1
+	# Get [base].
+	.tmp    .tmp    ?+1
+	.tmp    .arg7:7 ?+1
+	.p7     .p7     ?+1
+	.p7     .tmp    ?+1
+	.nbase  .nbase  ?+1
+	.nbase  .p7:0   ?+1
+	# Make sure [base] <= 36.
+	.rret   .rret   ?+1
+	.nbase  .z      .base0loop
+	.base   .base   .base0skip
+.base0loop:
+	.rret   .rret0  ?+1
+	.char   .char   .read
+	.num    .nchar  .ret+3
+.base0skip:
+	# [max]=[base]-1. If [base]=1, we allow [char] to be 0 or 1.
+	.max    .max    ?+1
+	.nbase  .z-2    ?+4
+	.max    .z-1    .whiteloop
+	.nbase  .z+1    ?+1
+	.base   .nbase  ?+1
+	.base   .nbase  ?+1
+	.max    .nbase  ?+1
+	.nbase  .n36    .ret+3
+	# Read whitespace
+.whiteloop:
+	.rret   .rret1  ?+1
+	.char   .char   .read
+	.char   .z32    ?-5
+	.char   .n32    ?+1
+	.rret   .rret2  ?+1
+.parseloop:
+	# [char] >= 'a'
+	.char   .ca1    ?+4
+	.char   .n9     .parsedone
+	.char   .nca1   ?+1
+	# [char] >= 'A'
+	.char   .cA1    ?+4
+	.char   .n9     .parsedone
+	.char   .ncA1   ?+1
+	# [char] >= '0'
+	.nchar  .nc91   .ret
+	.char   .c01    .ret
+	.char   .z+1    ?+1
+.parsedone:
+	# If [char] >= [max], abort.
+	.nchar  .nchar  ?+1
+	.nchar  .char   ?+1
+	.char   .max    ?+4
+	.str    .z-1    .ret+3
+	# num += num*(base-1)
+	.z+1    .base   ?+4
+	.tmp    .tmp    ?+13
+	.tmp    .tmp    ?+1
+	.tmp    .num    ?+1
+	.num    .tmp    ?+1
+	.z+1    .z-2    ?-5
+	# num += char
+	.num    .nchar  ?+1
+	.char   .char   .read
+.read:
+	# Mini function to read a character from the string.
+	.strlen .z+1    .ret+3
+	.nchar  .nchar  ?+1
+	.nchar  .str0:0 ?+1
+	.char   .nchar  ?+1
+	.str0   .z-1    .rret:0
+.ret:
+	# return [retidx] = [str0] - [str]
+	.str0   .z+1    ?+1
+	.str0   .ret0:0 ?+1
+	.str    .str0   ?+1
+	.ret1:0 .str    ?+1
+	# return [retnum]
+	.tmp    .tmp    ?+1
+	.num    .ret2:0 ?+1
+	.tmp    .num    ?+1
+	.ret3:0 .tmp    ?+1
+	0       0       .arg8:8
+	# Variables
+	0-2 0-1 .z:0 1 2
+	.n36:0-36
+	.n32:0-32
+	.n9:0-9
+	.z32:32
+	.tmp:0
+	.num:0
+	.nbase:0
+	.base:0
+	.nchar:0
+	.char:0
+	.max:0
+	.str:0
+	.strlen:0
+	.stridx:0
+	.rret0:0-.base0loop-6
+	.rret1:0-.whiteloop-6
+	.rret2:.whiteloop+6-.parseloop
+	.ca1: 97-1    # a-1
+	.nca1:1-97    # 1-a
+	.cA1: 65-1    # A-1
+	.ncA1:1-65    # 1-A
+	.c01: 48-1    # 0-1
+	.nc91:0-57-1  # 1-9
+
 
 
 #---------------------------------------------------------------------------------
@@ -1935,7 +2244,7 @@ uint.xor:
 #|==============================================================================
 
 
-Signed Integer Operations - v2.01
+Signed Integer Operations - v2.02
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -1945,15 +2254,15 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-int.unl provides functions for performing the signed integer operations that
-uint.unl doesn't cover.
+int.sico provides functions for performing the signed integer operations that
+uint.sico doesn't cover.
 
-If unileq's underlying integers are mod N, then we consider an integer to be
+If SICO's underlying integers are mod N, then we consider an integer to be
 negative if x >= floor((N+1)/2). The negative value of x is x' = x - N.
 
-Unileq typically uses integers modulo 2^64. However, string printing, integer
-arithmetic, and comparisons will work with any modulo. Bitwise functions, on
-the other hand, require integers modulo 2^n.
+SICO typically uses integers modulo 2^64. However: string, integer arithmetic,
+and comparison functions will work with any modulo. Bitwise functions, on the
+other hand, require integers modulo 2^n.
 
 The 0 address will always be 0 upon function return, even if one of the return
 value addresses is 0.
@@ -1966,7 +2275,8 @@ Worst case time complexity:
        Function  |    Complexity     |  Instructions
                  |                   |   (64 bits)
      ------------+-------------------+----------------
-         print   |  --               |       --
+         write   |  --               |     2317
+         read    |  --               |     1472
           cmp    |  37               |       37
           min    |  43               |       43
           max    |  43               |       43
@@ -1981,7 +2291,8 @@ Index
 
 
 Strings
-int.print [num] [base] [padding] [padchar] [sign]
+int.writestring [str] [strlen] [stridx] retidx [num] [base] [sign]
+int.readstring  [str] [strlen] [stridx] retidx retnum [base] [sign]
 
 Comparisons
 int.cmp [a] [b] lt eq gt
@@ -2018,6 +2329,9 @@ Version History
      int.div is 30% faster and int.mul is 1% faster.
 2.01
      Updated comments.
+2.02
+     Replaced int.print with int.writestring.
+     Added int.readstring.
 
 
 --------------------------------------------------------------------------------
@@ -2035,11 +2349,26 @@ Optimize comparison functions.
 # Strings
 
 
-int.print:
-	# Call  : 0 ? int.print num base padding padchar sign
+int.writestring:
+	# Call  : 0 ? int.writestring str strlen stridx retidx num base sign
 	#
-	# Effect: Prints a signed number in an arbitrary base. If the padding
-	# character is whitespace, print the sign after padding.
+	# Effect: Writes an unsigned integer to a string.
+	#       : [base] <= 16
+	#       : The first character is written to [str]+[stridx].
+	#       : The function does not write after [str]+[strlen]-1 or if [str]=0,
+	#       : but [retidx] will still be updated.
+	#       : [retidx] = [stridx] + (length of the integer string)
+	#       : If [retidx]>[strlen], then the string needs to be resized.
+	#       : If retidx=0, then [retidx] is not written to.
+	#       : If [sign]!=0, a plus sign will be printed for integers >= 0.
+	#       : Base = 0: c0*0^0 + c1*0^1 + c2*0^2 + ... = c0
+	#       : Base = 1: c0*1^0 + c1*1^1 + c2*1^2 + ... = hash marks
+	#       : Base > 1: regular number
+	#
+	# Time  : Base = 0: 83
+	#       : Base = 1: 92 + 9*MOD
+	#       : Base > 1: 77 + (23 + 6*base)*digits = 2317
+	#       : digits = ceil(ln(MOD)/ln(base))
 	#
 	# Use [0] to get the calling address.
 	.tmp    .tmp    ?+1
@@ -2052,178 +2381,412 @@ int.print:
 	.arg5   0       ?+1
 	.arg6   0       ?+1
 	.arg7   0       ?+1
-	# Get [num].
+	.arg8   0       ?+1
+	.arg9   0       ?+1
+	0       0       ?+1
+	# Get [str].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
-	.p0     .p0     ?+1
-	.p0     .tmp    ?+1
-	.nnum   .nnum   ?+1
-	.nnum   .p0:0   ?+1
-	.num    .num    ?+1
-	.num    .nnum   ?+1
-	# Check if [num] < 0.
-	.nnum   .z+1    ?+1
-	.num    .nnum   .notneg
-	# Set [nnum] = [num].
-	.tmp    .tmp    ?+1
-	.tmp    .num    ?+1
-	.nnum   .tmp    ?+1
-	.sign   .nneg   .isneg
-.notneg:
-	.nnum   .z-1    ?+1
-	# Load [sign].
-	.tmp    .tmp    ?+1
-	.tmp    .arg6:6 ?+1
-	.p4     .p4     ?+1
-	.p4     .tmp    ?+1
-	.p4:0   .z      .isneg
-	.sign   .nplus  ?+1
-.isneg:
-	.num    .num    ?+1
-	.num    .nnum   ?+1
-	# Get [pad].
-	.tmp    .tmp    ?+1
-	.tmp    .arg4:4 ?+1
 	.p2     .p2     ?+1
 	.p2     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p2:0   ?+1
-	.pad    .pad    ?+1
-	.pad    .tmp    ?+1
-	# Get [padchr].
+	.str    .str    ?+1
+	.str    .tmp    ?+1
+	# Get [stridx].
 	.tmp    .tmp    ?+1
-	.tmp    .arg5:5 ?+1
+	.tmp    .arg4:4 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.nidx   .nidx   ?+1
+	.nidx   .p4:0   ?+1
+	# Get [strlen]. If [str]=0 or [strlen]<=[stridx], set [strlen]=0.
+	.str    .z      .len0
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
 	.p3     .p3     ?+1
 	.p3     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p3:0   ?+1
-	.padchr .padchr ?+1
-	.padchr .tmp    ?+1
-	# If [padchr] is not whitespace, print [sign] before padding.
-	.sign   .z      .nosign
-	.pad    .z      ?+4
-	.pad    .z+1    ?+1
-	.padchr .white  ?+7
-	0-2     .sign   ?+1
-	.sign   .sign   ?+1
-	.padchr .nwhite ?+1
-.nosign:
+	.strlen .strlen ?+1
+	.strlen .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .nidx   ?+1
+	.strlen .tmp    .len0
+	.strlen .z-1    ?+4
+.len0:
+	.strlen .strlen ?+1
+	# Get retidx.
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
+	# Get [num].
+	.tmp    .tmp    ?+1
+	.tmp    .arg6:6 ?+1
+	.p6     .p6     ?+1
+	.p6     .tmp    ?+1
+	.nnum   .nnum   ?+1
+	.nnum   .p6:0   ?+1
+	.num    .num    ?+1
+	.num    .nnum   ?+1
 	# Get [base].
 	.tmp    .tmp    ?+1
-	.tmp    .arg3:3 ?+1
-	.p1     .p1     ?+1
-	.p1     .tmp    ?+1
+	.tmp    .arg7:7 ?+1
+	.p7     .p7     ?+1
+	.p7     .tmp    ?+1
 	.nbase  .nbase  ?+1
-	.nbase  .p1:0   ?+1
+	.nbase  .p7:0   ?+1
+	# Set string pointers.
+	.nidx   .str    ?+1
+	.str0   .str0   ?+1
+	.str0   .nidx   ?+1
+	.str1   .str1   ?+1
+	.str1   .nidx   ?+1
+	.str2   .str2   ?+1
+	.str2   .nidx   ?+1
+	.wret   .wret   ?+1
+	# Make sure [base] <= 16.
+	.nbase  .z      .base0loop
 	.base   .base   ?+1
 	.base   .nbase  ?+1
-	.nbase  .base   ?+1
-	# Make sure 1 <= [base] <= 16.
-	.base   .z      ?+7
-	.base   .z+1    .unary
-	.base   .mxbase .notunary
-	0-1     0       ?-2
-.unary:
-	# [base] = 1. Print 1's like hash marks.
-	# Pad while [pad] > [num].
-	.pad    .num    .unarypaddone
-	0-2     .padchr ?+1
-	.pad    .z+1    .unarypaddone
-	0-2     .padchr ?-5
-.unarypaddone:
-	# Print the sign if we haven't yet.
-	.sign   .z      ?+7
-	0-2     .sign   ?+1
-	.sign   .sign   ?+1
-	# Print 1's while [num] > 0.
+	.base   .nbase  ?+1
+	.nbase  .n17    .ret
+	# Check if [num] < 0.
+	.wret   .wret0  ?+1
+	.nnum   .z+1    ?+1
+	.num    .nnum   .notneg
+	# [num] < 0. Set [nnum] = [num].
+	.tmp    .tmp    ?+1
+	.tmp    .num    ?+1
+	.nnum   .tmp    ?+1
+	.nchar  .minus  .write
+.notneg:
+	.nnum   .z-1    ?+1
+	# Get [sign].
+	.tmp    .tmp    ?+1
+	.tmp    .arg8:8 ?+1
+	.p8     .p8     ?+1
+	.p8     .tmp    ?+1
+	.p8:0   .z      .isneg
+	.nchar  .plus   .write
+.isneg:
+	.num    .num    ?+1
+	.num    .nnum   ?+1
+	.nbase  .z15    .base1skip
+.base1loop:
+	# [base] = 1. Print hash marks.
 	.num    .z      .ret
-	0-2     .hex+2  ?+1
+	.wret   .wretb1 ?+4
 	.num    .z+1    .ret
-	0-2     .hex+2  ?-5
-.notunary:
+	.nchar  .hex+2  .write
+.base0loop:
+	# [base] = 0. [char]=[num].
+	.wret   .wretb0 ?+1
+	.nchar  .num    .write
+.base1skip:
 	# Calculate the most significant digit and how many digits are in [num].
+	.nbase  .nbase  ?+1
+	.nbase  .base   ?+1
 	.den    .den    ?+1
-	.lden   .lden   ?+1
-	.base   .base   ?+1
-	.base   .nbase  ?+1
+	.den    .z-1    ?+1
 	.chr    .chr    ?+1
 	.chr    .z-1    ?+1
-.firstloop:
+.msdloop:
 	.digits .z-1    ?+1
-	# num-=den
 	.chr    .base   ?+1
-	.num    .den   .firstdone
-	.num    .z+1    ?+1
-	.chr    .z-2    ?-8
-	# den=base*lden-1
-	.lden   .lden   ?+1
-	.lden   .den    ?+1
+	# Loop: num -= den
+	.num    .den    .msddone
+	.chr    .z-2    ?-5
+	# den = den*base
+	.nden   .nden   ?+1
+	.nden   .den    ?+1
 	.den    .den    ?+1
 	.den    .nnum   ?+1
 	.den    .num    ?+1
-	.den    .z+1    ?+1
 	.num    .num    ?+1
-	.num    .nnum   .firstloop
-.firstdone:
-	# Print padding.
-	.pad    .digits ?+10
-	0-2     .padchr ?+1
-	.pad    .z+1    ?+4
-	0-2     .padchr ?-5
-	# Print the sign if we haven't yet.
-	.sign   .z      ?+7
-	0-2     .sign   ?+1
-	.sign   .sign   ?+1
-	# Correct [num], [base], and [den].
-	.chr    .nbase  ?+1
-	.base   .z+2    ?+1
+	.num    .nnum   .msdloop
+.msddone:
+	# num += den if num>0. If the original [num]=0, skip any correction.
+	.nnum   .z      .nextloop-6
 	.tmp    .tmp    ?+1
-	.tmp    .den    ?+1
-	.num    .tmp    ?+1
+	.num    .z      ?+4
+	.tmp    .den    ?+4
+	.chr    .z-2    ?+4
+	.num    .tmp    .msdloop+12
 	.den    .den    ?+1
-	.den    .lden   .printdigit
+	.den    .nden   ?+1
+	.base   .z+2    ?+1
+	.chr    .nbase  ?+1
+	.wret   .wret1  .nextwrite
 .nextloop:
-	# num=num*base
+	.digits .z+1    .ret
+	# digit = num/den
+	.chr    .chr    ?+1
+	.num    .den    ?+4
+	.chr    .z-2    ?-5
+	# num = num*base
+	.num    .z      ?+7
+	.num    .nden   ?+1
+	.nnum   .nnum   ?+4
+	.chr    .z-2    ?-5
 	.z+1    .base   ?+1
-	.num    .lden   ?+1
-	.nnum   .nnum   ?+1
 	.nnum   .num    ?+1
 	.num    .nnum   ?+1
 	.z+1    .z-2    ?-5
-.printdigit:
-	# Print a digit.
+.nextwrite:
+	# Write a digit.
 	.chr    .nhex   ?+1
-	0-2     .chr:0  ?+1
-	.digits .z+1    .ret
-	# digit=num/den
-	.chr    .chr    ?+1
-	.num    .den    .nextloop
-	.num    .z+1    ?+1
-	.chr    .z-2    ?-8
+	.nchar  .chr:0  .write
+.write:
+	# Mini function to write a character to the string.
+	.strlen .z+1    .writeskip
+	.str0:0 .str1:0 ?+1
+	.str2:0 .nchar  ?+1
+	.str2   .z-1    ?+1
+	.str1   .z-1    ?+4
+.writeskip:
+	.strlen .strlen ?+1
+	.str0   .z-1    ?+1
+	.nchar  .nchar  .wret:0
 .ret:
-	0       0       .arg7:7
+	# return [retidx] = [str0] - [str]
+	.str0   .ret0:0 ?+1
+	.str    .str0   ?+1
+	.ret1:0 .str    ?+1
+	0       0       .arg9:9
 	# Variables
 	0-2 0-1 .z:0 1 2
+	.n17:0-17
+	.z15:15
+	.tmp:0
 	.nnum:0
 	.num:0
-	.mxbase:16-1
 	.nbase:0
 	.base:0
-	.pad:0
-	.padchr:32
 	.digits:0
-	.tmp:0
 	.den:0
-	.lden:0
-	.white:32
-	.nwhite:0-32
-	.sign:0
-	.nplus:0-43
-	.nneg:0-45
+	.nden:0
+	.nchar:0
+	.nidx:0
+	.strlen:0
+	.str:0
+	.plus:43
+	.minus:45
 	.hex:
 		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
 		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
 	.nhex:0-.hex
+	.wret0:0-.isneg
+	.wret1:.isneg-.nextloop
+	.wretb0:0-.ret
+	.wretb1:.isneg-.base1loop-6
+
+
+int.readstring:
+	# Call  : 0 ? int.readstring str strlen stridx retidx retnum base
+	#
+	# Effect: Converts a string into a signed integer.
+	#       : [base] <= 36
+	#       : [retnum] = return value.
+	#       : The first character is read from [str]+[stridx].
+	#       : The function does not read after [str]+[strlen]-1 or if [str]=0,
+	#       : but [retidx] will still be updated.
+	#       : [retidx] = [stridx] + (number of read characters)
+	#       : If retidx=0, then [retidx] is not written to.
+	#
+	# Time  : Base = 1: 110 + 19*MOD
+	#       : Base > 1: 128 + (17 + 2*base)*digits = 1472
+	#       : digits = ceil(ln(MOD)/ln(base))
+	#
+	# Use [0] to get the calling address.
+	.tmp    .tmp    ?+1
+	.tmp    .arg2   ?+1
+	.tmp    .z-2    ?+1
+	0       .tmp    ?+1
+	.arg2   0       ?+1
+	.arg3   0       ?+1
+	.arg4   0       ?+1
+	.arg5   0       ?+1
+	.arg6   0       ?+1
+	.arg7   0       ?+1
+	.arg8   0       ?+1
+	0       0       ?+1
+	# Get [str].
+	.tmp    .tmp    ?+1
+	.tmp    .arg2:2 ?+1
+	.p2     .p2     ?+1
+	.p2     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p2:0   ?+1
+	.str    .str    ?+1
+	.str    .tmp    ?+1
+	# Get [stridx].
+	.tmp    .tmp    ?+1
+	.tmp    .arg4:4 ?+1
+	.p4     .p4     ?+1
+	.p4     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p4:0   ?+1
+	.stridx .stridx ?+1
+	.stridx .tmp    ?+1
+	# Set string pointers.
+	.tmp    .str    ?+1
+	.str0   .str0   ?+1
+	.str0   .tmp    ?+1
+	# Get retidx.
+	.tmp    .tmp    ?+1
+	.tmp    .arg5:5 ?+1
+	.ret0   .ret0   ?+1
+	.ret0   .tmp    ?+1
+	.ret1   .ret1   ?+1
+	.ret1   .tmp    ?+1
+	# Get retnum.
+	.tmp    .tmp    ?+1
+	.tmp    .arg6:6 ?+1
+	.ret2   .ret2   ?+1
+	.ret2   .tmp    ?+1
+	.ret3   .ret3   ?+1
+	.ret3   .tmp    ?+1
+	.num    .num    ?+1
+	# Get [strlen]. If [str]=0 or [strlen]<=[stridx], return.
+	.str    .z      .ret+3
+	.tmp    .tmp    ?+1
+	.tmp    .arg3:3 ?+1
+	.p3     .p3     ?+1
+	.p3     .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .p3:0   ?+1
+	.strlen .strlen ?+1
+	.strlen .tmp    ?+1
+	.strlen .stridx .ret+3
+	.strlen .z-1    ?+1
+	# Get [base].
+	.tmp    .tmp    ?+1
+	.tmp    .arg7:7 ?+1
+	.p7     .p7     ?+1
+	.p7     .tmp    ?+1
+	.nbase  .nbase  ?+1
+	.nbase  .p7:0   ?+1
+	# Make sure [base] <= 36.
+	.rret   .rret   ?+1
+	.nbase  .z      .base0loop
+	.base   .base   .base0skip
+.base0loop:
+	.rret   .rret0  ?+1
+	.char   .char   .read
+	.num    .nchar  .ret+3
+.base0skip:
+	# [max]=[base]-1. If [base]=1, we allow [char] to be 0 or 1.
+	.max    .max    ?+1
+	.nbase  .z-2    ?+4
+	.max    .z-1    .whiteloop
+	.nbase  .z+1    ?+1
+	.base   .nbase  ?+1
+	.base   .nbase  ?+1
+	.max    .nbase  ?+1
+	.nbase  .n36    .ret+3
+	# Read whitespace
+.whiteloop:
+	.rret   .rret1  ?+1
+	.char   .char   .read
+	.char   .z32    ?-5
+	# Read any +- sign.
+	.rret   .rret2  ?+1
+	.char   .plus   ?+1
+	.char   .z      .read
+	.isneg  .z-1    ?+1
+	.char   .minus  ?+1
+	.char   .z      .read
+	.isneg  .z+1    ?+1
+	.char   .signc  ?+1
+.signdone:
+	.rret   .rret3  ?+1
+.parseloop:
+	# [char] >= 'a'
+	.char   .ca1    ?+4
+	.char   .n9     .parsedone
+	.char   .nca1   ?+1
+	# [char] >= 'A'
+	.char   .cA1    ?+4
+	.char   .n9     .parsedone
+	.char   .ncA1   ?+1
+	# [char] >= '0'
+	.nchar  .nc91   .ret
+	.char   .c01    .ret
+	.char   .z+1    ?+1
+.parsedone:
+	# If [char] >= [max], abort.
+	.nchar  .nchar  ?+1
+	.nchar  .char   ?+1
+	.char   .max    ?+4
+	.str    .z-1    .ret+3
+	# num += num*(base-1)
+	.z+1    .base   ?+4
+	.tmp    .tmp    ?+13
+	.tmp    .tmp    ?+1
+	.tmp    .num    ?+1
+	.num    .tmp    ?+1
+	.z+1    .z-2    ?-5
+	# num += char
+	.num    .nchar  ?+1
+	.char   .char   .read
+.read:
+	# Mini function to read a character from the string.
+	.strlen .z+1    .ret+3
+	.nchar  .nchar  ?+1
+	.nchar  .str0:0 ?+1
+	.char   .nchar  ?+1
+	.str0   .z-1    .rret:0
+.ret:
+	# return [retidx] = [str0] - [str]
+	.str0   .z+1    ?+1
+	.str0   .ret0:0 ?+1
+	.str    .str0   ?+1
+	.ret1:0 .str    ?+1
+	# return [retnum]
+	.isneg  .z      ?+10
+	.isneg  .isneg  ?+1
+	.isneg  .num    ?+1
+	.num    .num    ?+1
+	.tmp    .tmp    ?+1
+	.num    .ret2:0 ?+1
+	.tmp    .num    ?+1
+	.tmp    .isneg  ?+1
+	.isneg  .isneg  ?+1
+	.ret3:0 .tmp    ?+1
+	0       0       .arg8:8
+	# Variables
+	0-2 0-1 .z:0 1 2
+	.n36:0-36
+	.n9:0-9
+	.z32:32
+	.plus: 43-32  # '+' - ' '
+	.minus:45-43  # '-' - '+'
+	.signc: 0-45  #     - '-'
+	.tmp:0
+	.num:0
+	.isneg:0
+	.nbase:0
+	.base:0
+	.nchar:0
+	.char:0
+	.max:0
+	.str:0
+	.strlen:0
+	.stridx:0
+	.rret0:0-.base0loop-6
+	.rret1:0-.whiteloop-6
+	.rret2:.whiteloop+6-.signdone
+	.rret3:.signdone-.parseloop
+	.ca1: 97-1    # a-1
+	.nca1:1-97    # 1-a
+	.cA1: 65-1    # A-1
+	.ncA1:1-65    # 1-A
+	.c01: 48-1    # 0-1
+	.nc91:0-57-1  # 1-9
 
 
 #---------------------------------------------------------------------------------
@@ -2921,7 +3484,6 @@ int.div:
 	0       0       .arg6:6
 .divz:
 	# Division by 0. Abort.
-	0       0       ?+1
 	0-1     0       ?-2
 	# Variables
 	0-2 0-1 .z:0 1
@@ -3055,7 +3617,7 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-random.unl provides functions for generating uniform random numbers.
+random.sico provides functions for generating uniform random numbers.
 
 
 --------------------------------------------------------------------------------
@@ -3662,7 +4224,7 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-memory.unl handles common memory management functions. If it is concatenated
+memory.sico handles common memory management functions. If it is concatenated
 with other files, it must be included last for memory allocation to work.
 
 

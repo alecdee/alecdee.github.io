@@ -11,7 +11,7 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-memory.unl handles common memory management functions. If it is concatenated
+memory.sico handles common memory management functions. If it is concatenated
 with other files, it must be included last for memory allocation to work.
 
 

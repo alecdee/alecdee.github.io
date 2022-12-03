@@ -17,28 +17,28 @@ TODO
 /* jshint curly: true    */
 
 
-function UnlInitEditor() {
-	var runbutton=document.getElementById("unileq_run");
-	var resetbutton=document.getElementById("unileq_reset");
-	var input=document.getElementById("unileq_editor");
-	var output=document.getElementById("unileq_output");
-	var graphics=document.getElementById("unileq_canvas");
-	var select=document.getElementById("unileq_demo");
-	var advanced=document.getElementById("unileq_advanced");
-	var menu=document.getElementById("unileq_menu");
-	var keygrab=document.getElementById("unileq_keyboard");
-	var unl=UnlCreate(output,graphics);
+function SicoInitEditor() {
+	var runbutton=document.getElementById("sico_run");
+	var resetbutton=document.getElementById("sico_reset");
+	var input=document.getElementById("sico_editor");
+	var output=document.getElementById("sico_output");
+	var graphics=document.getElementById("sico_canvas");
+	var select=document.getElementById("sico_demo");
+	var advanced=document.getElementById("sico_advanced");
+	var menu=document.getElementById("sico_menu");
+	var keygrab=document.getElementById("sico_keyboard");
+	var sico=SicoCreate(output,graphics);
 	var running=0;
 	function update() {
-		// Our main event loop. Run the main unileq loop for 15ms and queue the next
+		// Our main event loop. Run the main SICO loop for 15ms and queue the next
 		// update for 12ms in the future. This will give the browser time to handle events
-		// and spend most of our time executing unileq instructions.
+		// and spend most of our time executing SICO instructions.
 		var runtext;
-		if (unl.state!==UNL_RUNNING) {
+		if (sico.state!==SICO_RUNNING) {
 			running=0;
 			runtext="&#9654;&nbsp;&nbsp;&nbsp;Run";
-			if (unl.state!==UNL_COMPLETE) {
-				unl.Print(unl.statestr);
+			if (sico.state!==SICO_COMPLETE) {
+				sico.Print(sico.statestr);
 			}
 		} else if (running===1) {
 			// There's no good unicode character for a pause button, so use 2 vertical bars
@@ -53,15 +53,15 @@ function UnlInitEditor() {
 		if (running===1) {
 			// Put the next update on the event queue before running our main loop.
 			setTimeout(update,12);
-			unl.Run(performance.now()+15);
+			sico.Run(performance.now()+15);
 		}
 	}
 	// Setup the run button.
 	runbutton.onclick=function() {
-		if (unl.state===UNL_RUNNING) {
+		if (sico.state===SICO_RUNNING) {
 			running=1-running;
 		} else {
-			unl.ParseAssembly(input.value);
+			sico.ParseAssembly(input.value);
 			running=1;
 		}
 		if (running===1) {
@@ -73,7 +73,7 @@ function UnlInitEditor() {
 	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Run";
 	// Setup the reset button.
 	resetbutton.onclick=function() {
-		unl.Clear();
+		sico.Clear();
 		running=0;
 		setTimeout(update,0);
 	};
@@ -118,16 +118,16 @@ function UnlInitEditor() {
 		var xhr=new XMLHttpRequest();
 		xhr.onreadystatechange=function(){
 			if (xhr.readyState===4) {
-				unl.Clear();
+				sico.Clear();
 				running=0;
 				setTimeout(update,0);
 				if (xhr.status===200) {
 					var name=path.split("/");
 					input.value=xhr.response;
-					unl.Print("Loaded "+name[name.length-1]+"\n");
+					sico.Print("Loaded "+name[name.length-1]+"\n");
 					updatetext();
 				} else {
-					unl.Print("Unable to open "+path+"\n");
+					sico.Print("Unable to open "+path+"\n");
 				}
 			}
 		};
@@ -137,7 +137,7 @@ function UnlInitEditor() {
 	// Setup the example select menu.
 	select.onchange=function() {
 		if (select.value==="") {
-			unl.Clear();
+			sico.Clear();
 			input.value="";
 			updatetext();
 		} else {
@@ -161,7 +161,7 @@ function UnlInitEditor() {
 				}
 			}
 		} else if (type==="source") {
-			unl.Clear();
+			sico.Clear();
 			input.value=arg;
 		}
 	}
@@ -222,7 +222,7 @@ function UnlInitEditor() {
 	};
 	var updatetext=function() {
 		updateposition();
-		highlight.innerHTML=UnlHighlightScroll(input);
+		highlight.innerHTML=SicoHighlightScroll(input);
 	};
 	new ResizeObserver(updatetext).observe(input);
 	input.oninput=updatetext;
@@ -230,7 +230,7 @@ function UnlInitEditor() {
 	updatetext();
 }
 
-function UnlHighlightScroll(input) {
+function SicoHighlightScroll(input) {
 	// Highlighting the whole source code can be slow, so highlight only the portion
 	// that we can see.
 	var str=input.value;
@@ -278,7 +278,7 @@ function UnlHighlightScroll(input) {
 	// the highlighter.
 	var sub=str.substring(i,j);
 	if (comment===1) {sub="#|\n\n"+sub;}
-	return pre+HighlightUnileq(sub);
+	return pre+HighlightSico(sub);
 }
 
-window.addEventListener("load",UnlInitEditor,true);
+window.addEventListener("load",SicoInitEditor,true);

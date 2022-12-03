@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-String Library - v1.04
+String Library - v1.05
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -11,7 +11,7 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-string.unl currently only provides the print function. In the future, it will
+string.sico currently only provides the print function. In the future, it will
 also provide string manipulation functions.
 
 
@@ -27,8 +27,8 @@ string.uint    [num]
 string.uintfmt [num], [base], [padding], [padchar]
 string.uintinl [num], base, padding, padchar
 string.int     [num]
-string.intfmt  [num], [base], [padding], [padchar], [sign]
-string.intinl  [num], base, padding, padchar, sign
+string.intfmt  [num], [base], [sign], [padding], [padchar]
+string.intinl  [num], base, sign, padding, padchar
 
 
 --------------------------------------------------------------------------------
@@ -47,6 +47,8 @@ Version History
      Renamed print to string.print for consistency.
 1.04
      Updated comments.
+1.05
+     Modified string.print to use uint.writestring instead of uint.print.
 
 
 --------------------------------------------------------------------------------
@@ -93,7 +95,10 @@ string.length
 string.getchar
 string.setchar
 string.split
-string.trim
+string.strip
+string.padleft
+string.padright
+string.padsign   # pad's left but skips +-, so "-31" becomes "-0031"
 
 string structure
 	0 ptr
@@ -111,8 +116,12 @@ string.print:
 	.ptr    .ptr    ?+1
 	.ptr    0       ?+1
 	.ptr    .z-2    ?+1
-	0       0       ?+2
-	.ret:   .tmp
+	0       0       .loop
+.ret:
+	0 ? mem.free .mem
+	.mem    .mem    ?+1
+	.memlen .memlen ?+1
+	.tmp
 .loop:
 	# Get the next character.
 	.tmp    .ptr:0  ?+1
@@ -130,6 +139,9 @@ string.print:
 	# Print something other than a character.
 	0       .ptr    ?+1
 	0       .z-2    ?+1
+	.padchr .padchr ?+1
+	.padchr .paddef ?+1
+	.retry  .retry  ?+1
 	# Determine what type of value we're printing.
 	.tmp    .z      .str
 	.tmp    .nesc   .invalid
@@ -153,28 +165,60 @@ string.print:
 	# Reserved for string printing.
 	0-1     0       ?-2
 .uint:
-	mem.getargs.0 ? mem.getargs ?+8 1 .ptr 0 0
-	0 ? uint.print 0 .base .z .padchr
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 .base
+	.tmp    .tmp    .write
 .uintfmt:
-	mem.getargs.0 ? mem.getargs ?+14 1 ?+13 1 ?+12 1 ?+11 1 .ptr 0 0
-	0 ? uint.print 0 0 0 0
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 1 .pad 2 .padchr 2 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 0
+	.tmp    .tmp    .write
 .uintinl:
-	mem.getargs.0 ? mem.getargs ?+14 1 ?+13 0 ?+12 0 ?+11 0 .ptr 0 0
-	0 ? uint.print 0 0 0 0
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 0 .pad 1 .padchr 1 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 0
+	.tmp    .tmp    .write
 .int:
-	mem.getargs.0 ? mem.getargs ?+8 1 .ptr 0 0
-	0 ? int.print 0 .base .z .padchr .z
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 .base .z
+	.tmp    .tmp    .write
 .intfmt:
-	mem.getargs.0 ? mem.getargs ?+16 1 ?+15 1 ?+14 1 ?+13 1 ?+12 1 .ptr 0 0
-	0 ? int.print 0 0 0 0 0
-	.tmp    .tmp    .loop
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 1 ?+18 1 .pad 2 .padchr 2 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
+	.tmp    .tmp    .write
 .intinl:
-	mem.getargs.0 ? mem.getargs ?+16 1 ?+15 0 ?+14 0 ?+13 0 ?+12 0 .ptr 0 0
-	0 ? int.print 0 0 0 0 0
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 0 ?+18 0 .pad 1 .padchr 1 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
+	.tmp    .tmp    .write
+.write:
+	# If [retlen]<[memlen] we need to resize [mem] and retry.
+	.retlen .memlen .lenok
+	.tmp    .retlen ?+1
+	.memlen .tmp    ?+1
+	0 ? mem.realloc .mem .mem .memlen
+	.mem    .z      .invalid
+	.tmp    .tmp    .retry:0
+.lenok:
+	.tmp    .memlen ?+1
+	.retlen .tmp    ?+1
+	# Print padding.
+	.pad    .retlen ?+10
+	0-2     .padchr ?+1
+	.pad    .z+1    ?+7
+	0-2     .padchr ?-5
+	.pad    .pad    ?+1
+	# Print [mem].
+	.tmp    .tmp    ?+1
+	.tmp    .mem    ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+4
+	.retlen .z+1    ?+7
+	0-2     .p0:0   ?+1
+	.p0     .z-1    ?-8
 	.tmp    .tmp    .loop
 	# Variables
 	0-2 0-1 .z:0 1
@@ -182,9 +226,14 @@ string.print:
 	.char:0
 	.esc:0-string.escstart
 	.nesc:string.escstart-string.escend
+	.mem:0
+	.memlen:0
+	.retlen:0
 	# Formatting defaults
 	.base:10
-	.padchr:32
+	.pad:0
+	.padchr:0
+	.paddef:0-32
 
 
 # String formatting escape codes. Define here so string.escstart >= 256.

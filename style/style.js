@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-style.js - v2.01
+style.js - v2.02
 
 Copyright 2018 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -121,8 +121,8 @@ function HighlightPython(text) {
 	return ret+"</span>";
 }
 
-function HighlightUnileq(str) {
-	// Convert unileq assembly language into a formatted HTML string.
+function HighlightSico(str) {
+	// Convert SICO assembly language into a formatted HTML string.
 	// Define styles.
 	var stylearr=[
 		"</span><span style='color:#eeeeee'>", // default, number, operator, label ref
@@ -231,7 +231,7 @@ function StyleOnload() {
 	// var time=performance.now();
 	StyleFooter();
 	HighlightStyle("langpython",HighlightPython);
-	HighlightStyle("langunileq",HighlightUnileq);
+	HighlightStyle("langsico",HighlightSico);
 	// console.log("Time: "+(performance.now()-time));
 	// 55 ms
 }

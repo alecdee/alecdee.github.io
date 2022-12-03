@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Unileq - Libraries</title>
+	<title>SICO - Libraries</title>
 	<link rel="stylesheet" href="../../style/style.css" type="text/css">
 	<script type="text/javascript" src="../../style/style.js"></script>
 </head>
@@ -12,7 +12,7 @@
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Libraries ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Libraries</h1>
-<p>This page lists the libraries I've worked on to build <a href="../index.html">unileq</a> up from
+<p>This page lists the libraries I've worked on to build <a href="../index.html">SICO</a> up from
 one instruction into an easy to use architecture.</p>
 <br>
 <p>Libraries:<br>
@@ -27,30 +27,30 @@ one instruction into an easy to use architecture.</p>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Master Library ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="master"><h1>Master Library</h1>
-<p><a href="./master.unl">master.unl</a> contains all libraries for ease of use in other
+<p><a href="./master.sico">master.sico</a> contains all libraries for ease of use in other
 projects.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Strings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="strings"><h1>Strings</h1>
-<p>Download <a href="./string.unl">string.unl</a> or try the live demo
+<p>Download <a href="./string.sico">string.sico</a> or try the live demo
 <a href="../index.html?demo=String%20Printing">here</a>.</p>
 <br>
-<p><a href="./string.unl">string.unl</a> is fundamental to working on other libraries. It defines
+<p><a href="./string.sico">string.sico</a> is fundamental to working on other libraries. It defines
 the <i>print</i> function which allows us to print ASCII strings as well as numerical values. This
 is needed to print diagnostic messages and see what other libraries are actually doing. It can be
 called like this:</p>
 <br>
-<div class="codeblock langunileq">0 ? string.print 120 32 61 32 string.uint x 10 0</div>
+<div class="codeblock langsico">0 ? string.print 120 32 61 32 string.uint x 10 0</div>
 <br>
 <p>The example can be broken up into a few parts:</p>
 <br>
 <table class="listtable">
-<tr><td><i>0 ? string.print</i></td><td>the unileq instruction that jumps to the <i>string.print</i>
+<tr><td><i>0 ? string.print</i></td><td>the SICO instruction that jumps to the <i>string.print</i>
 function and gives it our calling address.</td></tr>
 <tr><td><i>120 32 61 32</i></td><td>the ASCII values for "x = ".</td></tr>
-<tr><td><i>string.uint</i></td><td>a special value that tells <i>string.print</i> that the next value is
-an unsigned integer.</td></tr>
+<tr><td><i>string.uint</i></td><td>a special value that tells <i>string.print</i> that the next
+value is an unsigned integer.</td></tr>
 <tr><td><i>x</i></td><td>the unsigned integer to output.</td></tr>
 <tr><td><i>10</i></td><td>the ASCII value for an end-of-line.</td></tr>
 <tr><td><i>0</i></td><td>the end of the string.</td></tr>
@@ -61,35 +61,36 @@ an unsigned integer.</td></tr>
 <div class="consoleblock">x = 20</div>
 <br>
 <p>In order to convert a plaintext string into ASCII numerical values, we can use
-<a href="./toascii.unl">toascii.unl</a>. It takes a string from the console and outputs its ASCII
+<a href="./toascii.sico">toascii.sico</a>. It takes a string from the console and outputs its ASCII
 values.</p>
 <br>
-<div class="consoleblock">&gt; ./unileq toascii.unl
+<div class="consoleblock">&gt; ./sico toascii.sico
 enter text: Hello
 ascii     : 72 101 108 108 111
 </div>
 <br>
-<p><a href="./print_demo.unl">print_demo.unl</a> shows how to use the library. It's also used in
+<p><a href="./print_demo.sico">print_demo.sico</a> shows how to use the library. It's also used in
 the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unsigned Math ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="uint"><h1>Unsigned Math</h1>
-<p>Download <a href="./uint.unl">uint.unl</a> or try the live demo
+<p>Download <a href="./uint.sico">uint.sico</a> or try the live demo
 <a href="../index.html?demo=Unsigned%20Math">here</a>.</p>
 <br>
-<p><a href="./uint.unl">uint.unl</a> defines all of the usual functions for handling unsigned
+<p><a href="./uint.sico">uint.sico</a> defines all of the usual functions for handling unsigned
 integer arithmetic and bitwise operations. For example, to compute the bitwise AND of <i>[B]</i> and
 <i>[C]</i> and store it <i>[A]</i>, we would call</p>
 <br>
-<div class="codeblock langunileq">0 ? uint.and A B C</div>
+<div class="codeblock langsico">0 ? uint.and A B C</div>
 <br>
 <p>All of the functions are fairly well optimized. The table below gives the worst case number of
 instructions required per function call.</p>
 <br>
 <table class="datatable insttable headerrow">
 <tr><td>Function</td><td>Time (64 bits)</td></tr>
-<tr><td>print</td><td>-</td></tr>
+<tr><td>write</td><td>2303</td></tr>
+<tr><td>read</td><td>1456</td></tr>
 <tr><td>cmp</td><td>29</td></tr>
 <tr><td>min</td><td>34</td></tr>
 <tr><td>max</td><td>34</td></tr>
@@ -108,21 +109,22 @@ instructions required per function call.</p>
 <tr><td>xor</td><td>487</td></tr>
 </table>
 <br>
-<p><a href="./uint_demo.unl">uint_demo.unl</a> shows how to use the library. It's also used in
+<p><a href="./uint_demo.sico">uint_demo.sico</a> shows how to use the library. It's also used in
 the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Signed Math ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="int"><h1>Signed Math</h1>
-<p>Download <a href="./int.unl">int.unl</a>.</p>
+<p>Download <a href="./int.sico">int.sico</a>.</p>
 <br>
-<p><a href="./int.unl">int.unl</a> covers all of the signed integer functions that
-<a href="./uint.unl">uint.unl</a> doesn't cover. The table below gives the worst case number of
+<p><a href="./int.sico">int.sico</a> covers all of the signed integer functions that
+<a href="./uint.sico">uint.sico</a> doesn't cover. The table below gives the worst case number of
 instructions required per function call.</p>
 <br>
 <table class="datatable insttable headerrow">
 <tr><td>Function</td><td>Time (64 bits)</td></tr>
-<tr><td>print</td><td>-</td></tr>
+<tr><td>write</td><td>2317</td></tr>
+<tr><td>read</td><td>1472</td></tr>
 <tr><td>cmp</td><td>37</td></tr>
 <tr><td>min</td><td>43</td></tr>
 <tr><td>max</td><td>43</td></tr>
@@ -135,13 +137,13 @@ instructions required per function call.</p>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Random Number Generation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="random"><h1>Random Number Generation</h1>
-<p>Download <a href="./random.unl">random.unl</a> or try the live demo
+<p>Download <a href="./random.sico">random.sico</a> or try the live demo
 <a href="../index.html?demo=Random%20Numbers">here</a>.</p>
 <br>
-<p><a href="./random.unl">random.unl</a> defines a PRNG with a period of 2^64. It provides five
+<p><a href="./random.sico">random.sico</a> defines a PRNG with a period of 2^64. It provides five
 functions for handling random numbers:</p>
 <br>
-<div class="codeblock langunileq">random.hash    ret num
+<div class="codeblock langsico">random.hash    ret num
 random.seed    num
 random.jump    num
 random.get     dst
@@ -150,24 +152,24 @@ random.shuffle arr len</div>
 <br>
 <p>For instance, to get a random number modulo 52 and store it in <i>rand</i>, call:</p>
 <br>
-<div class="codeblock langunileq">0 ? random.get rand mod
+<div class="codeblock langsico">0 ? random.get rand mod
 rand: 0
 mod:  52</div>
 <br>
-<p><a href="./random_demo.unl">random_demo.unl</a> shows how to use the library. It's also used in
+<p><a href="./random_demo.sico">random_demo.sico</a> shows how to use the library. It's also used in
 the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Memory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content" id="memory"><h1>Memory</h1>
-<p>Download <a href="./memory.unl">memory.unl</a> or try the live demo
+<p>Download <a href="./memory.sico">memory.sico</a> or try the live demo
 <a href="../index.html?demo=Memory">here</a>.</p>
 <br>
-<p><a href="./memory.unl">memory.unl</a> defines functions for managing and allocating memory. In
+<p><a href="./memory.sico">memory.sico</a> defines functions for managing and allocating memory. In
 order to allocate memory safely, the library needs to be last when concatenating with other
 libraries.</p>
 <br>
-<div class="codeblock langunileq">mem.getargs dst0 refs0 dst1 refs1 ... 0
+<div class="codeblock langsico">mem.getargs dst0 refs0 dst1 refs1 ... 0
 
 mem.get     val mem
 mem.getidx  val mem idx
@@ -185,7 +187,7 @@ mem.alloc.verifyfree</div>
 <br>
 <p>For instance, to allocate a block of memory with <i>30</i> cells and set <i>arr[2]=400</i>:</p>
 <br>
-<div class="codeblock langunileq">0 ? mem.alloc arr len
+<div class="codeblock langsico">0 ? mem.alloc arr len
 0 ? mem.set   arr idx val
 0 ? mem.free  arr
 
@@ -194,12 +196,12 @@ len: 30
 idx: 2
 val: 400</div>
 <br>
-<p><a href="./memory_demo.unl">memory_demo.unl</a> shows how to use the library. It's also used in
+<p><a href="./memory_demo.sico">memory_demo.sico</a> shows how to use the library. It's also used in
 the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 7 Oct 2022<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 2 Dec 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>

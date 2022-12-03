@@ -1,16 +1,21 @@
 #|==============================================================================
 
+
 ASCII Converter - v1.03
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
+
 --------------------------------------------------------------------------------
 About
+
 
 When run, will take an input string and output the string's ASCII character
 values. For example, if "Hello" is the input, then "72 101 108 108 111" will be
 the output.
+
+
 |#
 
 0 0 toascii
@@ -70,7 +75,6 @@ print:
 uint.print:
 	# Call  : 0 ? uint.print num
 	# Effect: Prints a number in an arbitrary base.
-	# This function works even if unileq's underlying integers are not a power of two.
 	# Setup stack pointer.
 	.tmp    .tmp    ?+1
 	.tmp    .arg2   ?+1

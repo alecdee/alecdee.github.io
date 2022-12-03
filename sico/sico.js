@@ -1,26 +1,26 @@
 /*------------------------------------------------------------------------------
 
 
-unileq.js - v1.25
+sico.js - v1.25
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
 
 --------------------------------------------------------------------------------
-The Unileq Architecture
+The Single Instruction COmputer
 
 
-Unileq's purpose is to recreate the functionality of a normal computer using
-only one computing instruction. This is like going into a forest with no tools
-and trying to build a house. Since we only have one instruction, most modern
-conveniences are gone. Things like multiplying numbers or memory allocation
-need to be built from scratch using unileq's instruction.
+SICO is a Single Instruction COmputer that mimics the functionality of a normal
+computer while using only one computing instruction. This is like going into a
+forest with no tools and trying to build a house. Since we only have one
+instruction, most modern conveniences are gone. Things like multiplying numbers
+or memory allocation need to be built from scratch using SICO's instruction.
 
 The instruction is fairly simple: Given A, B, and C, compute mem[A]-mem[B] and
 store the result in mem[A]. Then, if mem[A] was less than or equal to mem[B],
 jump to C. Otherwise, jump by 3. We use the instruction pointer (IP) to keep
-track of our place in memory. The pseudocode below shows a unileq instruction:
+track of our place in memory. The pseudocode below shows a SICO instruction:
 
 
      A=mem[IP+0]
@@ -39,14 +39,14 @@ Overflow and underflow are handled by wrapping values around to be between 0 and
 
 Interaction with the host environment is done by reading and writing from
 special memory addresses. For example, writing anything to -1 will end execution
-of the unileq program.
+of the SICO program.
 
 
 --------------------------------------------------------------------------------
-Unileq Assembly Language
+SICO Assembly Language
 
 
-We can write a unileq program by setting the raw memory values directly, but it
+We can write a SICO program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
 Because there's only one instruction, we can skip defining what's used for data,
 execution, or structure like in other languages. We only need to define memory
@@ -193,7 +193,7 @@ browsers.
 When testing the math library, we jump 77% of the time. Delaying loading mem[C]
 didn't provide a meaningful speedup.
 
-Webassembly speedup isn't that great compared to UnlRun() and adds a lot of
+Webassembly speedup isn't that great compared to SicoRun() and adds a lot of
 complexity. Wait until better integration with javascript.
 
 We busy wait if sleeping for less than 4ms. This is because the HTML5 standard
@@ -218,7 +218,7 @@ Audio
 // 64 bit unsigned integers.
 
 
-function UnlU64Create(hi,lo) {
+function SicoU64Create(hi,lo) {
 	if (hi===undefined) {
 		// If arguments are empty, initialize to 0.
 		hi=0;
@@ -245,7 +245,7 @@ function UnlU64Create(hi,lo) {
 	return {lo:lo,hi:hi};
 }
 
-function UnlU64ToStr(n) {
+function SicoU64ToStr(n) {
 	// Convert a 64-bit number to its base 10 representation.
 	// Powers of 10 split into high 32 bits and low 32 bits.
 	var pot=[
@@ -280,7 +280,7 @@ function UnlU64ToStr(n) {
 	return str===""?"0":str;
 }
 
-function UnlU64Cmp(a,b) {
+function SicoU64Cmp(a,b) {
 	// if a<b, return -1
 	// if a=b, return  0
 	// if a>b, return  1
@@ -289,24 +289,24 @@ function UnlU64Cmp(a,b) {
 	return 0;
 }
 
-function UnlU64Set(a,b) {
+function SicoU64Set(a,b) {
 	// a=b
 	a.lo=b.lo;
 	a.hi=b.hi;
 }
 
-function UnlU64Zero(n) {
+function SicoU64Zero(n) {
 	// n=0
 	n.lo=0;
 	n.hi=0;
 }
 
-function UnlU64IsZero(n) {
+function SicoU64IsZero(n) {
 	// n==0
 	return n.lo===0 && n.hi===0;
 }
 
-function UnlU64Neg(r,a) {
+function SicoU64Neg(r,a) {
 	// r=-a
 	r.lo=0x100000000-a.lo;
 	r.hi=0x0ffffffff-a.hi;
@@ -318,7 +318,7 @@ function UnlU64Neg(r,a) {
 	}
 }
 
-function UnlU64Sub(r,a,b) {
+function SicoU64Sub(r,a,b) {
 	// r=a-b
 	// return true if a<=b
 	var lo,hi;
@@ -337,7 +337,7 @@ function UnlU64Sub(r,a,b) {
 	return hi===0 && lo===0;
 }
 
-function UnlU64Add(r,a,b) {
+function SicoU64Add(r,a,b) {
 	// r=a+b
 	r.lo=a.lo+b.lo;
 	r.hi=a.hi+b.hi;
@@ -350,7 +350,7 @@ function UnlU64Add(r,a,b) {
 	}
 }
 
-function UnlU64Mul(r,a,b) {
+function SicoU64Mul(r,a,b) {
 	// r=a*b
 	var a0=a.lo&0xffff,a1=a.lo>>>16;
 	var a2=a.hi&0xffff,a3=a.hi>>>16;
@@ -366,7 +366,7 @@ function UnlU64Mul(r,a,b) {
 	r.hi=hi>>>0;
 }
 
-function UnlU64Inc(n) {
+function SicoU64Inc(n) {
 	// n++
 	if ((++n.lo)>=0x100000000) {
 		n.lo=0;
@@ -376,7 +376,7 @@ function UnlU64Inc(n) {
 	}
 }
 
-function UnlU64Dec(n) {
+function SicoU64Dec(n) {
 	// n--
 	if ((--n.lo)<0) {
 		n.lo=0xffffffff;
@@ -388,25 +388,25 @@ function UnlU64Dec(n) {
 
 
 //---------------------------------------------------------------------------------
-// Unileq architecture interpreter.
+// SICO architecture interpreter.
 
 
-var UNL_RUNNING     =0;
-var UNL_COMPLETE    =1;
-var UNL_ERROR_PARSER=2;
-var UNL_ERROR_MEMORY=3;
-var UNL_MAX_PARSE   =1<<30;
+var SICO_RUNNING     =0;
+var SICO_COMPLETE    =1;
+var SICO_ERROR_PARSER=2;
+var SICO_ERROR_MEMORY=3;
+var SICO_MAX_PARSE   =1<<30;
 
-function UnlCreate(textout,canvas) {
+function SicoCreate(textout,canvas) {
 	var st={
 		// State variables
 		state:   0,
 		statestr:"",
-		ip:      UnlU64Create(),
+		ip:      SicoU64Create(),
 		memh:    null,
 		meml:    null,
 		alloc:   0,
-		lblroot: UnlCreateLabel(),
+		lblroot: SicoCreateLabel(),
 		sleep:   null,
 		// Input/Output
 		output:  textout,
@@ -415,26 +415,26 @@ function UnlCreate(textout,canvas) {
 		canvctx: null,
 		canvdata:null,
 		// Functions
-		Clear:   function(){return UnlClear(st);},
-		Print:   function(str){return UnlPrint(st,str);},
-		ParseAssembly:function(str){return UnlParseAssembly(st,str);},
-		GetMem:  function(addr){return UnlGetMem(st,addr);},
-		SetMem:  function(addr,val){return UnlSetMem(st,addr,val);},
-		Run:     function(stoptime){return UnlRun(st,stoptime);}
+		Clear:   function(){return SicoClear(st);},
+		Print:   function(str){return SicoPrint(st,str);},
+		ParseAssembly:function(str){return SicoParseAssembly(st,str);},
+		GetMem:  function(addr){return SicoGetMem(st,addr);},
+		SetMem:  function(addr,val){return SicoSetMem(st,addr,val);},
+		Run:     function(stoptime){return SicoRun(st,stoptime);}
 	};
-	UnlClear(st);
+	SicoClear(st);
 	return st;
 }
 
-function UnlClear(st) {
+function SicoClear(st) {
 	// Clear the interpreter state.
-	st.state=UNL_COMPLETE;
+	st.state=SICO_COMPLETE;
 	st.statestr="";
-	UnlU64Zero(st.ip);
+	SicoU64Zero(st.ip);
 	st.memh=null;
 	st.meml=null;
 	st.alloc=0;
-	st.lblroot=UnlCreateLabel();
+	st.lblroot=SicoCreateLabel();
 	st.sleep=null;
 	if (st.output!==null) {
 		st.output.value="";
@@ -448,7 +448,7 @@ function UnlClear(st) {
 	}
 }
 
-function UnlPrint(st,str) {
+function SicoPrint(st,str) {
 	// Print to output and autoscroll to bottom. If output is null, print to console.
 	var output=st.output;
 	if (output!==null) {
@@ -467,22 +467,22 @@ function UnlPrint(st,str) {
 	}
 }
 
-function UnlParseAssembly(st,str) {
-	// Convert unileq assembly language into a unileq program.
-	UnlClear(st);
-	st.state=UNL_RUNNING;
+function SicoParseAssembly(st,str) {
+	// Convert SICO assembly language into a SICO program.
+	SicoClear(st);
+	st.state=SICO_RUNNING;
 	var i=0,j=0,len=str.length;
 	var c,op,err=null;
 	function  CNUM(c) {return (c<=57?c+208:((c+191)&~32)+10)&255;}
 	function ISLBL(c) {return CNUM(c)<36 || c===95 || c===46 || c>127;}
 	function  ISOP(c) {return c===43 || c===45;}
 	function   NEXT() {return (c=i++<len?str.charCodeAt(i-1):0);}
-	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
+	if (len>=SICO_MAX_PARSE) {err="Input string too long";}
 	// Process the string in 2 passes. The first pass is needed to find label values.
 	for (var pass=0;pass<2 && err===null;pass++) {
 		var scope=st.lblroot;
-		var addr=UnlU64Create(),val=UnlU64Create(),acc=UnlU64Create();
-		var tmp0=UnlU64Create(),tmp1=UnlU64Create();
+		var addr=SicoU64Create(),val=SicoU64Create(),acc=SicoU64Create();
+		var tmp0=SicoU64Create(),tmp1=SicoU64Create();
 		op=0;
 		i=0;
 		NEXT();
@@ -507,38 +507,38 @@ function UnlParseAssembly(st,str) {
 				// Operator. Decrement addr since we're modifying the previous value.
 				if (op!==0 ) {err="Double operator";}
 				if (op===58) {err="Operating on declaration";}
-				if (UnlU64IsZero(addr)) {err="Leading operator";}
-				UnlU64Dec(addr);
+				if (SicoU64IsZero(addr)) {err="Leading operator";}
+				SicoU64Dec(addr);
 				op=c;
 				NEXT();
 			} else if (CNUM(c)<10) {
 				// Number. If it starts with "0x", use hexadecimal.
 				token=10;
-				UnlU64Zero(val);
+				SicoU64Zero(val);
 				if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
 				tmp0.lo=token;
 				while ((tmp1.lo=CNUM(c))<token) {
-					UnlU64Mul(val,val,tmp0);
-					UnlU64Add(val,val,tmp1);
+					SicoU64Mul(val,val,tmp0);
+					SicoU64Add(val,val,tmp1);
 					NEXT();
 				}
 			} else if (c===63) {
 				// Current address token.
 				token=1;
-				UnlU64Set(val,addr);
+				SicoU64Set(val,addr);
 				NEXT();
 			} else if (ISLBL(c)) {
 				// Label.
 				while (ISLBL(c)) {NEXT();}
-				var lbl=UnlAddLabel(st,scope,str,j-1,i-j);
+				var lbl=SicoAddLabel(st,scope,str,j-1,i-j);
 				if (lbl===null) {err="Unable to allocate label";break;}
-				UnlU64Set(val,lbl.addr);
+				SicoU64Set(val,lbl.addr);
 				var isset=val.hi!==0xffffffff || val.lo!==0xffffffff;
 				if (c===58) {
 					// Label declaration.
 					if (pass===0) {
 						if (isset) {err="Duplicate label declaration";}
-						UnlU64Set(lbl.addr,addr);
+						SicoU64Set(lbl.addr,addr);
 					}
 					if (str[j-1]!=='.') {scope=lbl;}
 					if (ISOP(op)) {err="Operating on declaration";}
@@ -554,29 +554,29 @@ function UnlParseAssembly(st,str) {
 			}
 			if (token!==0) {
 				// Add a new value to memory.
-				if (op===43) {UnlU64Add(val,acc,val);}
-				else if (op===45) {UnlU64Sub(val,acc,val);}
+				if (op===43) {SicoU64Add(val,acc,val);}
+				else if (op===45) {SicoU64Sub(val,acc,val);}
 				else if (pass!==0) {
-					UnlU64Dec(addr);
-					UnlSetMem(st,addr,acc);
-					UnlU64Inc(addr);
+					SicoU64Dec(addr);
+					SicoSetMem(st,addr,acc);
+					SicoU64Inc(addr);
 				}
-				UnlU64Inc(addr);
-				UnlU64Set(acc,val);
+				SicoU64Inc(addr);
+				SicoU64Set(acc,val);
 				op=0;
 				if (ISLBL(c) || c===63) {err="Unseparated tokens";}
 			}
 		}
 		if (err===null && ISOP(op)) {err="Trailing operator";}
 		if (pass!==0) {
-			UnlU64Dec(addr);
-			UnlSetMem(st,addr,acc);
-			UnlU64Inc(addr);
+			SicoU64Dec(addr);
+			SicoSetMem(st,addr,acc);
+			SicoU64Inc(addr);
 		}
 	}
 	if (err!==null) {
 		// We've encountered a parsing error.
-		st.state=UNL_ERROR_PARSER;
+		st.state=SICO_ERROR_PARSER;
 		st.statestr="Parser: "+err+"\n";
 		if (i-- && j--)
 		{
@@ -606,15 +606,15 @@ function UnlParseAssembly(st,str) {
 	}
 }
 
-function UnlCreateLabel() {
+function SicoCreateLabel() {
 	var lbl={
-		addr: UnlU64Create(-1),
+		addr: SicoU64Create(-1),
 		child:new Array(16).fill(null)
 	};
 	return lbl;
 }
 
-function UnlAddLabel(st,scope,data,idx,len) {
+function SicoAddLabel(st,scope,data,idx,len) {
 	// Add a label if it's new.
 	// If the label starts with a '.', make it a child of the last non '.' label.
 	var lbl=data[idx]==='.'?scope:st.lblroot;
@@ -625,7 +625,7 @@ function UnlAddLabel(st,scope,data,idx,len) {
 			var parent=lbl;
 			lbl=parent.child[val];
 			if (lbl===null) {
-				lbl=UnlCreateLabel();
+				lbl=SicoCreateLabel();
 				parent.child[val]=lbl;
 			}
 		}
@@ -633,7 +633,7 @@ function UnlAddLabel(st,scope,data,idx,len) {
 	return lbl;
 }
 
-function UnlFindLabel(st,label) {
+function SicoFindLabel(st,label) {
 	// Returns the given label's address. Returns null if no label was found.
 	var lbl=st.lblroot,len=label.length;
 	if (lbl===null) {return null;}
@@ -645,25 +645,25 @@ function UnlFindLabel(st,label) {
 			if (lbl===null) {return null;}
 		}
 	}
-	return UnlU64Create(lbl.addr);
+	return SicoU64Create(lbl.addr);
 }
 
-function UnlGetMem(st,addr) {
+function SicoGetMem(st,addr) {
 	// Return the memory value at addr.
 	var i=addr.lo;
 	if (addr.hi===0 && i<st.alloc) {
-		return UnlU64Create(st.memh[i],st.meml[i]);
+		return SicoU64Create(st.memh[i],st.meml[i]);
 	}
-	return UnlU64Create();
+	return SicoU64Create();
 }
 
-function UnlSetMem(st,addr,val) {
+function SicoSetMem(st,addr,val) {
 	// Write val to the memory at addr.
 	var pos=addr.lo;
 	if (addr.hi!==0 || pos>=st.alloc) {
 		// If we're writing to an address outside of our memory, attempt to resize it or
 		// error out.
-		if (UnlU64IsZero(val)) {return;}
+		if (SicoU64IsZero(val)) {return;}
 		// Find the maximum we can allocate.
 		var alloc=1,memh=null,meml=null;
 		while (alloc<=pos) {alloc+=alloc;}
@@ -686,8 +686,8 @@ function UnlSetMem(st,addr,val) {
 			st.meml=meml;
 			st.alloc=alloc;
 		} else {
-			st.state=UNL_ERROR_MEMORY;
-			st.statestr="Failed to allocate memory.\nIndex: "+UnlU64ToStr(addr)+"\n";
+			st.state=SICO_ERROR_MEMORY;
+			st.statestr="Failed to allocate memory.\nIndex: "+SicoU64ToStr(addr)+"\n";
 			return;
 		}
 	}
@@ -695,7 +695,7 @@ function UnlSetMem(st,addr,val) {
 	st.meml[pos]=val.lo;
 }
 
-function UnlDrawImage(st,imghi,imglo) {
+function SicoDrawImage(st,imghi,imglo) {
 	var canvas=st.canvas;
 	if (canvas===null || canvas===undefined) {
 		return;
@@ -742,51 +742,51 @@ function UnlDrawImage(st,imghi,imglo) {
 	st.canvctx.putImageData(st.canvdata,0,0);
 }
 
-/*function UnlRunStandard(st) {
-	//Run unileq for a given number of iterations.
+/*function SicoRunStandard(st) {
+	//Run SICO for a given number of iterations.
 	var a,b,c,ma,mb,ip=st.ip;
-	var io=UnlU64Create(-4);
-	for (var iters=st.instperframe;iters>0 && st.state===UNL_RUNNING;iters--) {
+	var io=SicoU64Create(-4);
+	for (var iters=st.instperframe;iters>0 && st.state===SICO_RUNNING;iters--) {
 		//Load a, b, and c.
-		a=UnlGetMem(st,ip);UnlU64Inc(ip);
-		b=UnlGetMem(st,ip);UnlU64Inc(ip);
-		c=UnlGetMem(st,ip);UnlU64Inc(ip);
+		a=SicoGetMem(st,ip);SicoU64Inc(ip);
+		b=SicoGetMem(st,ip);SicoU64Inc(ip);
+		c=SicoGetMem(st,ip);SicoU64Inc(ip);
 		//Input
-		if (UnlU64Cmp(b,io)<0) {
-			mb=UnlGetMem(st,b);
+		if (SicoU64Cmp(b,io)<0) {
+			mb=SicoGetMem(st,b);
 		} else if (b.lo===0xfffffffc) {
 			//Read time. time = (seconds since 1 Jan 1970) * 2^32.
 			var time=performance.timing.navigationStart+performance.now();
-			mb=UnlU64Create((time/1000)>>>0,((time%1000)*4294967.296)>>>0);
+			mb=SicoU64Create((time/1000)>>>0,((time%1000)*4294967.296)>>>0);
 		} else {
-			UnlU64Zero(mb);
+			SicoU64Zero(mb);
 		}
 		//Output
-		if (UnlU64Cmp(a,io)<0) {
-			//Execute a normal unileq instruction.
-			ma=UnlGetMem(st,a);
-			if (UnlU64Sub(ma,ma,mb)) {
-				UnlU64Set(ip,c);
+		if (SicoU64Cmp(a,io)<0) {
+			//Execute a normal SICO instruction.
+			ma=SicoGetMem(st,a);
+			if (SicoU64Sub(ma,ma,mb)) {
+				SicoU64Set(ip,c);
 			}
-			UnlSetMem(st,a,ma);
+			SicoSetMem(st,a,ma);
 			continue;
 		} else if (a.lo===0xffffffff) {
 			//Exit.
-			st.state=UNL_COMPLETE;
+			st.state=SICO_COMPLETE;
 		} else if (a.lo===0xfffffffe) {
 			//Print to stdout.
-			UnlPrint(st,String.fromCharCode(mb.lo&255));
+			SicoPrint(st,String.fromCharCode(mb.lo&255));
 		}
-		UnlU64Set(ip,c);
+		SicoU64Set(ip,c);
 	}
 }*/
 
-function UnlRun(st,stoptime) {
-	// Run unileq while performance.now()<stoptime.
+function SicoRun(st,stoptime) {
+	// Run SICO while performance.now()<stoptime.
 	//
-	// This version of UnlRun() unrolls several operations to speed things up.
+	// This version of SicoRun() unrolls several operations to speed things up.
 	// Depending on the platform, it's 4 to 10 times faster than standard.
-	if (st.state!==UNL_RUNNING) {
+	if (st.state!==SICO_RUNNING) {
 		return;
 	}
 	if (st.sleep!==null) {
@@ -797,7 +797,7 @@ function UnlRun(st,stoptime) {
 		// If we're sleeping for more than 4ms, defer until later.
 		var sleep=st.sleep-performance.now();
 		if (sleep>4) {
-			setTimeout(UnlRun,sleep-2,st,stoptime);
+			setTimeout(SicoRun,sleep-2,st,stoptime);
 			return;
 		}
 		// Busy wait.
@@ -813,7 +813,7 @@ function UnlRun(st,stoptime) {
 	var alloc=st.alloc,alloc2=alloc-2;
 	var ahi,alo,chi,clo;
 	var bhi,blo,mbhi,mblo;
-	var tmp0=UnlU64Create(),tmp1=UnlU64Create(),tmp2;
+	var tmp0=SicoU64Create(),tmp1=SicoU64Create(),tmp2;
 	var io=0x100000000-32;
 	var timeiters=0;
 	while (true) {
@@ -834,11 +834,11 @@ function UnlRun(st,stoptime) {
 			chi=memh[iplo  ];
 			clo=meml[iplo++];
 		} else {
-			// Out of bounds read. Use UnlGetMem to read a, b, and c.
+			// Out of bounds read. Use SicoGetMem to read a, b, and c.
 			tmp0.hi=iphi;tmp0.lo=iplo;
-			tmp1=UnlGetMem(st,tmp0);ahi=tmp1.hi;alo=tmp1.lo;UnlU64Inc(tmp0);
-			tmp1=UnlGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;UnlU64Inc(tmp0);
-			tmp1=UnlGetMem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;UnlU64Inc(tmp0);
+			tmp1=SicoGetMem(st,tmp0);ahi=tmp1.hi;alo=tmp1.lo;SicoU64Inc(tmp0);
+			tmp1=SicoGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;SicoU64Inc(tmp0);
+			tmp1=SicoGetMem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;SicoU64Inc(tmp0);
 			iphi=tmp0.hi;iplo=tmp0.lo;
 			timeiters-=3;
 		}
@@ -853,9 +853,9 @@ function UnlRun(st,stoptime) {
 				mblo=0;
 			}
 		} else if (bhi<0xffffffff || blo<io) {
-			// Out of bounds. Use UnlGetMem to read mem[b].
+			// Out of bounds. Use SicoGetMem to read mem[b].
 			tmp0.hi=bhi;tmp0.lo=blo;
-			tmp2=UnlGetMem(st,tmp0);
+			tmp2=SicoGetMem(st,tmp0);
 			mbhi=tmp2.hi;mblo=tmp2.lo;
 			timeiters-=1;
 		} else if (blo===0xfffffffc) {
@@ -875,7 +875,7 @@ function UnlRun(st,stoptime) {
 		}
 		// Output
 		if (ahi===0 && alo<alloc) {
-			// Execute a normal unileq instruction.
+			// Execute a normal SICO instruction.
 			// Inbounds. Read and write to mem[a] directly.
 			mblo=meml[alo]-mblo;
 			if (mblo<0) {
@@ -895,16 +895,16 @@ function UnlRun(st,stoptime) {
 			memh[alo]=mbhi;
 			continue;
 		} else if (ahi<0xffffffff || alo<io) {
-			// Out of bounds. Use UnlSetMem to modify mem[a].
+			// Out of bounds. Use SicoSetMem to modify mem[a].
 			tmp0.hi=ahi;tmp0.lo=alo;
-			tmp2=UnlGetMem(st,tmp0);
+			tmp2=SicoGetMem(st,tmp0);
 			tmp1.hi=mbhi;tmp1.lo=mblo;
-			if (UnlU64Sub(tmp2,tmp2,tmp1)) {
+			if (SicoU64Sub(tmp2,tmp2,tmp1)) {
 				iphi=chi;
 				iplo=clo;
 			}
-			UnlSetMem(st,tmp0,tmp2);
-			if (st.state!==UNL_RUNNING) {
+			SicoSetMem(st,tmp0,tmp2);
+			if (st.state!==SICO_RUNNING) {
 				break;
 			}
 			memh=st.memh;
@@ -919,11 +919,11 @@ function UnlRun(st,stoptime) {
 		iplo=clo;
 		if (alo===0xffffffff) {
 			// Exit.
-			st.state=UNL_COMPLETE;
+			st.state=SICO_COMPLETE;
 			break;
 		} else if (alo===0xfffffffe) {
 			// Print to stdout.
-			UnlPrint(st,String.fromCharCode(mblo&255));
+			SicoPrint(st,String.fromCharCode(mblo&255));
 			timeiters-=1;
 		} else if (alo===0xfffffffa) {
 			// Sleep.
@@ -933,7 +933,7 @@ function UnlRun(st,stoptime) {
 			if (sleep>4 || sleeptill>=stoptime) {
 				st.sleep=sleeptill;
 				if (sleeptill<stoptime) {
-					setTimeout(UnlRun,sleep-2,st,stoptime);
+					setTimeout(SicoRun,sleep-2,st,stoptime);
 				}
 				break;
 			}
@@ -942,14 +942,14 @@ function UnlRun(st,stoptime) {
 			timeiters=0;
 		} else if (alo===0xfffffff9) {
 			// Draw an image.
-			UnlDrawImage(st,mbhi,mblo);
+			SicoDrawImage(st,mbhi,mblo);
 		}
 	}
 	st.ip.hi=iphi;
 	st.ip.lo=iplo;
 	// Performance testing.
-	/*if (st.state!==UNL_RUNNING) {
+	/*if (st.state!==SICO_RUNNING) {
 		var time=performance.now()-this.time;
-		UnlPrint(st,"time: "+time);
+		SicoPrint(st,"time: "+time);
 	}*/
 }

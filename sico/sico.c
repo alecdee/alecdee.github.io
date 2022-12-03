@@ -1,26 +1,26 @@
 /*------------------------------------------------------------------------------
 
 
-unileq.c - v1.45
+sico.c - v1.45
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
 
 --------------------------------------------------------------------------------
-The Unileq Architecture
+The Single Instruction COmputer
 
 
-Unileq's purpose is to recreate the functionality of a normal computer using
-only one computing instruction. This is like going into a forest with no tools
-and trying to build a house. Since we only have one instruction, most modern
-conveniences are gone. Things like multiplying numbers or memory allocation
-need to be built from scratch using unileq's instruction.
+SICO is a Single Instruction COmputer that mimics the functionality of a normal
+computer while using only one computing instruction. This is like going into a
+forest with no tools and trying to build a house. Since we only have one
+instruction, most modern conveniences are gone. Things like multiplying numbers
+or memory allocation need to be built from scratch using SICO's instruction.
 
 The instruction is fairly simple: Given A, B, and C, compute mem[A]-mem[B] and
 store the result in mem[A]. Then, if mem[A] was less than or equal to mem[B],
 jump to C. Otherwise, jump by 3. We use the instruction pointer (IP) to keep
-track of our place in memory. The pseudocode below shows a unileq instruction:
+track of our place in memory. The pseudocode below shows a SICO instruction:
 
 
      A=mem[IP+0]
@@ -39,14 +39,14 @@ Overflow and underflow are handled by wrapping values around to be between 0 and
 
 Interaction with the host environment is done by reading and writing from
 special memory addresses. For example, writing anything to -1 will end execution
-of the unileq program.
+of the SICO program.
 
 
 --------------------------------------------------------------------------------
-Unileq Assembly Language
+SICO Assembly Language
 
 
-We can write a unileq program by setting the raw memory values directly, but it
+We can write a SICO program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
 Because there's only one instruction, we can skip defining what's used for data,
 execution, or structure like in other languages. We only need to define memory
@@ -172,8 +172,8 @@ The rules of the assembly language are given below.
 Notes
 
 
-Linux  : gcc -O3 unileq.c -o unileq
-Windows: cl /O2 unileq.c
+Linux  : gcc -O3 sico.c -o sico
+Windows: cl /O2 sico.c
 
 Keep under 20k bytes.
 Find a better form of label scoping.
@@ -200,71 +200,71 @@ typedef unsigned char uchar;
 
 
 //---------------------------------------------------------------------------------
-// The unileq interpreter state.
+// The SICO interpreter state.
 
 
-#define UNL_RUNNING      0
-#define UNL_COMPLETE     1
-#define UNL_ERROR_PARSER 2
-#define UNL_ERROR_MEMORY 3
-#define UNL_MAX_PARSE    (1<<30)
+#define SICO_RUNNING      0
+#define SICO_COMPLETE     1
+#define SICO_ERROR_PARSER 2
+#define SICO_ERROR_MEMORY 3
+#define SICO_MAX_PARSE    (1<<30)
 
-typedef struct UnlLabel {
+typedef struct SicoLabel {
 	u64 addr;
 	u32 child[16];
-} UnlLabel;
+} SicoLabel;
 
-typedef struct UnlState {
+typedef struct SicoState {
 	u64 *mem,alloc,ip;
 	u32 state;
 	char statestr[256];
-	UnlLabel* lblarr;
+	SicoLabel* lblarr;
 	u32 lblalloc,lblpos;
-} UnlState;
+} SicoState;
 
 
-UnlState* UnlCreate(void);
-void UnlFree(UnlState* st);
-void UnlClear(UnlState* st);
+SicoState* SicoCreate(void);
+void SicoFree(SicoState* st);
+void SicoClear(SicoState* st);
 
-void UnlParseAssembly(UnlState* st,const char* str);
-u32  UnlAddLabel(UnlState* st,u32 scope,const uchar* data,u32 len);
-u64  UnlFindLabel(UnlState* st,const char* label);
-void UnlParseFile(UnlState* st,const char* path);
+void SicoParseAssembly(SicoState* st,const char* str);
+u32  SicoAddLabel(SicoState* st,u32 scope,const uchar* data,u32 len);
+u64  SicoFindLabel(SicoState* st,const char* label);
+void SicoParseFile(SicoState* st,const char* path);
 
-void UnlPrintState(UnlState* st);
-u64  UnlGetIP(UnlState* st);
-void UnlSetIP(UnlState* st,u64 ip);
-u64  UnlGetMem(UnlState* st,u64 addr);
-void UnlSetMem(UnlState* st,u64 addr,u64 val);
+void SicoPrintState(SicoState* st);
+u64  SicoGetIP(SicoState* st);
+void SicoSetIP(SicoState* st,u64 ip);
+u64  SicoGetMem(SicoState* st,u64 addr);
+void SicoSetMem(SicoState* st,u64 addr,u64 val);
 
-void UnlRun(UnlState* st,u32 iters);
+void SicoRun(SicoState* st,u32 iters);
 
 
 //---------------------------------------------------------------------------------
-// Unileq architecture interpreter.
+// SICO architecture interpreter.
 
 
-UnlState* UnlCreate(void) {
-	// Allocate a unileq interpreter.
-	UnlState* st=(UnlState*)malloc(sizeof(UnlState));
+SicoState* SicoCreate(void) {
+	// Allocate a SICO interpreter.
+	SicoState* st=(SicoState*)malloc(sizeof(SicoState));
 	if (st) {
 		st->mem=0;
 		st->lblarr=0;
-		UnlClear(st);
+		SicoClear(st);
 	}
 	return st;
 }
 
-void UnlFree(UnlState* st) {
+void SicoFree(SicoState* st) {
 	if (st) {
-		UnlClear(st);
+		SicoClear(st);
 		free(st);
 	}
 }
 
-void UnlClear(UnlState* st) {
-	st->state=UNL_RUNNING;
+void SicoClear(SicoState* st) {
+	st->state=SICO_RUNNING;
 	st->statestr[0]=0;
 	st->ip=0;
 	free(st->mem);
@@ -276,22 +276,22 @@ void UnlClear(UnlState* st) {
 	st->lblpos=0;
 }
 
-void UnlParseAssembly(UnlState* st,const char* str) {
-	// Convert unileq assembly language into a unileq program.
+void SicoParseAssembly(SicoState* st,const char* str) {
+	// Convert SICO assembly language into a SICO program.
 	#define  CNUM(c) ((uchar)(c<='9'?c-'0':((c-'A')&~32)+10))
 	#define ISLBL(c) (CNUM(c)<36 || c=='_' || c=='.' || c>127)
 	#define  ISOP(c) (c=='+' || c=='-')
 	#define     NEXT (c=i++<len?ustr[i-1]:0)
-	UnlClear(st);
+	SicoClear(st);
 	u32 i=0,j=0,len=0;
 	const uchar* ustr=(const uchar*)str;
 	uchar c,op;
 	const char* err=0;
 	// Get the string length.
 	if (ustr) {
-		while (len<UNL_MAX_PARSE && ustr[len]) {len++;}
+		while (len<SICO_MAX_PARSE && ustr[len]) {len++;}
 	}
-	if (len>=UNL_MAX_PARSE) {err="Input string too long";}
+	if (len>=SICO_MAX_PARSE) {err="Input string too long";}
 	// Process the string in 2 passes. The first pass is needed to find label values.
 	for (u32 pass=0;pass<2 && err==0;pass++) {
 		u32 scope=0,lbl;
@@ -337,7 +337,7 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 			} else if (ISLBL(c)) {
 				// Label.
 				while (ISLBL(c)) {NEXT;}
-				lbl=UnlAddLabel(st,scope,ustr+(j-1),i-j);
+				lbl=SicoAddLabel(st,scope,ustr+(j-1),i-j);
 				if (lbl==0) {err="Unable to allocate label";break;}
 				val=st->lblarr[lbl].addr;
 				if (c==':') {
@@ -362,7 +362,7 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 				// Add a new value to memory.
 				if (op=='+') {val=acc+val;}
 				else if (op=='-') {val=acc-val;}
-				else if (pass) {UnlSetMem(st,addr-1,acc);}
+				else if (pass) {SicoSetMem(st,addr-1,acc);}
 				addr++;
 				acc=val;
 				op=0;
@@ -370,11 +370,11 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 			}
 		}
 		if (err==0 && ISOP(op)) {err="Trailing operator";}
-		if (pass) {UnlSetMem(st,addr-1,acc);}
+		if (pass) {SicoSetMem(st,addr-1,acc);}
 	}
 	if (err) {
 		// We've encountered a parsing error.
-		st->state=UNL_ERROR_PARSER;
+		st->state=SICO_ERROR_PARSER;
 		const char* fmt="Parser: %s\n";
 		u32 line=1;
 		uchar window[61],under[61];
@@ -406,17 +406,17 @@ void UnlParseAssembly(UnlState* st,const char* str) {
 	}
 }
 
-u32 UnlAddLabel(UnlState* st,u32 scope,const uchar* data,u32 len) {
+u32 SicoAddLabel(SicoState* st,u32 scope,const uchar* data,u32 len) {
 	// Add a label if it's new. Return its position in the label array.
-	UnlLabel* arr=st->lblarr;
+	SicoLabel* arr=st->lblarr;
 	u32 pos=st->lblpos;
 	if (arr==0) {
 		// Initialize the root label.
-		arr=(UnlLabel*)malloc(sizeof(UnlLabel));
+		arr=(SicoLabel*)malloc(sizeof(SicoLabel));
 		if (arr==0) {return 0;}
 		st->lblalloc=1;
 		pos=1;
-		memset(arr,0,sizeof(UnlLabel));
+		memset(arr,0,sizeof(SicoLabel));
 		arr[0].addr=(u64)-1;
 	}
 	// If the label starts with a '.', make it a child of the last non '.' label.
@@ -430,12 +430,12 @@ u32 UnlAddLabel(UnlState* st,u32 scope,const uchar* data,u32 len) {
 			if (lbl==0) {
 				if (pos>=st->lblalloc) {
 					st->lblalloc<<=1;
-					arr=(UnlLabel*)realloc(arr,st->lblalloc*sizeof(UnlLabel));
+					arr=(SicoLabel*)realloc(arr,st->lblalloc*sizeof(SicoLabel));
 					if (arr==0) {i=len;break;}
 				}
 				lbl=pos++;
 				arr[parent].child[val]=lbl;
-				memset(arr+lbl,0,sizeof(UnlLabel));
+				memset(arr+lbl,0,sizeof(SicoLabel));
 				arr[lbl].addr=(u64)-1;
 			}
 		}
@@ -445,7 +445,7 @@ u32 UnlAddLabel(UnlState* st,u32 scope,const uchar* data,u32 len) {
 	return lbl;
 }
 
-u64 UnlFindLabel(UnlState* st,const char* label) {
+u64 SicoFindLabel(SicoState* st,const char* label) {
 	// Returns the given label's address. Returns -1 if no label was found.
 	if (st->lblarr==0) {return (u64)-1;}
 	uchar c;
@@ -460,10 +460,10 @@ u64 UnlFindLabel(UnlState* st,const char* label) {
 	return st->lblarr[lbl].addr;
 }
 
-void UnlParseFile(UnlState* st,const char* path) {
+void SicoParseFile(SicoState* st,const char* path) {
 	// Load and parse a source file.
-	UnlClear(st);
-	st->state=UNL_ERROR_PARSER;
+	SicoClear(st);
+	st->state=SICO_ERROR_PARSER;
 	FILE* in=fopen(path,"rb");
 	// Check if the file exists.
 	if (in==0) {
@@ -474,7 +474,7 @@ void UnlParseFile(UnlState* st,const char* path) {
 	fseek(in,0,SEEK_END);
 	size_t size=(size_t)ftell(in);
 	char* str=0;
-	if (size<UNL_MAX_PARSE) {
+	if (size<SICO_MAX_PARSE) {
 		str=(char*)malloc((size+1)*sizeof(char));
 	}
 	if (str==0) {
@@ -483,32 +483,32 @@ void UnlParseFile(UnlState* st,const char* path) {
 		fseek(in,0,SEEK_SET);
 		for (size_t i=0;i<size;i++) {str[i]=(char)getc(in);}
 		str[size]=0;
-		UnlParseAssembly(st,str);
+		SicoParseAssembly(st,str);
 		free(str);
 	}
 	fclose(in);
 }
 
-void UnlPrintState(UnlState* st) {
+void SicoPrintState(SicoState* st) {
 	const char* str=st->statestr;
-	if (str[0]==0 && st->state==UNL_RUNNING) {str="Running\n";}
-	printf("Unileq state: %08x\n%s",st->state,str);
+	if (str[0]==0 && st->state==SICO_RUNNING) {str="Running\n";}
+	printf("SICO state: %08x\n%s",st->state,str);
 }
 
-u64 UnlGetIP(UnlState* st) {
+u64 SicoGetIP(SicoState* st) {
 	return st->ip;
 }
 
-void UnlSetIP(UnlState* st,u64 ip) {
+void SicoSetIP(SicoState* st,u64 ip) {
 	st->ip=ip;
 }
 
-u64 UnlGetMem(UnlState* st,u64 addr) {
+u64 SicoGetMem(SicoState* st,u64 addr) {
 	// Return the memory value at addr.
 	return addr<st->alloc?st->mem[addr]:0;
 }
 
-void UnlSetMem(UnlState* st,u64 addr,u64 val) {
+void SicoSetMem(SicoState* st,u64 addr,u64 val) {
 	// Write val to the memory at addr.
 	if (addr>=st->alloc) {
 		// If we're writing to an address outside of our memory, attempt to resize it or
@@ -531,7 +531,7 @@ void UnlSetMem(UnlState* st,u64 addr,u64 val) {
 			st->mem=mem;
 			st->alloc=alloc;
 		} else {
-			st->state=UNL_ERROR_MEMORY;
+			st->state=SICO_ERROR_MEMORY;
 			snprintf(st->statestr,sizeof(st->statestr),"Failed to allocate memory.\nIndex: %" PRIu64 "\n",addr);
 			return;
 		}
@@ -539,10 +539,10 @@ void UnlSetMem(UnlState* st,u64 addr,u64 val) {
 	st->mem[addr]=val;
 }
 
-void UnlRun(UnlState* st,u32 iters) {
-	// Run unileq for a given number of iterations. If iters=-1, run forever. We will
+void SicoRun(SicoState* st,u32 iters) {
+	// Run SICO for a given number of iterations. If iters=-1, run forever. We will
 	// spend 99% of our time in this function.
-	if (st->state!=UNL_RUNNING) {
+	if (st->state!=SICO_RUNNING) {
 		return;
 	}
 	u32 dec=(iters+1)>0;
@@ -576,7 +576,7 @@ void UnlRun(UnlState* st,u32 iters) {
 		}
 		// Output
 		if (a<alloc) {
-			// Execute a normal unileq instruction.
+			// Execute a normal SICO instruction.
 			ma=mem[a];
 			if (ma<=mb) {ip=c;}
 			mem[a]=ma-mb;
@@ -585,16 +585,16 @@ void UnlRun(UnlState* st,u32 iters) {
 		// a is out of bounds or a special address.
 		ip=c;
 		if (a<io) {
-			// Execute a normal unileq instruction.
-			UnlSetMem(st,a,0-mb);
-			if (st->state!=UNL_RUNNING) {
+			// Execute a normal SICO instruction.
+			SicoSetMem(st,a,0-mb);
+			if (st->state!=SICO_RUNNING) {
 				break;
 			}
 			mem=st->mem;
 			alloc=st->alloc;
 		} else if (a==(u64)-1) {
 			// Exit.
-			st->state=UNL_COMPLETE;
+			st->state=SICO_COMPLETE;
 			break;
 		} else if (a==(u64)-2) {
 			// Print to stdout.
@@ -613,31 +613,31 @@ void UnlRun(UnlState* st,u32 iters) {
 
 
 //---------------------------------------------------------------------------------
-// Example usage. Call "unileq file.unl" to run a file.
+// Example usage. Call "sico file.sico" to run a file.
 
 
 int main(int argc,char** argv) {
-	UnlState* unl=UnlCreate();
+	SicoState* st=SicoCreate();
 	if (argc<=1) {
-		// Print "Usage: unileq file.unl".
-		UnlParseAssembly(unl,"\
+		// Print "Usage: sico file.sico".
+		SicoParseAssembly(st,"\
 			loop: len  ?     neg\
 			      0-2  text  ?+1\
 			      ?-2  neg   loop\
-			text: 85 115 97 103 101 58 32 117 110 105 108 101\
-			      113 32 102 105 108 101 46 117 110 108 10\
+			text: 85 115 97 103 101 58 32 115 105 99 111\
+			      32 102 105 108 101 46 115 105 99 111 10\
 			neg:  0-1\
 			len:  len-text\
 		");
 	} else {
-		UnlParseFile(unl,argv[1]);
+		SicoParseFile(st,argv[1]);
 	}
 	// Main loop.
-	UnlRun(unl,(u32)-1);
+	SicoRun(st,(u32)-1);
 	// Exit and print the status if there was an error.
-	u32 ret=unl->state;
-	if (ret!=UNL_COMPLETE) {UnlPrintState(unl);}
-	UnlFree(unl);
+	u32 ret=st->state;
+	if (ret!=SICO_COMPLETE) {SicoPrintState(st);}
+	SicoFree(st);
 	return (int)ret;
 }
 

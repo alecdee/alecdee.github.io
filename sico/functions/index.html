@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Unileq - Functions</title>
+	<title>SICO - Functions</title>
 	<link rel="stylesheet" href="../../style/style.css" type="text/css">
 	<script type="text/javascript" src="../../style/style.js"></script>
 </head>
@@ -12,14 +12,14 @@
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>Functions</h1>
-<p>In the introduction to unileq, we showed how to perform several higher level operations, such as
+<p>In the introduction to SICO, we showed how to perform several higher level operations, such as
 comparing values. Even though we can perform these useful operations, we may need to write out
-dozens of unileq instructions to do so. Rewriting these instructions every time we need them is
+dozens of SICO instructions to do so. Rewriting these instructions every time we need them is
 going to be both messy and prone to errors.</p>
 <br>
 <p>In this section, we will solve this problem by creating a calling convention for functions. These
 functions will allow us to reuse other instructions with very little effort on our part, and they
-can be implemented within unileq. That is, we won't need to introduce any new assembly notation.</p>
+can be implemented within SICO. That is, we won't need to introduce any new assembly notation.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Calling Convention ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
@@ -29,9 +29,9 @@ memory address <i>x</i>. Now, assume that the label <i>func</i> is the function 
 address <i>0</i> always holds the value <i>0</i> when we begin. Then the function calling convention
 we will use is:</p>
 <br>
-<div class="codeblock langunileq">0 ? func arg0 arg1 ...</div>
+<div class="codeblock langsico">0 ? func arg0 arg1 ...</div>
 <br>
-<p>When the unileq instruction <i>0 ? func</i> is executed, it will perform the operation
+<p>When the SICO instruction <i>0 ? func</i> is executed, it will perform the operation
 <i>[0]=[0]-[?]</i>. Since <i>?</i> refers to the current address in memory, we have the equality
 <i>[?]=?</i>. Also, by our assumptions, <i>[0]=0</i>. Thus, we have <i>[0]=0-?</i>. That is, we
 store the negation of the current address in memory address <i>0</i>. And since the value <i>0</i>
@@ -42,7 +42,7 @@ that we are passing: <i>arg0 arg1 ...</i> etc. Since we know that address <i>0</
 negation of the calling address, and that the arguments are listed immediately after the calling
 address, we can retrieve <i>arg0</i> at <i>-[0]+2</i>, <i>arg1</i> at <i>-[0]+3</i>, and so on.</p>
 <br>
-<div class="codeblock langunileq">0     ?     func     arg0     arg1    ...
+<div class="codeblock langsico">0     ?     func     arg0     arg1    ...
 
     -[0]   -[0]+1   -[0]+2   -[0]+3   ...
 </div>
@@ -55,16 +55,16 @@ that any subsequent function calls can assume <i>[0]=0</i>.</p>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ First Function: Adding Numbers ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <div class="content"><h1>First Function: Adding Numbers</h1>
-<p>Unileq's single instruction nature means that it lacks even the common mathematical operations
-that most languages have by default. Large unileq programs will need functions like multiplication
+<p>SICO's single instruction nature means that it lacks even the common mathematical operations
+that most languages have by default. Large SICO programs will need functions like multiplication
 and division in order to be easy to read and write. So, for our first function, it will pay off
 immensely to show how to create a function that can add numbers.</p>
 <br>
 <p>Assume our function takes addresses <i>r</i>, <i>a</i>, and <i>b</i> as inputs and we want to
-compute <i>[r]=[a]+[b]</i>. To do this in plain unileq instructions, we would need to write 5
+compute <i>[r]=[a]+[b]</i>. To do this in plain SICO instructions, we would need to write 5
 instructions every time we wanted to perform this operation:</p>
 <br>
-<div class="codeblock langunileq">tmp tmp ?+1
+<div class="codeblock langsico">tmp tmp ?+1
 tmp a   ?+1
 tmp b   ?+1  # [tmp]=-[a]-[b]
 r   r   ?+1
@@ -74,11 +74,11 @@ r   tmp ?+1  # [r]=[a]+[b]
 <p>After writing our function, called <i>addnum</i>, we will be able to shrink this down to a single
 line:</p>
 <br>
-<div class="codeblock langunileq">0 ? addnum r a b</div>
+<div class="codeblock langsico">0 ? addnum r a b</div>
 <br>
 <p>Before we even write <i>addnum</i>, we can write a program to show how we intend to use it.</p>
 <br>
-<div class="codeblock langunileq">0 0 main
+<div class="codeblock langsico">0 0 main
 
 addnum:
 	# ...
@@ -110,7 +110,7 @@ main:
 </div>
 <br>
 <p>The program makes use of the sublabels <i>.a</i>, <i>.b</i>, etc under <i>main</i>. Whereas
-normal labels need to be unique across the entire unileq program, sublabels only need to be unique
+normal labels need to be unique across the entire SICO program, sublabels only need to be unique
 for the label they're defined under. This helps out with larger programs where we expect to reuse
 common label names.</p>
 <br>
@@ -123,7 +123,7 @@ convert them to printable digits. After that shift, we can print our digits and 
 <p>Here is the outline of what we want <i>addnum</i> to do. All that we need to do is fill it
 in.</p>
 <br>
-<div class="codeblock langunileq">addnum:
+<div class="codeblock langsico">addnum:
 	# Get r.
 	# Get a.
 	# Get b.
@@ -141,7 +141,7 @@ instead of their values. This is because we won't need their values until the
 There's only a few of them, but they're used throughout the function. Covering them first will help
 with understanding the other sections.</p>
 <br>
-<div class="codeblock langunileq">	# Constants.
+<div class="codeblock langsico">	# Constants.
 	.z:0 1 2
 	.tmp:0
 	.val:0
@@ -154,7 +154,7 @@ values.</p>
 <br>
 <p>To get the return address, <i>r</i>, we'll need to perform 3 dereferences.</p>
 <br>
-<div class="codeblock langunileq">	# Get r.
+<div class="codeblock langsico">	# Get r.
 	0     .z+2  ?+1
 	.r0   .r0   ?+1
 	.r0   0     ?+1
@@ -176,7 +176,7 @@ second and third dereferences.</p>
 <p>To get <i>a</i> we decrement <i>[0]</i> by <i>1</i> and perform another 2 dereferences. This time
 we only have 1 destination address to write to.</p>
 <br>
-<div class="codeblock langunileq">	# Get a.
+<div class="codeblock langsico">	# Get a.
 	0     .z+1  ?+1
 	.a0   .a0   ?+1
 	.a0   0     ?+1
@@ -188,7 +188,7 @@ we only have 1 destination address to write to.</p>
 <br>
 <p>To get <i>b</i> we decrement <i>[0]</i> and perform another 2 dereferences.</p>
 <br>
-<div class="codeblock langunileq">	# Get b.
+<div class="codeblock langsico">	# Get b.
 	0     .z+1  ?+1
 	.b0   .b0   ?+1
 	.b0   0     ?+1
@@ -200,7 +200,7 @@ we only have 1 destination address to write to.</p>
 <br>
 <p>Getting the return address is much simpler than getting the arguments.</p>
 <br>
-<div class="codeblock langunileq">	# Set the return address.
+<div class="codeblock langsico">	# Set the return address.
 	0     .z+1  ?+1
 	.ret  .ret  ?+1
 	.ret  0     ?+1
@@ -212,7 +212,7 @@ We then use it overwrite <i>[ret]</i>, the jump operand of the last instruction 
 <p>At his point we are all set to perform what the function originally set out to do: add
 numbers.</p>
 <br>
-<div class="codeblock langunileq">	#Set [r]=[a]+[b].
+<div class="codeblock langsico">	#Set [r]=[a]+[b].
 	.tmp  .tmp  ?+1
 	.tmp  .r1:0 ?+1  # [tmp]=-[r]
 	.val  .val  ?+1
@@ -229,7 +229,7 @@ allows us to write both negative and positive values to the return address.</p>
 <br>
 <p>After setting <i>[r]</i>, we have the last instruction:</p>
 <br>
-<div class="codeblock langunileq">	# Return and set [0]=0.
+<div class="codeblock langsico">	# Return and set [0]=0.
 	0     0     .ret:0</div>
 <br>
 <p>As the comment says, our last instruction simply sets <i>[0]</i> to <i>0</i> for future functions
@@ -237,7 +237,7 @@ to use and returns to the end of the calling instruction.</p>
 <br>
 <p>The full program is given below.</p>
 <br>
-<div class="codeblock langunileq">0 0 main
+<div class="codeblock langsico">0 0 main
 
 addnum:
 	# Call  : 0 ? addnum r a b
