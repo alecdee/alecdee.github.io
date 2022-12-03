@@ -6,6 +6,7 @@ SICO Master Library
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
+
 --------------------------------------------------------------------------------
 Notes
 
@@ -18,11 +19,11 @@ message and exit if it's not.
 
           File      |  Line
      ---------------+--------
-       string.sico  |    39
-         uint.sico  |   291
-          int.sico  |  2207
-       random.sico  |  3570
-       memory.sico  |  4177
+       string.sico  |    40
+         uint.sico  |   292
+          int.sico  |  2208
+       random.sico  |  3571
+       memory.sico  |  4178
 
 
 |#
