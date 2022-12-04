@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.js - v1.25
+sico.js - v1.26
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -153,14 +153,14 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
-     Input /      |  Interaction with the host environment can be done by
-     Output       |  reading or writing from special addresses.
+     Input /      |  For an instruction A B C, reading or writing from
+     Output       |  special addresses will interact with the host.
                   |
                   |  A = -1: End execution.
                   |  A = -2: Write mem[B] to stdout.
-                  |  B = -3: Subtract stdin from mem[A].
-                  |  B = -4: Subtract timing frequency from mem[A].
-                  |  B = -5: Subtract current time from mem[A].
+                  |  B = -3: mem[B] = stdin
+                  |  B = -4: mem[B] = environment timing frequency
+                  |  B = -5: mem[B] = system time
                   |  A = -6: Sleep for mem[B]/2^32 seconds.
                   |
                   |  Ex:

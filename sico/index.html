@@ -171,15 +171,15 @@ Ex:<br>
 ?+1
 </div>
 </td></tr>
-<tr><td>Input / Output</td><td>Interaction with the host environment can be done by reading or
-writing from special addresses.<br>
+<tr><td>Input / Output</td><td>For an instruction <i>A B C</i>, reading or writing from special
+addresses will interact with the host.<br>
 <br>
 <i>A = -1</i>: End execution.<br>
 <i>A = -2</i>: Write <i>mem[B]</i> to stdout.<br>
-<i>B = -3</i>: Subtract stdin from <i>mem[A]</i>.<br>
-<i>B = -4</i>: Subtract timing frequency from <i>mem[A]</i>.<br>
-<i>B = -5</i>: Subtract current time from <i>mem[A]</i>.<br>
-<i>A = -6</i>: Sleep for <i>mem[B]/2^32</i> seconds.<br>
+<i>B = -3</i>: <i>mem[B]</i> = stdin.<br>
+<i>B = -4</i>: <i>mem[B]</i> = environment timing frequency.<br>
+<i>B = -5</i>: <i>mem[B]</i> = system time.<br>
+<i>A = -6</i>: Sleep for <i>mem[B]/freq</i> seconds.<br>
 <br>
 Ex:<br>
 <div class="codeblock langsico">0-2  txt  ?+1  # A = -2. Print a letter.
@@ -569,7 +569,7 @@ for the <a href="./sico.c">sico.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 3 Dec 2022<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 4 Dec 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
