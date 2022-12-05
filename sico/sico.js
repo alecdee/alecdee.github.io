@@ -36,7 +36,7 @@ Overflow and underflow are handled by wrapping values around to be between
 0 and 2^64-1 inclusive.
 
 Interaction with the host environment is done by reading and writing from
-special memory addresses. For example, writing anything to A=-1 will end
+special memory addresses. For example, writing anything to -1 will end
 execution of the SICO program.
 
 
