@@ -321,7 +321,7 @@ string.escend:
 #|==============================================================================
 
 
-Unsigned Integer Operations - v5.04
+Unsigned Integer Library - v5.04
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -2237,7 +2237,7 @@ uint.xor:
 #|==============================================================================
 
 
-Signed Integer Operations - v2.02
+Signed Integer Library - v2.02
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -3600,7 +3600,7 @@ int.shr:
 #|==============================================================================
 
 
-Random Number Generator - v2.00
+Random Number Generator Library - v2.00
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -4207,7 +4207,7 @@ random.shuffle:
 #|==============================================================================
 
 
-Memory - v1.02
+Memory Library - v1.02
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com

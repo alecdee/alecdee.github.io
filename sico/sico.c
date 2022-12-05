@@ -23,23 +23,21 @@ jump to C. Otherwise, jump by 3. We use the instruction pointer (IP) to keep
 track of our place in memory. The pseudocode below shows a SICO instruction:
 
 
-     A=mem[IP+0]
-     B=mem[IP+1]
-     C=mem[IP+2]
-     if mem[A]<=mem[B]
-          IP=C
-     else
-          IP=IP+3
-     mem[A]=mem[A]-mem[B]
+     A = mem[IP+0]
+     B = mem[IP+1]
+     C = mem[IP+2]
+     IP += 3
+     if mem[A] <= mem[B]: IP = C
+     mem[A] -= mem[B]
 
 
 The instruction pointer and memory values are all 64 bit unsigned integers.
-Overflow and underflow are handled by wrapping values around to be between 0 and
-2^64-1 inclusive.
+Overflow and underflow are handled by wrapping values around to be between
+0 and 2^64-1 inclusive.
 
 Interaction with the host environment is done by reading and writing from
-special memory addresses. For example, writing anything to -1 will end execution
-of the SICO program.
+special memory addresses. For example, writing anything to A=-1 will end
+execution of the SICO program.
 
 
 --------------------------------------------------------------------------------
@@ -154,7 +152,8 @@ The rules of the assembly language are given below.
      -------------+--------------------------------------------------------
                   |
      Input /      |  For an instruction A B C, reading or writing from
-     Output       |  special addresses will interact with the host.
+     Output       |  special addresses will interact with the host. When
+                  |  writing to these addresses, act as if mem[A]=0.
                   |
                   |  A = -1: End execution.
                   |  A = -2: Write mem[B] to stdout.

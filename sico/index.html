@@ -71,14 +71,12 @@ equal to <i>mem[B]</i>, jump to <i>C</i>. Otherwise, jump by <i>3</i>. We use th
 pointer (<i>IP</i>) to keep track of our place in memory. The pseudocode below shows a SICO
 instruction:</p>
 <br>
-<div class="codeblock langpython">     A=mem[IP+0]
-     B=mem[IP+1]
-     C=mem[IP+2]
-     if mem[A]&lt;=mem[B]
-          IP=C
-     else
-          IP=IP+3
-     mem[A]=mem[A]-mem[B]
+<div class="codeblock langpython">A = mem[IP+0]
+B = mem[IP+1]
+C = mem[IP+2]
+IP += 3
+if mem[A] &lt;= mem[B]: IP = C
+mem[A] -= mem[B]
 </div>
 <br>
 <p>The instruction pointer and memory values are all 64 bit unsigned integers. Overflow and
@@ -172,7 +170,8 @@ Ex:<br>
 </div>
 </td></tr>
 <tr><td>Input / Output</td><td>For an instruction <i>A B C</i>, reading or writing from special
-addresses will interact with the host.<br>
+addresses will interact with the host. When writing to these addresses, act as if <i>mem[A]=0</i>.
+<br>
 <br>
 <i>A = -1</i>: End execution.<br>
 <i>A = -2</i>: Write <i>mem[B]</i> to stdout.<br>
