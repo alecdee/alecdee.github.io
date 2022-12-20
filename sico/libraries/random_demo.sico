@@ -4,15 +4,16 @@ demo:
 
 	# 64 bit
 	0 ? random.get .ret
-	0 ? string.print 54 52 32 98 105 116 32 58 32 string.uint .ret 10 0
+	0 ? string.print '6 '4 '  'b 'i 't '  ': '  string.uint .ret 10 0
 
 	# Mod
 	0 ? random.mod .ret .mod
-	0 ? string.print 109 111 100 32 string.uint .mod 32 58 32 string.uint .ret 10 0
+	0 ? string.print 'm 'o 'd '  string.uint .mod '  ': '  string.uint .ret 10 0
 
 	# Shuffle
 	0 ? random.shuffle .arrptr .arrlen
-	0 ? string.print 115 104 117 102 102 108 101 58 32 string.uint .arr+0 32 string.uint .arr+1 32 string.uint .arr+2 32 string.uint .arr+3 32 string.uint .arr+4 10 0
+	0 ? string.print 's 'h 'u 'f 'f 'l 'e ': '  string.uint .arr+0 '  string.uint .arr+1 ' 
+                      string.uint .arr+2 '  string.uint .arr+3 '  string.uint .arr+4 10 0
 
 	0-1 0 ?-2
 
@@ -45,280 +46,31 @@ message and exit if it's not.
 
           File      |  Line
      ---------------+--------
-       string.sico  |    40
-         uint.sico  |   292
-          int.sico  |  2208
-       random.sico  |  3571
-       memory.sico  |  4178
+         uint.sico  |    43
+          int.sico  |  1961
+       random.sico  |  3326
+       string.sico  |  3933
+       memory.sico  |  4347
 
 
 |#
 
 
-0 0 ?+1
-0 ? string.print
-    69 82 82 79 82 58 32 109 97 115 116 101 114 46 117
-    110 108 32 109 117 115 116 32 98 101 32 105 110 99
-    108 117 100 101 100 32 108 97 115 116 10 0
-0-1 0 ?-2
+master:
+	.len    .z+1    .z-1
+	0-2     .ptr    ?+1
+	?-2     .z-1    master
+	0-1 .z:0 1
+	.ptr: 'E 'R 'R 'O 'R ': '  'm 'a 's 't 'e 'r '. 's 'i 'c
+	      'o '  'm 'u 's 't '  'b 'e '  'i 'n 'c 'l 'u 'd 'e
+	      'd '  'l 'a 's 't 10
+	.len: .len-.ptr+1
 
 
 #|==============================================================================
 
 
-String Library - v1.05
-
-Copyright 2022 Alec Dee - MIT license - SPDX: MIT
-alecdee.github.io - akdee144@gmail.com
-
-
---------------------------------------------------------------------------------
-Notes
-
-
-string.sico currently only provides the print function. In the future, it will
-also provide string manipulation functions.
-
-
---------------------------------------------------------------------------------
-Index
-
-
-Printing
-string.print char0 char1 char2 ... 0
-
-String formatting escape codes
-string.uint    [num]
-string.uintfmt [num], [base], [padding], [padchar]
-string.uintinl [num], base, padding, padchar
-string.int     [num]
-string.intfmt  [num], [base], [sign], [padding], [padchar]
-string.intinl  [num], base, sign, padding, padchar
-
-
---------------------------------------------------------------------------------
-Version History
-
-
-1.00
-     Initial version.
-     Created print function.
-1.01
-     Reorganized integer printing constants.
-1.02
-     Replaced built-in integer printing with uint.print and int.print.
-     Library now handles strings instead of just printing.
-1.03
-     Renamed print to string.print for consistency.
-1.04
-     Updated comments.
-1.05
-     Modified string.print to use uint.writestring instead of uint.print.
-
-
---------------------------------------------------------------------------------
-ASCII Reference Table
-
-
-  0  00  NUL |  26  1a      |  52  34   4  |  78  4e   N  | 104  68   h
-  1  01      |  27  1b  ESC |  53  35   5  |  79  4f   O  | 105  69   i
-  2  02      |  28  1c      |  54  36   6  |  80  50   P  | 106  6a   j
-  3  03      |  29  1d      |  55  37   7  |  81  51   Q  | 107  6b   k
-  4  04      |  30  1e      |  56  38   8  |  82  52   R  | 108  6c   l
-  5  05      |  31  1f      |  57  39   9  |  83  53   S  | 109  6d   m
-  6  06      |  32  20  SPC |  58  3a   :  |  84  54   T  | 110  6e   n
-  7  07  BEL |  33  21   !  |  59  3b   ;  |  85  55   U  | 111  6f   o
-  8  08  BCK |  34  22   "  |  60  3c   <  |  86  56   V  | 112  70   p
-  9  09  TAB |  35  23   #  |  61  3d   =  |  87  57   W  | 113  71   q
- 10  0a  LF  |  36  24   $  |  62  3e   >  |  88  58   X  | 114  72   r
- 11  0b  VTB |  37  25   %  |  63  3f   ?  |  89  59   Y  | 115  73   s
- 12  0c      |  38  26   &  |  64  40   @  |  90  5a   Z  | 116  74   t
- 13  0d  CR  |  39  27   '  |  65  41   A  |  91  5b   [  | 117  75   u
- 14  0e      |  40  28   (  |  66  42   B  |  92  5c   \  | 118  76   v
- 15  0f      |  41  29   )  |  67  43   C  |  93  5d   ]  | 119  77   w
- 16  10      |  42  2a   *  |  68  44   D  |  94  5e   ^  | 120  78   x
- 17  11      |  43  2b   +  |  69  45   E  |  95  5f   _  | 121  79   y
- 18  12      |  44  2c   ,  |  70  46   F  |  96  60   `  | 122  7a   z
- 19  13      |  45  2d   -  |  71  47   G  |  97  61   a  | 123  7b   {
- 20  14      |  46  2e   .  |  72  48   H  |  98  62   b  | 124  7c   |
- 21  15      |  47  2f   /  |  73  49   I  |  99  63   c  | 125  7d   }
- 22  16      |  48  30   0  |  74  4a   J  | 100  64   d  | 126  7e   ~
- 23  17      |  49  31   1  |  75  4b   K  | 101  65   e  | 127  7f  DEL
- 24  18  CAN |  50  32   2  |  76  4c   L  | 102  66   f  |
- 25  19      |  51  33   3  |  77  4d   M  | 103  67   g  |
-
-
---------------------------------------------------------------------------------
-TODO
-
-
-rename string.print to io.print
-io.readline
-string.create
-string.free
-string.length
-string.getchar
-string.setchar
-string.split
-string.strip
-string.padleft
-string.padright
-string.padsign   # pad's left but skips +-, so "-31" becomes "-0031"
-
-string structure
-	0 ptr
-	1 len
-char[i] = [[string.ptr] + i]
-
-|#
-
-
-string.print:
-	# Call  : 0 ? string.print char0 char1 char2 ... 0
-	# Effect: Prints a zero terminated ASCII string. If an escape code is used,
-	#       : the next value(s) are expected to be numbers or formatting.
-	# Use [0] to get the calling address.
-	.ptr    .ptr    ?+1
-	.ptr    0       ?+1
-	.ptr    .z-2    ?+1
-	0       0       .loop
-.ret:
-	0 ? mem.free .mem
-	.mem    .mem    ?+1
-	.memlen .memlen ?+1
-	.tmp
-.loop:
-	# Get the next character.
-	.tmp    .ptr:0  ?+1
-	.ptr    .z-1    ?+1
-	.char   .char   ?+1
-	.char   .tmp    ?+1
-	# If [char]=0, we've reached the end of the string.
-	.char   .z      .ret
-	# If [tmp]<=[escape], then we want to print a non-character.
-	.tmp    .esc    .escprint
-	# Print [char].
-	0-2     .char   ?+1
-	.tmp    .tmp    .loop
-.escprint:
-	# Print something other than a character.
-	0       .ptr    ?+1
-	0       .z-2    ?+1
-	.padchr .padchr ?+1
-	.padchr .paddef ?+1
-	.retry  .retry  ?+1
-	# Determine what type of value we're printing.
-	.tmp    .z      .str
-	.tmp    .nesc   .invalid
-	.tmp    .z+1    .intinl
-	.tmp    .z+1    .intfmt
-	.tmp    .z+1    .int
-	.tmp    .z+1    .uintinl
-	.tmp    .z+1    .uintfmt
-	.tmp    .z+1    .uint
-	.tmp    .z+1    .strfmt
-.invalid:
-	# Print "INVALID FORMAT"
-	.tmp    .tmp    ?+1
-	0       0       ?+1
-	0 ? string.print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
-	0-1     0       ?-2
-.str:
-	# Reserved for string printing.
-	0-1     0       ?-2
-.strfmt:
-	# Reserved for string printing.
-	0-1     0       ?-2
-.uint:
-	.retry  ?+2     ?+2  0-uint.writestring-36
-	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
-	0 ? uint.writestring .mem .memlen .z .retlen 0 .base
-	.tmp    .tmp    .write
-.uintfmt:
-	.retry  ?+2     ?+2  0-uint.writestring-36
-	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 1 .pad 2 .padchr 2 .ptr 0 0
-	0 ? uint.writestring .mem .memlen .z .retlen 0 0
-	.tmp    .tmp    .write
-.uintinl:
-	.retry  ?+2     ?+2  0-uint.writestring-36
-	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 0 .pad 1 .padchr 1 .ptr 0 0
-	0 ? uint.writestring .mem .memlen .z .retlen 0 0
-	.tmp    .tmp    .write
-.int:
-	.retry  ?+2     ?+2  0-int.writestring-39
-	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
-	0 ? int.writestring .mem .memlen .z .retlen 0 .base .z
-	.tmp    .tmp    .write
-.intfmt:
-	.retry  ?+2     ?+2  0-int.writestring-39
-	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 1 ?+18 1 .pad 2 .padchr 2 .ptr 0 0
-	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
-	.tmp    .tmp    .write
-.intinl:
-	.retry  ?+2     ?+2  0-int.writestring-39
-	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 0 ?+18 0 .pad 1 .padchr 1 .ptr 0 0
-	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
-	.tmp    .tmp    .write
-.write:
-	# If [retlen]<[memlen] we need to resize [mem] and retry.
-	.retlen .memlen .lenok
-	.tmp    .retlen ?+1
-	.memlen .tmp    ?+1
-	0 ? mem.realloc .mem .mem .memlen
-	.mem    .z      .invalid
-	.tmp    .tmp    .retry:0
-.lenok:
-	.tmp    .memlen ?+1
-	.retlen .tmp    ?+1
-	# Print padding.
-	.pad    .retlen ?+10
-	0-2     .padchr ?+1
-	.pad    .z+1    ?+7
-	0-2     .padchr ?-5
-	.pad    .pad    ?+1
-	# Print [mem].
-	.tmp    .tmp    ?+1
-	.tmp    .mem    ?+1
-	.p0     .p0     ?+1
-	.p0     .tmp    ?+4
-	.retlen .z+1    ?+7
-	0-2     .p0:0   ?+1
-	.p0     .z-1    ?-8
-	.tmp    .tmp    .loop
-	# Variables
-	0-2 0-1 .z:0 1
-	.tmp:0
-	.char:0
-	.esc:0-string.escstart
-	.nesc:string.escstart-string.escend
-	.mem:0
-	.memlen:0
-	.retlen:0
-	# Formatting defaults
-	.base:10
-	.pad:0
-	.padchr:0
-	.paddef:0-32
-
-
-# String formatting escape codes. Define here so string.escstart >= 256.
-
-string.escstart:
-string.str:     0  # Reserved
-string.strfmt:  1  # Reserved
-string.uint:    2  # [num]
-string.uintfmt: 3  # [num], [base], [padding], [pad char]
-string.uintinl: 4  # [num], base, padding, pad char
-string.int:     5  # [num]
-string.intfmt:  6  # [num], [base], [padding], [pad char], [sign]
-string.intinl:  7  # [num], base, padding, pad char, sign
-string.escend:
-
-
-#|==============================================================================
-
-
-Unsigned Integer Library - v5.04
+Unsigned Integer Library - v5.05
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -490,6 +242,8 @@ Version History
      Replaced uint.print with uint.writestring. This will allow the integer and
      string libraries to interact more naturally.
      Added uint.readstring.
+5.05
+     Replaced ASCII codes with ASCII literals.
 
 
 --------------------------------------------------------------------------------
@@ -720,8 +474,8 @@ uint.writestring:
 	.strlen:0
 	.str:0
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
-		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
+		'0 '0 '1 '1 '2 '2 '3 '3 '4 '4 '5 '5 '6 '6 '7 '7
+          '8 '8 '9 '9 'a 'a 'b 'b 'c 'c 'd 'd 'e 'e 'f 'f
 	.nhex:0-.hex
 	.wretb0:0-.ret
 	.wretb1:0-.base1loop-6
@@ -905,12 +659,12 @@ uint.readstring:
 	.rret0:0-.base0loop-6
 	.rret1:0-.whiteloop-6
 	.rret2:.whiteloop+6-.parseloop
-	.ca1: 97-1    # a-1
-	.nca1:1-97    # 1-a
-	.cA1: 65-1    # A-1
-	.ncA1:1-65    # 1-A
-	.c01: 48-1    # 0-1
-	.nc91:0-57-1  # 1-9
+	.ca1: 'a-1
+	.nca1:1-'a
+	.cA1: 'A-1
+	.ncA1:1-'A
+	.c01: '0-1
+	.nc91:0-'9-1
 
 
 
@@ -2234,7 +1988,7 @@ uint.xor:
 #|==============================================================================
 
 
-Signed Integer Library - v2.02
+Signed Integer Library - v2.03
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -2322,6 +2076,8 @@ Version History
 2.02
      Replaced int.print with int.writestring.
      Added int.readstring.
+2.03
+     Replaced ASCII codes with ASCII literals.
 
 
 --------------------------------------------------------------------------------
@@ -2566,8 +2322,8 @@ int.writestring:
 	.plus:43
 	.minus:45
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
-		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
+		'0 '0 '1 '1 '2 '2 '3 '3 '4 '4 '5 '5 '6 '6 '7 '7
+          '8 '8 '9 '9 'a 'a 'b 'b 'c 'c 'd 'd 'e 'e 'f 'f
 	.nhex:0-.hex
 	.wret0:0-.isneg
 	.wret1:.isneg-.nextloop
@@ -2753,9 +2509,9 @@ int.readstring:
 	.n36:0-36
 	.n9:0-9
 	.z32:32
-	.plus: 43-32  # '+' - ' '
-	.minus:45-43  # '-' - '+'
-	.signc: 0-45  #     - '-'
+	.plus: '+ - ' 
+	.minus:'- - '+
+	.signc: 0 - '-
 	.tmp:0
 	.num:0
 	.isneg:0
@@ -2771,12 +2527,12 @@ int.readstring:
 	.rret1:0-.whiteloop-6
 	.rret2:.whiteloop+6-.signdone
 	.rret3:.signdone-.parseloop
-	.ca1: 97-1    # a-1
-	.nca1:1-97    # 1-a
-	.cA1: 65-1    # A-1
-	.ncA1:1-65    # 1-A
-	.c01: 48-1    # 0-1
-	.nc91:0-57-1  # 1-9
+	.ca1: 'a-1
+	.nca1:1-'a
+	.cA1: 'A-1
+	.ncA1:1-'A
+	.c01: '0-1
+	.nc91:0-'9-1
 
 
 #---------------------------------------------------------------------------------
@@ -4204,6 +3960,420 @@ random.shuffle:
 #|==============================================================================
 
 
+String Library - v2.00
+
+Copyright 2022 Alec Dee - MIT license - SPDX: MIT
+alecdee.github.io - akdee144@gmail.com
+
+
+--------------------------------------------------------------------------------
+Notes
+
+
+string.sico provides functions for basic string manipulation and console IO.
+
+Do not include this library first. It needs to start at address 256 or later for
+the escape code constants to work.
+
+This library depends on the memory library.
+
+
+--------------------------------------------------------------------------------
+Index
+
+
+Management
+string.create   [ret]
+string.free     [str]
+
+Input/Output
+string.print char0 char1 char2 ... 0
+
+String formatting escape codes:
+string.str     [str]
+string.strfmt  [str], [padding], [pad char]
+string.strinl  [str], padding, pad char
+string.uint    [num]
+string.uintfmt [num], [base], [padding], [padchar]
+string.uintinl [num], base, padding, padchar
+string.int     [num]
+string.intfmt  [num], [base], [sign], [padding], [padchar]
+string.intinl  [num], base, sign, padding, padchar
+
+
+--------------------------------------------------------------------------------
+Version History
+
+
+1.00
+     Initial version.
+     Created print function.
+1.01
+     Reorganized integer printing constants.
+1.02
+     Replaced built-in integer printing with uint.print and int.print.
+     Library now handles strings instead of just printing.
+1.03
+     Renamed print to string.print for consistency.
+1.04
+     Updated comments.
+1.05
+     Modified string.print to use uint.writestring instead of uint.print.
+2.00
+     Added string structure, basic manipulation functions, and console
+     input/output functions.
+
+
+--------------------------------------------------------------------------------
+ASCII Reference Table
+
+
+  0  00  NUL |  26  1a      |  52  34   4  |  78  4e   N  | 104  68   h
+  1  01      |  27  1b  ESC |  53  35   5  |  79  4f   O  | 105  69   i
+  2  02      |  28  1c      |  54  36   6  |  80  50   P  | 106  6a   j
+  3  03      |  29  1d      |  55  37   7  |  81  51   Q  | 107  6b   k
+  4  04      |  30  1e      |  56  38   8  |  82  52   R  | 108  6c   l
+  5  05      |  31  1f      |  57  39   9  |  83  53   S  | 109  6d   m
+  6  06      |  32  20  SPC |  58  3a   :  |  84  54   T  | 110  6e   n
+  7  07  BEL |  33  21   !  |  59  3b   ;  |  85  55   U  | 111  6f   o
+  8  08  BCK |  34  22   "  |  60  3c   <  |  86  56   V  | 112  70   p
+  9  09  TAB |  35  23   #  |  61  3d   =  |  87  57   W  | 113  71   q
+ 10  0a  LF  |  36  24   $  |  62  3e   >  |  88  58   X  | 114  72   r
+ 11  0b  VTB |  37  25   %  |  63  3f   ?  |  89  59   Y  | 115  73   s
+ 12  0c      |  38  26   &  |  64  40   @  |  90  5a   Z  | 116  74   t
+ 13  0d  CR  |  39  27   '  |  65  41   A  |  91  5b   [  | 117  75   u
+ 14  0e      |  40  28   (  |  66  42   B  |  92  5c   \  | 118  76   v
+ 15  0f      |  41  29   )  |  67  43   C  |  93  5d   ]  | 119  77   w
+ 16  10      |  42  2a   *  |  68  44   D  |  94  5e   ^  | 120  78   x
+ 17  11      |  43  2b   +  |  69  45   E  |  95  5f   _  | 121  79   y
+ 18  12      |  44  2c   ,  |  70  46   F  |  96  60   `  | 122  7a   z
+ 19  13      |  45  2d   -  |  71  47   G  |  97  61   a  | 123  7b   {
+ 20  14      |  46  2e   .  |  72  48   H  |  98  62   b  | 124  7c   |
+ 21  15      |  47  2f   /  |  73  49   I  |  99  63   c  | 125  7d   }
+ 22  16      |  48  30   0  |  74  4a   J  | 100  64   d  | 126  7e   ~
+ 23  17      |  49  31   1  |  75  4b   K  | 101  65   e  | 127  7f  DEL
+ 24  18  CAN |  50  32   2  |  76  4c   L  | 102  66   f  |
+ 25  19      |  51  33   3  |  77  4d   M  | 103  67   g  |
+
+
+--------------------------------------------------------------------------------
+TODO
+
+
+merge string.print and string.writeinline
+rename string.int to string.esc.int, etc
+
+Management
+string.copy     ret str
+string.clear    str
+string.length   ret str
+string.getchar  ret str idx
+string.setchar  str idx chr
+
+Formatting
+string.writeinline [ret] char0 char1 char2 ... 0
+string.writestring [ret] [fmt]
+
+Input/Output
+string.read  ret
+
+Comparisons
+string.cmp      a b lt eq gt
+
+Block Operations
+string.substring ret str start stop
+string.split    ret str
+
+Padding
+string.strip    ret str
+string.padleft  ret str
+string.padright ret str
+string.padsign  ret str # pad's left but skips +-, so "-31" becomes "-0031"
+
+string structure
+	0 ptr
+	1 len
+char[i] = [[string.ptr] + i]
+
+
+|#
+
+
+#---------------------------------------------------------------------------------
+# Constants
+
+
+# The string structure in memory.
+string.struct:
+	.str:  0
+	.len:  1
+	.size: 2
+
+
+# Escape codes. Used to insert values into strings.
+string.escstart:
+string.str:     0  # [str]
+string.strfmt:  1  # [str], [padding], [pad char]
+string.strinl:  2  # [str], padding, pad char
+string.uint:    3  # [num]
+string.uintfmt: 4  # [num], [base], [padding], [pad char]
+string.uintinl: 5  # [num], base, padding, pad char
+string.int:     6  # [num]
+string.intfmt:  7  # [num], [base], [padding], [pad char], [sign]
+string.intinl:  8  # [num], base, padding, pad char, sign
+string.escend:
+
+
+#---------------------------------------------------------------------------------
+# Management
+
+
+string.create:
+	# Call  : 0 ? string.create ret
+	# Effect: Allocates an empty string and returns its pointer.
+	mem.getargs.0 ? mem.getargs .ret 0 .arg3 0 0
+	0 ? mem.alloc .str string.struct.size
+	0 ? mem.set .ret:0 .str
+	0 0 .arg3:0
+	# Variables
+	.str:0
+
+
+string.free:
+	# Call  : 0 ? string.free str
+	# Effect: Frees [str].
+	mem.getargs.0 ? mem.getargs .str 2 .arg3 0 0
+	0 ? mem.getidx .strptr .str string.struct.str
+	0 ? mem.free .strptr
+	0 ? mem.free .str
+	0 0 .arg3:0
+	# Variables
+	.strptr:0
+	.str:0
+
+
+#---------------------------------------------------------------------------------
+# Formatting
+
+
+#|
+string.writeinline:
+	.ptr .z-1 .modify:?+1
+.ret:
+	.tmp
+
+string.writestring:
+	# Call  : 0 ? string.writestring [ret] [fmt]
+	# Effect:
+|#
+
+
+#---------------------------------------------------------------------------------
+# Input/Output
+
+#|
+string.print:
+	# Call  : 0 ? string.print char0 char1 char2 ... 0
+	# Effect: Prints a zero terminated ASCII string. If an escape code is used,
+	#       : the next value(s) are expected to be numbers or formatting.
+	# Use [0] to get the calling address.
+	0       .z+2    ?+1
+	.ptr    .ptr    ?+1
+	.ptr    0       ?+1
+	.fmt+string.struct.str-string.struct+1 .fmt+string.struct.str-string.struct+1 ?+1
+	.fmt+string.struct.str-string.struct+1 0                                      ?+1
+	.fmt+string.struct.len-string.struct+1 .fmt+string.struct.len-string.struct+1 ?+1
+	.fmt+string.struct.len-string.struct+1 .ptr                                   ?+1
+	0       0       .loop
+.ret:
+	.tmp
+.loop:
+	# Get the next character.
+	.tmp    .ptr:0  ?+1
+	# If [tmp]=0, we've reached the end of the string.
+	.tmp    .z      .print
+	# If [tmp]<=-256, then we want to print an escape character.
+	.tmp    .esc    ?+7
+	.ptr    .z-1    ?+1
+	.tmp    .tmp    .loop
+	# Print something other than a character.
+	# If [tmp]+start-1<=start-end-1, abort.
+	.tmp    .nesc   ?+1
+	.tmp    .escmax .abort
+	.tmp    .nargs  ?+1
+	.ptr    .tmp:0  ?+1
+	.tmp    .tmp    .loop
+.print:
+	.tmp    .ptr    ?+1
+	.fmt+string.struct.len-string.struct+1 .tmp ?+1
+	0 ? string.writestring .str .fmt
+	# Print the string.
+	.str+string.struct.len-string.struct+1 .z .printdone
+	.tmp    .tmp    ?+1
+	.tmp    .str+string.struct.str-string.struct+1 ?+1
+	.pptr   .pptr   ?+1
+	.pptr   .tmp    ?+4
+.printloop:
+	.str+string.struct.len-string.struct+1 .z+1 .printdone
+	0-2     .pptr:0 ?+1
+	.pptr   .z-1    .printloop
+.printdone:
+	# Free the string.
+	0 ? mem.free .str+string.struct.str-string.struct+1
+	.str+string.struct.str-string.struct+1 .str+string.struct.str-string.struct+1 ?+1
+	.ptr    .z-1    .ret
+.abort:
+	0-1     0       ?-2
+	# Variables
+	0-1 .z:0 1 2
+	# Number of arguments in escape codes in reverse order.
+	0-6 0-6 0-2 0-5 0-5 0-2 0-4 0-4 0-2
+	.esc:0-256
+	.nesc:256-string.escstart+1
+	.escmax:string.escstart-string.escend-1
+	.nargs:0-2-.z
+	.fmt:?+1 0 0
+	.str:?+1 0 0
+|#
+
+string.print:
+	# Call  : 0 ? string.print char0 char1 char2 ... 0
+	# Effect: Prints a zero terminated ASCII string. If an escape code is used,
+	#       : the next value(s) are expected to be numbers or formatting.
+	# Use [0] to get the calling address.
+	.ptr    .ptr    ?+1
+	.ptr    0       ?+1
+	.ptr    .z-2    ?+1
+	0       0       .loop
+.ret:
+	0 ? mem.free .mem
+	.mem    .mem    ?+1
+	.memlen .memlen ?+1
+	.tmp
+.loop:
+	# Get the next character.
+	.tmp    .ptr:0  ?+1
+	.ptr    .z-1    ?+1
+	.char   .char   ?+1
+	.char   .tmp    ?+1
+	# If [char]=0, we've reached the end of the string.
+	.char   .z      .ret
+	# If [tmp]<=[escape], then we want to print a non-character.
+	.tmp    .esc    .escprint
+	# Print [char].
+	0-2     .char   ?+1
+	.tmp    .tmp    .loop
+.escprint:
+	# Print something other than a character.
+	0       .ptr    ?+1
+	0       .z-2    ?+1
+	.padchr .padchr ?+1
+	.padchr .paddef ?+1
+	.retry  .retry  ?+1
+	# Determine what type of value we're printing.
+	.tmp    .nesc   .invalid
+	.tmp    .z+1    .intinl
+	.tmp    .z+1    .intfmt
+	.tmp    .z+1    .int
+	.tmp    .z+1    .uintinl
+	.tmp    .z+1    .uintfmt
+	.tmp    .z+1    .uint
+	.tmp    .z+1    .strinl
+	.tmp    .z+1    .strfmt
+	.tmp    .z+1    .str
+.invalid:
+	# Print "INVALID FORMAT" and abort.
+	.ilen   .z+1    .z-1
+	0-2     .iptr   ?+1
+	?-2     .z-1    .invalid
+	.iptr: 'I 'N 'V 'A 'L 'I 'D '  'F 'O 'R 'M 'A 'T 10
+	.ilen: .ilen-.iptr+1
+.str:
+	mem.getargs.0 ? mem.getargs .substr 2 .ptr 0 0
+	0 ? mem.getidx .p0 .substr string.struct.str
+	0 ? mem.getidx .retlen .substr string.struct.len
+	.tmp    .tmp    .lenok+18
+.strfmt:
+	mem.getargs.0 ? mem.getargs .substr 2 .pad 2 .padchr 2 .ptr 0 0
+	.tmp    .tmp    .str+8
+.strinl:
+	mem.getargs.0 ? mem.getargs .substr 2 .pad 1 .padchr 1 .ptr 0 0
+	.tmp    .tmp    .str+8
+.uint:
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 .base
+	.tmp    .tmp    .write
+.uintfmt:
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 1 .pad 2 .padchr 2 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 0
+	.tmp    .tmp    .write
+.uintinl:
+	.retry  ?+2     ?+2  0-uint.writestring-36
+	mem.getargs.0 ? mem.getargs ?+18 1 ?+17 0 .pad 1 .padchr 1 .ptr 0 0
+	0 ? uint.writestring .mem .memlen .z .retlen 0 0
+	.tmp    .tmp    .write
+.int:
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 .base .z
+	.tmp    .tmp    .write
+.intfmt:
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 1 ?+18 1 .pad 2 .padchr 2 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
+	.tmp    .tmp    .write
+.intinl:
+	.retry  ?+2     ?+2  0-int.writestring-39
+	mem.getargs.0 ? mem.getargs ?+20 1 ?+19 0 ?+18 0 .pad 1 .padchr 1 .ptr 0 0
+	0 ? int.writestring .mem .memlen .z .retlen 0 0 0
+	.tmp    .tmp    .write
+.write:
+	# If [retlen]<[memlen] we need to resize [mem] and retry.
+	.retlen .memlen .lenok
+	.tmp    .retlen ?+1
+	.memlen .tmp    ?+1
+	0 ? mem.realloc .mem .mem .memlen
+	.mem    .z      .invalid
+	.tmp    .tmp    .retry:0
+.lenok:
+	.tmp    .memlen ?+1
+	.retlen .tmp    ?+1
+	.tmp    .tmp    ?+1
+	.tmp    .mem    ?+1
+	.p0     .p0     ?+1
+	.p0     .tmp    ?+1
+	# Print padding.
+	.pad    .retlen ?+10
+	0-2     .padchr ?+1
+	.pad    .z+1    ?+10
+	0-2     .padchr ?-5
+	.pad    .pad    ?+4
+	# Print [mem].
+	.retlen .z+1    ?+7
+	0-2     .p0:0   ?+1
+	.p0     .z-1    ?-8
+	.tmp    .tmp    .loop
+	# Variables
+	0-2 0-1 .z:0 1
+	.tmp:0
+	.char:0
+	.esc:0-256
+	.nesc:256-string.escend
+	.mem:0
+	.memlen:0
+	.retlen:0
+	.substr:0
+	# Formatting defaults
+	.base:10
+	.pad:0
+	.padchr:0
+	.paddef:0-32
+
+#|==============================================================================
+
+
 Memory Library - v1.02
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
@@ -4259,6 +4429,7 @@ Version History
 TODO
 
 
+Add mem.alloclen to return the allocated size of a block.
 Replace alloc hash table with AVL tree.
 	Find the smallest block that will fit an allocation.
 	If there are multiple matches, choose the one with the smallest address.
@@ -4828,14 +4999,14 @@ mem.alloc.init:
 	.zcheck .z+1    .dbgzdone
 	.p0:mem.alloc.start .z .dbgzgood
 	# ERROR: Alloc memory not 0
-	mem.error.z ? mem.error 69 82 82 79 82 58 32 65 108 108 111 99 32 109 101 109 111 114 121 32 110 111 116 32 48 10 0
+	mem.error.z ? mem.error 'E 'R 'R 'O 'R ': '  'A 'l 'l 'o 'c '  'm 'e 'm 'o 'r 'y '  'n 'o 't '  '0 10 0
 .dbgzgood:
 	.p0     .z-1    .dbgzloop
 .dbgzdone:
 	# len=end-start-65-2. Need len>=2, hence end-(start+69)>=0.
 	.minend mem.alloc.end .hasmem
 	# ERROR: Not enough memory
-	mem.error.z ? mem.error 69 82 82 79 82 58 32 78 111 116 32 101 110 111 117 103 104 32 109 101 109 111 114 121 10 0
+	mem.error.z ? mem.error 'E 'R 'R 'O 'R ': '  'N 'o 't '  'e 'n 'o 'u 'g 'h '  'm 'e 'm 'o 'r 'y 10 0
 .hasmem:
 	# Setup the catch-all block.
 	mem.alloc.start+63 .s63 ?+1
@@ -5039,10 +5210,10 @@ mem.alloc.verify:
 	0       0       .arg2:2
 .errormeta:
 	# ERROR: Corrupt memory metadata
-	mem.error.z ? mem.error 69 82 82 79 82 58 32 67 111 114 114 117 112 116 32 109 101 109 111 114 121 32 109 101 116 97 100 97 116 97 10 0
+	mem.error.z ? mem.error 'E 'R 'R 'O 'R ': '  'C 'o 'r 'r 'u 'p 't '  'm 'e 'm 'o 'r 'y '  'm 'e 't 'a 'd 'a 't 'a 10 0
 .errorfree:
 	# ERROR: Unfreed memory
-	mem.error.z ? mem.error 69 82 82 79 82 58 32 85 110 102 114 101 101 100 32 109 101 109 111 114 121 10 0
+	mem.error.z ? mem.error 'E 'R 'R 'O 'R ': '  'U 'n 'f 'r 'e 'e 'd '  'm 'e 'm 'o 'r 'y 10 0
 	# Variables
 	0-1 .z:0 1 2 3
 	.tmp0:0
@@ -5573,7 +5744,7 @@ mem.free:
 	0 ? mem.alloc.verifyblock .blk
 	mem.alloc.verifyblock.free .z .dbgdone0
 	# ERROR: Double free
-	mem.error.z ? mem.error 69 82 82 79 82 58 32 68 111 117 98 108 101 32 102 114 101 101 10 0
+	mem.error.z ? mem.error 'E 'R 'R 'O 'R ': '  'D 'o 'u 'b 'l 'e '  'f 'r 'e 'e 10 0
 .dbgdone0:
 	# prev=mem[blk+0]
 	.nprev  .nprev  ?+1

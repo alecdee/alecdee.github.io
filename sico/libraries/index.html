@@ -41,14 +41,15 @@ the <i>print</i> function which allows us to print ASCII strings as well as nume
 is needed to print diagnostic messages and see what other libraries are actually doing. It can be
 called like this:</p>
 <br>
-<div class="codeblock langsico">0 ? string.print 120 32 61 32 string.uint x 10 0</div>
+<div class="codeblock langsico">0 ? string.print 'x ' '= '  string.uint x 10 0</div>
 <br>
 <p>The example can be broken up into a few parts:</p>
 <br>
 <table class="listtable">
 <tr><td><i>0 ? string.print</i></td><td>the SICO instruction that jumps to the <i>string.print</i>
 function and gives it our calling address.</td></tr>
-<tr><td><i>120 32 61 32    </i></td><td>the ASCII values for "x = ".</td></tr>
+<tr><td><i>'x '  '= '      </i></td><td>the ASCII literal values for "x = ". We could also use
+<i>120 32 61 32</i></td></tr>
 <tr><td><i>string.uint     </i></td><td>a special value that tells <i>string.print</i> that the
 next value is an unsigned integer.</td></tr>
 <tr><td><i>x               </i></td><td>the unsigned integer to output.</td></tr>
@@ -60,16 +61,7 @@ next value is an unsigned integer.</td></tr>
 <br>
 <div class="consoleblock">x = 20</div>
 <br>
-<p>In order to convert a plaintext string into ASCII numerical values, we can use
-<a href="./toascii.sico">toascii.sico</a>. It takes a string from the console and outputs its ASCII
-values.</p>
-<br>
-<div class="consoleblock">&gt; ./sico toascii.sico
-enter text: Hello
-ascii     : 72 101 108 108 111
-</div>
-<br>
-<p><a href="./print_demo.sico">print_demo.sico</a> shows how to use the library. It's also used in
+<p><a href="./string_demo.sico">string_demo.sico</a> shows how to use the library. It's also used in
 the live version linked above.</p>
 </div>
 
@@ -201,7 +193,7 @@ the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 3 Dec 2022<br>
+<div id="footer">Created on 18 Dec 2020 - Modified on 19 Dec 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../../index.html">Alec Dee's Homepage</a></div>
 </body>

@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-style.js - v2.02
+style.js - v2.03
 
 Copyright 2018 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -126,11 +126,13 @@ function HighlightSico(str) {
 	// Define styles.
 	var stylearr=[
 		"</span><span style='color:#eeeeee'>", // default, number, operator, label ref
-		"</span><span style='color:#999999'>", // comment
-		"</span><span style='color:#aabb80'>"  // label declaration
+		"</span><span style='color:#9999dd'>", // comment
+		"</span><span style='color:#aabb80'>", // label declaration
+		"</span><span style='color:#909090'>"  // ASCII literal
 	];
 	var styledefault =0;
 	var stylecomment =1;
+	var styleascii   =3;
 	var stylenumber  =0;
 	var styleoperator=0;
 	var stylelabelref=0;
@@ -167,6 +169,11 @@ function HighlightSico(str) {
 			if (c===48 && (NEXT()===120 || c===88)) {token=16;NEXT();}
 			while (CNUM(c)<token) {NEXT();}
 			style=stylenumber;
+		} else if (c===39) {
+			// ASCII literal. Ex: 'H 'e 'l 'l 'o
+			NEXT();
+			NEXT();
+			style=styleascii;
 		} else if (c===63) {
 			// Current address token.
 			NEXT();
@@ -228,12 +235,9 @@ function StyleFooter() {
 }
 
 function StyleOnload() {
-	// var time=performance.now();
 	StyleFooter();
 	HighlightStyle("langpython",HighlightPython);
 	HighlightStyle("langsico",HighlightSico);
-	// console.log("Time: "+(performance.now()-time));
-	// 55 ms
 }
 
 window.addEventListener("load",StyleOnload,true);

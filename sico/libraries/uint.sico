@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Unsigned Integer Library - v5.04
+Unsigned Integer Library - v5.05
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -173,6 +173,8 @@ Version History
      Replaced uint.print with uint.writestring. This will allow the integer and
      string libraries to interact more naturally.
      Added uint.readstring.
+5.05
+     Replaced ASCII codes with ASCII literals.
 
 
 --------------------------------------------------------------------------------
@@ -403,8 +405,8 @@ uint.writestring:
 	.strlen:0
 	.str:0
 	.hex:
-		48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 56
-		56 57 57 97 97 98 98 99 99 100 100 101 101 102 102
+		'0 '0 '1 '1 '2 '2 '3 '3 '4 '4 '5 '5 '6 '6 '7 '7
+          '8 '8 '9 '9 'a 'a 'b 'b 'c 'c 'd 'd 'e 'e 'f 'f
 	.nhex:0-.hex
 	.wretb0:0-.ret
 	.wretb1:0-.base1loop-6
@@ -588,12 +590,12 @@ uint.readstring:
 	.rret0:0-.base0loop-6
 	.rret1:0-.whiteloop-6
 	.rret2:.whiteloop+6-.parseloop
-	.ca1: 97-1    # a-1
-	.nca1:1-97    # 1-a
-	.cA1: 65-1    # A-1
-	.ncA1:1-65    # 1-A
-	.c01: 48-1    # 0-1
-	.nc91:0-57-1  # 1-9
+	.ca1: 'a-1
+	.nca1:1-'a
+	.cA1: 'A-1
+	.ncA1:1-'A
+	.c01: '0-1
+	.nc91:0-'9-1
 
 
 

@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-editor.js - v1.02
+editor.js - v1.03
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -135,15 +135,17 @@ function SicoInitEditor() {
 		xhr.send();
 	}
 	// Setup the example select menu.
-	select.onchange=function() {
-		if (select.value==="") {
-			sico.Clear();
-			input.value="";
-			updatetext();
-		} else {
-			loadfile(select.value);
-		}
-	};
+	if (select!==null) {
+		select.onchange=function() {
+			if (select.value==="") {
+				sico.Clear();
+				input.value="";
+				updatetext();
+			} else {
+				loadfile(select.value);
+			}
+		};
+	}
 	// Parse URL arguments.
 	var regex=new RegExp(".*?\\?(file|demo|source)=(.*)","g");
 	var match=regex.exec(decodeURI(window.location.href));

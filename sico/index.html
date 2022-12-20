@@ -21,7 +21,7 @@
 		<label>Demos:
 			<select id="sico_demo">
 				<option value="./libraries/helloworld_demo.sico">Hello World</option>
-				<option value="./libraries/print_demo.sico">String Printing</option>
+				<option value="./libraries/string_demo.sico">String Printing</option>
 				<option value="./libraries/uint_demo.sico">Unsigned Math</option>
 				<option value="./libraries/random_demo.sico">Random Numbers</option>
 				<option value="./libraries/memory_demo.sico">Memory</option>
@@ -42,14 +42,14 @@
 	</div>
 	<canvas id="sico_canvas" style="display:none;background:#000000;width:100%;margin-top:1rem"></canvas>
 	<textarea id="sico_output" style="box-sizing:border-box;width:100%;height:14rem;" class="consoleblock" spellcheck="false" readonly>Please enable javascript to run</textarea>
-	<textarea id="sico_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one  exit            # Decrement [len]. If [len]&lt;=1, exit.
-      0-2  txt  ?+1             # Print a letter.
-      ?-2  neg  loop            # Increment letter pointer.
+	<textarea id="sico_editor" style="box-sizing:border-box;width:100%;height:40rem;" class="codeblock" spellcheck="false">loop: len  one  exit        # Decrement [len]. If [len]&lt;=1, exit.
+      0-2  txt  ?+1         # Print a letter.
+      ?-2  neg  loop        # Increment letter pointer.
 
 exit: 0-1  0    0
 
-txt:  72 101 108 108 111 44 32  # Hello,
-      87 111 114 108 100 33 10  # World!
+txt:  'H 'e 'l 'l 'o ', ' 
+      'W 'o 'r 'l 'd '! 10
 len:  len-txt+1
 neg:  0-1
 one:  1
@@ -91,13 +91,12 @@ architecture.</p>
 <br>
 <h2>SICO Assembly Language</h2>
 <br>
-<p>We can write a SICO program by setting the raw memory values directly, but it will be easier
-to both read and write a program by using an assembly language. Because there's only one
-instruction, we can skip defining what's used for data, execution, or structure like in other
-languages. We only need to define memory values, and the flow of the program will decide what gets
-executed.</p>
+<p>We can write a SICO program by setting the raw memory values directly, but it will be easier to
+both read and write a program by using an assembly language. Because there's only one instruction,
+we don't need to define what's used for data, execution, or structure like in other languages. We
+only need to define memory values, and the flow of the program will decide what gets executed.</p>
 <br>
-<p>The rules of the assembly language are given below.</p>
+<p>The entire assembly language is simple enough to fit on a single piece of paper:</p>
 <br>
 <table class="datatable headerrow">
 <tr><td>Component</td><td>Description</td></tr>
@@ -112,8 +111,8 @@ Ex:<br>
 <br>
 Ex:<br>
 <div class="codeblock langsico">#|
-     line 1
-     line 2
+     Hello,
+     World!
 |#
 </div>
 </td></tr>
@@ -127,25 +126,24 @@ Ex:<br>
 <tr><td>Label Declaration</td><td>Denoted by a name followed by a colon. Declarations mark the
 current memory address for later recall.<br>
 <br>
-Labels are case sensitive and support UTF-8. They can consist of letters, underscores, periods,
-numbers, and any characters with a high bit. However, the first character can't be a number.<br>
+Labels are case sensitive and support UTF-8. They can consist of letters, numbers, underscores,
+periods, and characters with a high bit. However, the first character can't be a number.<br>
 <br>
 Ex:<br>
 <div class="codeblock langsico">loop:
-Another_Label:
-label3:
+Another_Label3:
 </div>
 </td></tr>
 <tr><td>Label Recall</td><td>Denoted by a label name. Inserts the memory address declared by
 <i>Label:</i>.<br>
 <br>
 Ex:<br>
-<div class="codeblock langsico">label:  # declaration
-label   # recall
+<div class="codeblock langsico">loop:  # declaration
+loop   # recall
 </div>
 </td></tr>
-<tr><td>Sublabel</td><td>Denoted by a period in front of a label. Shorthand for placing a label
-under another label's scope.<br>
+<tr><td>Sublabel</td><td>Denoted by a period before a label. Places a label under another label's
+scope. Avoids name collisions.<br>
 <br>
 Ex:<br>
 <div class="codeblock langsico"> A:
@@ -154,6 +152,12 @@ Ex:<br>
 </td></tr>
 <tr><td>Number</td><td>Inserts the number's value. A number must be in decimal or hexadecimal
 form.<br>
+<br>
+Ex:<br>
+<div class="codeblock langsico">'A 'B 'C  # Evaluates to: 65 66 67
+</div>
+</td></tr>
+<tr><td>ASCII Literal</td><td>Denoted by an apostrophe. Inserts an ASCII value.<br>
 <br>
 Ex:<br>
 <div class="codeblock langsico">123
@@ -192,14 +196,14 @@ Ex:<br>
 <p>We can show how the SICO assembly language and architecture work with a simple program that
 prints "Hello, World!" to the screen:</p>
 <br>
-<div class="codeblock langsico">loop: len  one  exit            # Decrement [len]. If [len]&lt;=1, exit.
-      0-2  txt  ?+1             # Print a letter.
-      ?-2  neg  loop            # Increment letter pointer.
+<div class="codeblock langsico">loop: len  one  exit        # Decrement [len]. If [len]&lt;=1, exit.
+      0-2  txt  ?+1         # Print a letter.
+      ?-2  neg  loop        # Increment letter pointer.
 
 exit: 0-1  0    0
 
-txt:  72 101 108 108 111 44 32  # Hello,
-      87 111 114 108 100 33 10  # World!
+txt:  'H 'e 'l 'l 'o ', '
+      'W 'o 'r 'l 'd '! 10
 len:  len-txt+1
 neg:  0-1
 one:  1
@@ -224,7 +228,7 @@ subtracting), then we will jump to <i>exit</i> and end the program.</p>
 <p>Thus, when the program is running, we expect it to count from <i>len-text+1</i> down to <i>1</i>
 and then exit.</p>
 <br>
-<div class="codeblock langsico">      0-2  text  ?+1</div>
+<div class="codeblock langsico">      0-2  txt   ?+1</div>
 <br>
 <p>The second instruction of our loop has <i>-2</i> as the first operand, which is a special output
 address. When a program writes to this address, the interpreter won't execute a normal SICO
@@ -247,13 +251,13 @@ to <i>-1</i> will tell the interpreter to end the program. Note, we do not speci
 <i>0-1</i> as the first operand. Any expression that evaluates to <i>-1</i>, such as <i>2-3</i>,
 will also work.</p>
 <br>
-<div class="codeblock langsico">text: 72 101 108 108 111 44 32
-      87 111 114 108 100 33 10</div>
+<div class="codeblock langsico">txt:  'H 'e 'l 'l 'o ', '
+      'W 'o 'r 'l 'd '! 10</div>
 <br>
 <p>Here we define the ASCII character codes for the text "Hello, World!", plus an end-of-line
 character.</p>
 <br>
-<div class="codeblock langsico">len:  len-text+1</div>
+<div class="codeblock langsico">len:  len-txt+1</div>
 <br>
 <p>This line is a quick and dirty way of calculating the length of the text we want to print. We
 need to add <i>1</i> to the length since we abort at <i>1</i> instead of <i>0</i>.</p>
@@ -529,7 +533,6 @@ triggered architectures.</p>
 <p>Since writing this, the interpreter has been improved in a few ways:</p>
 <br>
 <table class="listtable">
-<tr><td>&bull;</td><td>All memory allocation (ex: <i>malloc()</i>) is checked for failure.</td></tr>
 <tr><td>&bull;</td><td>The parser underlines the section of text that yields an error.</td></tr>
 <tr><td>&bull;</td><td>The parser checks for non-terminated block quotes.</td></tr>
 <tr><td>&bull;</td><td>The parser uses a hash map instead of an AVL tree for matching
@@ -568,7 +571,7 @@ for the <a href="./sico.c">sico.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 4 Dec 2022<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 18 Dec 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>

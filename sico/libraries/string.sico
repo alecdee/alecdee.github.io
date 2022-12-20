@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-String Library - v1.05
+String Library - v2.00
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -11,18 +11,29 @@ alecdee.github.io - akdee144@gmail.com
 Notes
 
 
-string.sico currently only provides the print function. In the future, it will
-also provide string manipulation functions.
+string.sico provides functions for basic string manipulation and console IO.
+
+Do not include this library first. It needs to start at address 256 or later for
+the escape code constants to work.
+
+This library depends on the memory library.
 
 
 --------------------------------------------------------------------------------
 Index
 
 
-Printing
+Management
+string.create   [ret]
+string.free     [str]
+
+Input/Output
 string.print char0 char1 char2 ... 0
 
-String formatting escape codes
+String formatting escape codes:
+string.str     [str]
+string.strfmt  [str], [padding], [pad char]
+string.strinl  [str], padding, pad char
 string.uint    [num]
 string.uintfmt [num], [base], [padding], [padchar]
 string.uintinl [num], base, padding, padchar
@@ -49,6 +60,9 @@ Version History
      Updated comments.
 1.05
      Modified string.print to use uint.writestring instead of uint.print.
+2.00
+     Added string structure, basic manipulation functions, and console
+     input/output functions.
 
 
 --------------------------------------------------------------------------------
@@ -87,26 +101,181 @@ ASCII Reference Table
 TODO
 
 
-rename string.print to io.print
-io.readline
-string.create
-string.free
-string.length
-string.getchar
-string.setchar
-string.split
-string.strip
-string.padleft
-string.padright
-string.padsign   # pad's left but skips +-, so "-31" becomes "-0031"
+merge string.print and string.writeinline
+rename string.int to string.esc.int, etc
+
+Management
+string.copy     ret str
+string.clear    str
+string.length   ret str
+string.getchar  ret str idx
+string.setchar  str idx chr
+
+Formatting
+string.writeinline [ret] char0 char1 char2 ... 0
+string.writestring [ret] [fmt]
+
+Input/Output
+string.read  ret
+
+Comparisons
+string.cmp      a b lt eq gt
+
+Block Operations
+string.substring ret str start stop
+string.split    ret str
+
+Padding
+string.strip    ret str
+string.padleft  ret str
+string.padright ret str
+string.padsign  ret str # pad's left but skips +-, so "-31" becomes "-0031"
 
 string structure
 	0 ptr
 	1 len
 char[i] = [[string.ptr] + i]
 
+
 |#
 
+
+#---------------------------------------------------------------------------------
+# Constants
+
+
+# The string structure in memory.
+string.struct:
+	.str:  0
+	.len:  1
+	.size: 2
+
+
+# Escape codes. Used to insert values into strings.
+string.escstart:
+string.str:     0  # [str]
+string.strfmt:  1  # [str], [padding], [pad char]
+string.strinl:  2  # [str], padding, pad char
+string.uint:    3  # [num]
+string.uintfmt: 4  # [num], [base], [padding], [pad char]
+string.uintinl: 5  # [num], base, padding, pad char
+string.int:     6  # [num]
+string.intfmt:  7  # [num], [base], [padding], [pad char], [sign]
+string.intinl:  8  # [num], base, padding, pad char, sign
+string.escend:
+
+
+#---------------------------------------------------------------------------------
+# Management
+
+
+string.create:
+	# Call  : 0 ? string.create ret
+	# Effect: Allocates an empty string and returns its pointer.
+	mem.getargs.0 ? mem.getargs .ret 0 .arg3 0 0
+	0 ? mem.alloc .str string.struct.size
+	0 ? mem.set .ret:0 .str
+	0 0 .arg3:0
+	# Variables
+	.str:0
+
+
+string.free:
+	# Call  : 0 ? string.free str
+	# Effect: Frees [str].
+	mem.getargs.0 ? mem.getargs .str 2 .arg3 0 0
+	0 ? mem.getidx .strptr .str string.struct.str
+	0 ? mem.free .strptr
+	0 ? mem.free .str
+	0 0 .arg3:0
+	# Variables
+	.strptr:0
+	.str:0
+
+
+#---------------------------------------------------------------------------------
+# Formatting
+
+
+#|
+string.writeinline:
+	.ptr .z-1 .modify:?+1
+.ret:
+	.tmp
+
+string.writestring:
+	# Call  : 0 ? string.writestring [ret] [fmt]
+	# Effect:
+|#
+
+
+#---------------------------------------------------------------------------------
+# Input/Output
+
+#|
+string.print:
+	# Call  : 0 ? string.print char0 char1 char2 ... 0
+	# Effect: Prints a zero terminated ASCII string. If an escape code is used,
+	#       : the next value(s) are expected to be numbers or formatting.
+	# Use [0] to get the calling address.
+	0       .z+2    ?+1
+	.ptr    .ptr    ?+1
+	.ptr    0       ?+1
+	.fmt+string.struct.str-string.struct+1 .fmt+string.struct.str-string.struct+1 ?+1
+	.fmt+string.struct.str-string.struct+1 0                                      ?+1
+	.fmt+string.struct.len-string.struct+1 .fmt+string.struct.len-string.struct+1 ?+1
+	.fmt+string.struct.len-string.struct+1 .ptr                                   ?+1
+	0       0       .loop
+.ret:
+	.tmp
+.loop:
+	# Get the next character.
+	.tmp    .ptr:0  ?+1
+	# If [tmp]=0, we've reached the end of the string.
+	.tmp    .z      .print
+	# If [tmp]<=-256, then we want to print an escape character.
+	.tmp    .esc    ?+7
+	.ptr    .z-1    ?+1
+	.tmp    .tmp    .loop
+	# Print something other than a character.
+	# If [tmp]+start-1<=start-end-1, abort.
+	.tmp    .nesc   ?+1
+	.tmp    .escmax .abort
+	.tmp    .nargs  ?+1
+	.ptr    .tmp:0  ?+1
+	.tmp    .tmp    .loop
+.print:
+	.tmp    .ptr    ?+1
+	.fmt+string.struct.len-string.struct+1 .tmp ?+1
+	0 ? string.writestring .str .fmt
+	# Print the string.
+	.str+string.struct.len-string.struct+1 .z .printdone
+	.tmp    .tmp    ?+1
+	.tmp    .str+string.struct.str-string.struct+1 ?+1
+	.pptr   .pptr   ?+1
+	.pptr   .tmp    ?+4
+.printloop:
+	.str+string.struct.len-string.struct+1 .z+1 .printdone
+	0-2     .pptr:0 ?+1
+	.pptr   .z-1    .printloop
+.printdone:
+	# Free the string.
+	0 ? mem.free .str+string.struct.str-string.struct+1
+	.str+string.struct.str-string.struct+1 .str+string.struct.str-string.struct+1 ?+1
+	.ptr    .z-1    .ret
+.abort:
+	0-1     0       ?-2
+	# Variables
+	0-1 .z:0 1 2
+	# Number of arguments in escape codes in reverse order.
+	0-6 0-6 0-2 0-5 0-5 0-2 0-4 0-4 0-2
+	.esc:0-256
+	.nesc:256-string.escstart+1
+	.escmax:string.escstart-string.escend-1
+	.nargs:0-2-.z
+	.fmt:?+1 0 0
+	.str:?+1 0 0
+|#
 
 string.print:
 	# Call  : 0 ? string.print char0 char1 char2 ... 0
@@ -143,7 +312,6 @@ string.print:
 	.padchr .paddef ?+1
 	.retry  .retry  ?+1
 	# Determine what type of value we're printing.
-	.tmp    .z      .str
 	.tmp    .nesc   .invalid
 	.tmp    .z+1    .intinl
 	.tmp    .z+1    .intfmt
@@ -151,19 +319,27 @@ string.print:
 	.tmp    .z+1    .uintinl
 	.tmp    .z+1    .uintfmt
 	.tmp    .z+1    .uint
+	.tmp    .z+1    .strinl
 	.tmp    .z+1    .strfmt
+	.tmp    .z+1    .str
 .invalid:
-	# Print "INVALID FORMAT"
-	.tmp    .tmp    ?+1
-	0       0       ?+1
-	0 ? string.print 73 78 86 65 76 73 68 32 70 79 82 77 65 84 10 0
-	0-1     0       ?-2
+	# Print "INVALID FORMAT" and abort.
+	.ilen   .z+1    .z-1
+	0-2     .iptr   ?+1
+	?-2     .z-1    .invalid
+	.iptr: 'I 'N 'V 'A 'L 'I 'D '  'F 'O 'R 'M 'A 'T 10
+	.ilen: .ilen-.iptr+1
 .str:
-	# Reserved for string printing.
-	0-1     0       ?-2
+	mem.getargs.0 ? mem.getargs .substr 2 .ptr 0 0
+	0 ? mem.getidx .p0 .substr string.struct.str
+	0 ? mem.getidx .retlen .substr string.struct.len
+	.tmp    .tmp    .lenok+18
 .strfmt:
-	# Reserved for string printing.
-	0-1     0       ?-2
+	mem.getargs.0 ? mem.getargs .substr 2 .pad 2 .padchr 2 .ptr 0 0
+	.tmp    .tmp    .str+8
+.strinl:
+	mem.getargs.0 ? mem.getargs .substr 2 .pad 1 .padchr 1 .ptr 0 0
+	.tmp    .tmp    .str+8
 .uint:
 	.retry  ?+2     ?+2  0-uint.writestring-36
 	mem.getargs.0 ? mem.getargs ?+12 1 .ptr 0 0
@@ -205,17 +381,17 @@ string.print:
 .lenok:
 	.tmp    .memlen ?+1
 	.retlen .tmp    ?+1
-	# Print padding.
-	.pad    .retlen ?+10
-	0-2     .padchr ?+1
-	.pad    .z+1    ?+7
-	0-2     .padchr ?-5
-	.pad    .pad    ?+1
-	# Print [mem].
 	.tmp    .tmp    ?+1
 	.tmp    .mem    ?+1
 	.p0     .p0     ?+1
-	.p0     .tmp    ?+4
+	.p0     .tmp    ?+1
+	# Print padding.
+	.pad    .retlen ?+10
+	0-2     .padchr ?+1
+	.pad    .z+1    ?+10
+	0-2     .padchr ?-5
+	.pad    .pad    ?+4
+	# Print [mem].
 	.retlen .z+1    ?+7
 	0-2     .p0:0   ?+1
 	.p0     .z-1    ?-8
@@ -224,29 +400,15 @@ string.print:
 	0-2 0-1 .z:0 1
 	.tmp:0
 	.char:0
-	.esc:0-string.escstart
-	.nesc:string.escstart-string.escend
+	.esc:0-256
+	.nesc:256-string.escend
 	.mem:0
 	.memlen:0
 	.retlen:0
+	.substr:0
 	# Formatting defaults
 	.base:10
 	.pad:0
 	.padchr:0
 	.paddef:0-32
-
-
-# String formatting escape codes. Define here so string.escstart >= 256.
-
-string.escstart:
-string.str:     0  # Reserved
-string.strfmt:  1  # Reserved
-string.uint:    2  # [num]
-string.uintfmt: 3  # [num], [base], [padding], [pad char]
-string.uintinl: 4  # [num], base, padding, pad char
-string.int:     5  # [num]
-string.intfmt:  6  # [num], [base], [padding], [pad char], [sign]
-string.intinl:  7  # [num], base, padding, pad char, sign
-string.escend:
-
 

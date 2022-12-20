@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.js - v1.26
+sico.js - v1.27
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -54,14 +54,14 @@ values, and the flow of the program will decide what gets executed.
 This example shows a "Hello, World!" program in assembly.
 
 
-     loop: len  one  exit            # Decrement [len]. If [len]<=1, exit.
-           0-2  txt  ?+1             # Print a letter.
-           ?-2  neg  loop            # Increment letter pointer.
+     loop: len  one  exit        # Decrement [len]. If [len]<=1, exit.
+           0-2  txt  ?+1         # Print a letter.
+           ?-2  neg  loop        # Increment letter pointer.
 
      exit: 0-1  0    0
 
-     txt:  72 101 108 108 111 44 32  # Hello,
-           87 111 114 108 100 33 10  # World!
+     txt:  'H 'e 'l 'l 'o ', '
+           'W 'o 'r 'l 'd '! 10
      len:  len-txt+1
      neg:  0-1
      one:  1
@@ -89,15 +89,6 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
-     Current      |  Denoted by a question mark. Inserts the current memory
-     Address      |  address.
-                  |
-                  |  Ex:
-                  |       ?
-                  |       ?+1  # Next address
-                  |
-     -------------+--------------------------------------------------------
-                  |
      Label        |  Denoted by a name followed by a colon. Declarations
      Declaration  |  mark the current memory address for later recall.
                   |
@@ -114,7 +105,7 @@ The rules of the assembly language are given below.
      -------------+--------------------------------------------------------
                   |
      Label        |  Denoted by a label name. Inserts the memory address
-     Recall       |  declared by "Label:".
+     Recall       |  declared by "label:".
                   |
                   |  Ex:
                   |       label:  # declaration
@@ -131,6 +122,15 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
+     Current      |  Denoted by a question mark. Inserts the current memory
+     Address      |  address.
+                  |
+                  |  Ex:
+                  |       ?
+                  |       ?+1  # Next address
+                  |
+     -------------+--------------------------------------------------------
+                  |
      Number       |  Inserts the number's value. A number must be in
                   |  decimal or hexadecimal form.
                   |
@@ -140,10 +140,17 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
+     ASCII        |  Denoted by an apostrophe. Inserts an ASCII value.
+     Literal      |
+                  |  Ex:
+                  |       'H 'e 'l 'l 'o  # Evaluates to 72 101 108 108 111
+                  |
+     -------------+--------------------------------------------------------
+                  |
      Operator     |  Denoted by a plus or minus. Adds or subtracts the
                   |  number or label from the previous value. Parentheses
-                  |  are not supported. To express a negative number, use
-                  |  the form "0-x".
+                  |  are not supported. To express a negative number such
+                  |  as -5, use the form "0-5".
                   |
                   |  Ex:
                   |       len-txt+1
@@ -203,6 +210,8 @@ enforces a minimum setTimeout() time of 4ms.
 TODO
 
 
+Speed up math:
+	inc: (a.lo+1)|0, (a.hi+(a.lo===0))|0
 Mouse+Keyboard
 Audio
 
@@ -521,6 +530,11 @@ function SicoParseAssembly(st,str) {
 					SicoU64Add(val,val,tmp1);
 					NEXT();
 				}
+			} else if (c===39) {
+				// ASCII literal. Ex: 'H 'e 'l 'l 'o
+				token=1;
+				val=SicoU64Create(NEXT());
+				NEXT();
 			} else if (c===63) {
 				// Current address token.
 				token=1;
@@ -563,7 +577,7 @@ function SicoParseAssembly(st,str) {
 				SicoU64Inc(addr);
 				SicoU64Set(acc,val);
 				op=0;
-				if (ISLBL(c) || c===63) {err="Unseparated tokens";}
+				if (ISLBL(c) || c===63 || c===39) {err="Unseparated tokens";}
 			}
 		}
 		if (err===null && ISOP(op)) {err="Trailing operator";}

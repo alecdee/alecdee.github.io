@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.c - v1.46
+sico.c - v1.47
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -46,28 +46,28 @@ SICO Assembly Language
 
 We can write a SICO program by setting the raw memory values directly, but it
 will be easier to both read and write a program by using an assembly language.
-Because there's only one instruction, we can skip defining what's used for data,
-execution, or structure like in other languages. We only need to define memory
-values, and the flow of the program will decide what gets executed.
+Because there's only one instruction, we don't need to define what's used for
+data, execution, or structure like in other languages. We only need to define
+memory values, and the flow of the program will decide what gets executed.
 
 
 This example shows a "Hello, World!" program in assembly.
 
 
-     loop: len  one  exit            # Decrement [len]. If [len]<=1, exit.
-           0-2  txt  ?+1             # Print a letter.
-           ?-2  neg  loop            # Increment letter pointer.
+     loop: len  one  exit        # Decrement [len]. If [len]<=1, exit.
+           0-2  txt  ?+1         # Print a letter.
+           ?-2  neg  loop        # Increment letter pointer.
 
      exit: 0-1  0    0
 
-     txt:  72 101 108 108 111 44 32  # Hello,
-           87 111 114 108 100 33 10  # World!
+     txt:  'H 'e 'l 'l 'o ', '
+           'W 'o 'r 'l 'd '! 10
      len:  len-txt+1
      neg:  0-1
      one:  1
 
 
-The rules of the assembly language are given below.
+The entire assembly language is simple enough to fit on a single piece of paper:
 
 
                   |
@@ -83,9 +83,41 @@ The rules of the assembly language are given below.
      Comment      |
                   |  Ex:
                   |       #|
-                  |            line 1
-                  |            line 2
+                  |            Hello,
+                  |            World!
                   |       |#
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Label        |  Denoted by a name followed by a colon. Declarations
+     Declaration  |  mark the current memory address for later recall.
+                  |
+                  |  Labels are case sensitive and support UTF-8. They can
+                  |  consist of letters, numbers, underscores, periods, and
+                  |  characters with a high bit. However, the first
+                  |  character can't be a number.
+                  |
+                  |  Ex:
+                  |       loop:
+                  |       Another_Label3:
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Label        |  Denoted by a label name. Inserts the memory address
+     Recall       |  declared by "label:".
+                  |
+                  |  Ex:
+                  |       loop:  # declaration
+                  |       loop   # recall
+                  |
+     -------------+--------------------------------------------------------
+                  |
+     Sublabel     |  Denoted by a period before a label. Places a label
+                  |  under another label's scope. Avoids name collisions.
+                  |
+                  |  Ex:
+                  |        A:
+                  |       .B:  # Shorthand for A.B:
                   |
      -------------+--------------------------------------------------------
                   |
@@ -98,39 +130,6 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
-     Label        |  Denoted by a name followed by a colon. Declarations
-     Declaration  |  mark the current memory address for later recall.
-                  |
-                  |  Labels are case sensitive and support UTF-8. They can
-                  |  consist of letters, underscores, periods, numbers, and
-                  |  any characters with a high bit. However, the first
-                  |  character can't be a number.
-                  |
-                  |  Ex:
-                  |       loop:
-                  |       Another_Label:
-                  |       label3:
-                  |
-     -------------+--------------------------------------------------------
-                  |
-     Label        |  Denoted by a label name. Inserts the memory address
-     Recall       |  declared by "Label:".
-                  |
-                  |  Ex:
-                  |       label:  # declaration
-                  |       label   # recall
-                  |
-     -------------+--------------------------------------------------------
-                  |
-     Sublabel     |  Denoted by a period in front of a label. Shorthand for
-                  |  placing a label under another label's scope.
-                  |
-                  |  Ex:
-                  |        A:
-                  |       .B:  # Shorthand for A.B:
-                  |
-     -------------+--------------------------------------------------------
-                  |
      Number       |  Inserts the number's value. A number must be in
                   |  decimal or hexadecimal form.
                   |
@@ -140,10 +139,17 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
+     ASCII        |  Denoted by an apostrophe. Inserts an ASCII value.
+     Literal      |
+                  |  Ex:
+                  |       'A 'B 'C  # Evaluates to: 65 66 67
+                  |
+     -------------+--------------------------------------------------------
+                  |
      Operator     |  Denoted by a plus or minus. Adds or subtracts the
                   |  number or label from the previous value. Parentheses
-                  |  are not supported. To express a negative number, use
-                  |  the form "0-x".
+                  |  are not supported. To express a negative number such
+                  |  as -5, use the form "0-5".
                   |
                   |  Ex:
                   |       len-txt+1
@@ -163,7 +169,7 @@ The rules of the assembly language are given below.
                   |  A = -6: Sleep for mem[B]/freq seconds.
                   |
                   |  Ex:
-                  |       0-2  txt  ?+1  # A = -2. Print a letter.
+                  |       0-2  txt  ?+1  # A = -2. Print the value of txt.
                   |
 
 
@@ -328,6 +334,11 @@ void SicoParseAssembly(SicoState* st,const char* str) {
 				val=0;
 				if (c=='0' && (NEXT=='x' || c=='X')) {token=16;NEXT;}
 				while ((n=CNUM(c))<token) {val=val*token+n;NEXT;}
+			} else if (c=='\'') {
+				// ASCII literal. Ex: 'H 'e 'l 'l 'o
+				token=1;
+				val=NEXT;
+				NEXT;
 			} else if (c=='?') {
 				// Current address token.
 				token=1;
@@ -365,7 +376,7 @@ void SicoParseAssembly(SicoState* st,const char* str) {
 				addr++;
 				acc=val;
 				op=0;
-				if (ISLBL(c) || c=='?') {err="Unseparated tokens";}
+				if (ISLBL(c) || c=='?' || c=='\'') {err="Unseparated tokens";}
 			}
 		}
 		if (err==0 && ISOP(op)) {err="Trailing operator";}
@@ -618,13 +629,13 @@ void SicoRun(SicoState* st,u32 iters) {
 int main(int argc,char** argv) {
 	SicoState* st=SicoCreate();
 	if (argc<=1) {
-		// Print "Usage: sico file.sico".
+		// Print usage message.
 		SicoParseAssembly(st,"\
 			loop: len  ?     neg\
 			      0-2  text  ?+1\
 			      ?-2  neg   loop\
-			text: 85 115 97 103 101 58 32 115 105 99 111\
-			      32 102 105 108 101 46 115 105 99 111 10\
+			text: 'U 's 'a 'g 'e ': '  's 'i 'c 'o\
+			      '  'f 'i 'l 'e '. 's 'i 'c 'o 10\
 			neg:  0-1\
 			len:  len-text\
 		");
