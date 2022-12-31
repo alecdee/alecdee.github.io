@@ -20,10 +20,10 @@ message and exit if it's not.
           File      |  Line
      ---------------+--------
          uint.sico  |    43
-          int.sico  |  1961
-       random.sico  |  3326
-       string.sico  |  3933
-       memory.sico  |  4347
+          int.sico  |  1963
+       random.sico  |  3328
+       string.sico  |  3935
+       memory.sico  |  4350
 
 
 |#
@@ -73,23 +73,23 @@ Worst case time complexity:
                  |                   |   (64 bits)
      ------------+-------------------+----------------
          write   |  --               |     2303
-         read    |  --               |     1456
-          cmp    |  29               |       29
-          min    |  34               |       34
-          max    |  34               |       34
-          set    |  24               |       24
-          neg    |  25               |       25
-          add    |  30               |       30
-          sub    |  31               |       31
-          mul    |  55 + 12.97*bits  |      885
-          div    |  60 +  8.65*bits  |      613
-          gcd    |  40 + 20.17*bits  |     1330
-          shl    |  40 +  2.00*bits  |      168
-          shr    |  31 +  8.00*bits  |      543
-          not    |  26               |       26
-          and    |  37 +  7.00*bits  |      485
-          or     |  38 +  7.00*bits  |      486
-          xor    |  39 +  7.00*bits  |      487
+          read   |  --               |     1456
+           cmp   |  29               |       29
+           min   |  34               |       34
+           max   |  34               |       34
+           set   |  24               |       24
+           neg   |  25               |       25
+           add   |  30               |       30
+           sub   |  31               |       31
+           mul   |  55 + 12.97*bits  |      885
+           div   |  60 +  8.65*bits  |      613
+           gcd   |  40 + 20.17*bits  |     1330
+           shl   |  40 +  2.00*bits  |      168
+           shr   |  31 +  8.00*bits  |      543
+           not   |  26               |       26
+           and   |  37 +  7.00*bits  |      485
+            or   |  38 +  7.00*bits  |      486
+           xor   |  39 +  7.00*bits  |      487
 
 
 --------------------------------------------------------------------------------
@@ -236,6 +236,8 @@ when terminating loop.
 
 Expand uint.writestring to allow base 36. Get rid of translation table.
 Simplify [char] to value translation in uint.readstring.
+
+Get rid of mod testing with uint_test.cpp and replace with uint_test.sico.
 
 
 |#
@@ -4033,6 +4035,7 @@ ASCII Reference Table
 TODO
 
 
+redo string to pointer to [len,char 0, char 1, etc]
 merge string.print and string.writeinline
 rename string.int to string.esc.int, etc
 
@@ -4045,13 +4048,13 @@ string.setchar  str idx chr
 
 Formatting
 string.writeinline [ret] char0 char1 char2 ... 0
-string.writestring [ret] [fmt]
 
 Input/Output
-string.read  ret
+string.input  ret
 
 Comparisons
 string.cmp      a b lt eq gt
+	if a or b is 0, treat as 0 length string
 
 Block Operations
 string.substring ret str start stop

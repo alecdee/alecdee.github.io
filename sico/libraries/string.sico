@@ -101,6 +101,7 @@ ASCII Reference Table
 TODO
 
 
+redo string to pointer to [len,char 0, char 1, etc]
 merge string.print and string.writeinline
 rename string.int to string.esc.int, etc
 
@@ -113,13 +114,13 @@ string.setchar  str idx chr
 
 Formatting
 string.writeinline [ret] char0 char1 char2 ... 0
-string.writestring [ret] [fmt]
 
 Input/Output
-string.read  ret
+string.input  ret
 
 Comparisons
 string.cmp      a b lt eq gt
+	if a or b is 0, treat as 0 length string
 
 Block Operations
 string.substring ret str start stop

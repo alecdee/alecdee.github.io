@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-editor.js - v1.03
+editor.js - v1.04
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -252,14 +252,21 @@ function SicoHighlightScroll(input) {
 		if (c===10) {
 			line++;
 		} else if (comment===1) {
+			// End block quote.
 			if (c===124 && str.charCodeAt(i)===35) {
 				i++;
 				comment=0;
 			}
 		} else if (c===35) {
+			// Start block quote.
 			if (str.charCodeAt(i)===124) {
 				i++;
 				comment=1;
+			}
+		} else if (c===39) {
+			// ASCII literal.
+			if (str.charCodeAt(i++)===10) {
+				line++;
 			}
 		}
 	}
