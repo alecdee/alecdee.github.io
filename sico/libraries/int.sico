@@ -32,7 +32,7 @@ Worst case time complexity:
        Function  |    Complexity     |  Instructions
                  |                   |   (64 bits)
      ------------+-------------------+----------------
-         write   |  --               |     2317
+        write    |  --               |     2317
          read    |  --               |     1472
           cmp    |  37               |       37
           min    |  43               |       43
