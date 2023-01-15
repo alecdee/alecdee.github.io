@@ -1,10 +1,15 @@
 """
-RangeEncoder.py - v1.01
+
+RangeEncoder.py - v1.02
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
+
 --------------------------------------------------------------------------------
+Notes
+
+
 This range encoder will convert a sequence of intervals to and from a binary
 coded fraction. When these intervals are mapped to cumulative symbol
 probabilities, we can compress or decompress data.
@@ -13,11 +18,14 @@ Usage:
 python RangeEncoder.py -c image.bmp compress.dat
 python RangeEncoder.py -d compress.dat decompress.bmp
 
+
 --------------------------------------------------------------------------------
 TODO
 
-Determine if assert(self.low>=off) is necessary.
+
 Figure out a simpler bit queuing system.
+
+
 """
 
 class RangeEncoder(object):
@@ -123,15 +131,15 @@ class RangeEncoder(object):
 		# Calculate how many bits need to be appended to be byte aligned.
 		pad=0
 		for i in range(qlen):
-			pad-=qcount[(qpos-i)&qmask]
-		pad&=7
+			pad+=qcount[(qpos-i)&qmask]
+		pad%=8
 		# If we're not byte aligned.
 		if pad!=0:
 			# Align us with an odd parity and add the pad. Add 1 to qlen if qpos&1=0.
 			qlen-=qpos
 			qpos|=1
 			qlen+=qpos
-			qcount[qpos]+=pad
+			qcount[qpos]+=8-pad
 		self.qpos=qpos
 		self.qlen=qlen
 

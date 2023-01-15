@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.c - v1.47
+sico.c - v1.49
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -199,17 +199,17 @@ Find a better form of label scoping.
 		Sleep((DWORD)((req)->tv_sec*1000+(req)->tv_nsec/1000000))
 #endif
 
+typedef unsigned char u8;
 typedef uint32_t u32;
 typedef uint64_t u64;
-typedef unsigned char uchar;
 
 
 //---------------------------------------------------------------------------------
 // The SICO interpreter state.
 
 
-#define SICO_RUNNING      0
-#define SICO_COMPLETE     1
+#define SICO_COMPLETE     0
+#define SICO_RUNNING      1
 #define SICO_ERROR_PARSER 2
 #define SICO_ERROR_MEMORY 3
 #define SICO_MAX_PARSE    (1<<30)
@@ -233,7 +233,7 @@ void SicoFree(SicoState* st);
 void SicoClear(SicoState* st);
 
 void SicoParseAssembly(SicoState* st,const char* str);
-u32  SicoAddLabel(SicoState* st,u32 scope,const uchar* data,u32 len);
+u32  SicoAddLabel(SicoState* st,u32 scope,const u8* data,u32 len);
 u64  SicoFindLabel(SicoState* st,const char* label);
 void SicoParseFile(SicoState* st,const char* path);
 
@@ -283,14 +283,14 @@ void SicoClear(SicoState* st) {
 
 void SicoParseAssembly(SicoState* st,const char* str) {
 	// Convert SICO assembly language into a SICO program.
-	#define  CNUM(c) ((uchar)(c<='9'?c-'0':((c-'A')&~32)+10))
+	#define  CNUM(c) ((u8)(c<='9'?c-'0':((c-'A')&~32)+10))
 	#define ISLBL(c) (CNUM(c)<36 || c=='_' || c=='.' || c>127)
 	#define  ISOP(c) (c=='+' || c=='-')
 	#define     NEXT (c=i++<len?ustr[i-1]:0)
 	SicoClear(st);
 	u32 i=0,j=0,len=0;
-	const uchar* ustr=(const uchar*)str;
-	uchar c,op;
+	const u8* ustr=(const u8*)str;
+	u8 c,op;
 	const char* err=0;
 	// Get the string length.
 	if (ustr) {
@@ -387,7 +387,7 @@ void SicoParseAssembly(SicoState* st,const char* str) {
 		st->state=SICO_ERROR_PARSER;
 		const char* fmt="Parser: %s\n";
 		u32 line=1;
-		uchar window[61],under[61];
+		u8 window[61],under[61];
 		if (i-- && j--)
 		{
 			fmt="Parser: %s\nLine  : %u\n\n\t%s\n\t%s\n\n";
@@ -416,7 +416,7 @@ void SicoParseAssembly(SicoState* st,const char* str) {
 	}
 }
 
-u32 SicoAddLabel(SicoState* st,u32 scope,const uchar* data,u32 len) {
+u32 SicoAddLabel(SicoState* st,u32 scope,const u8* data,u32 len) {
 	// Add a label if it's new. Return its position in the label array.
 	SicoLabel* arr=st->lblarr;
 	u32 pos=st->lblpos;
@@ -432,7 +432,7 @@ u32 SicoAddLabel(SicoState* st,u32 scope,const uchar* data,u32 len) {
 	// If the label starts with a '.', make it a child of the last non '.' label.
 	u32 lbl=data[0]=='.'?scope:0;
 	for (u32 i=0;i<len;i++) {
-		uchar c=data[i];
+		u8 c=data[i];
 		for (u32 j=4;j<8;j-=4) {
 			u32 val=(u32)((c>>j)&15);
 			u32 parent=lbl;
@@ -458,9 +458,9 @@ u32 SicoAddLabel(SicoState* st,u32 scope,const uchar* data,u32 len) {
 u64 SicoFindLabel(SicoState* st,const char* label) {
 	// Returns the given label's address. Returns -1 if no label was found.
 	if (st->lblarr==0) {return (u64)-1;}
-	uchar c;
+	u8 c;
 	u32 lbl=0;
-	for (u32 i=0;(c=(uchar)label[i])!=0;i++) {
+	for (u32 i=0;(c=(u8)label[i])!=0;i++) {
 		for (u32 j=4;j<8;j-=4) {
 			u32 val=(u32)((c>>j)&15);
 			lbl=st->lblarr[lbl].child[val];
@@ -572,7 +572,7 @@ void SicoRun(SicoState* st,u32 iters) {
 			mb=0;
 		} else if (b==(u64)-3) {
 			// Read stdin.
-			mb=(uchar)getchar();
+			mb=(u8)getchar();
 		} else if (b==(u64)-4) {
 			// Timing frequency. 2^32 = 1 second.
 			mb=1ULL<<32;

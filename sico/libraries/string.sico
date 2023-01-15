@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-String Library - v2.01
+String Library - v2.02
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -82,6 +82,8 @@ Version History
      Updated string structure so [len] is at index 0.
      Added string.writeinline and string.input.
      Modified string.print to use string.writeinline.
+2.02
+     Renamed uint.writestring to uint.write.
 
 
 --------------------------------------------------------------------------------
@@ -120,8 +122,6 @@ ASCII Reference Table
 TODO
 
 
-Add string.split; see how python splits runs.
-
 Management
      string.copy     ret str
      string.clear    str
@@ -143,7 +143,7 @@ Padding
      string.padsign  ret str # pad's left but skips +-, so "-31" becomes "-0031"
 
 writeinline
-	Rename to write?
+	Rename from 'writeinline' to 'write'?
 	If padlen<0, pad right instead.
 	Merge escstr with padding loop.
 	Optimize setting ret attributes.
@@ -291,32 +291,32 @@ string.writeinline:
 .escuint:
 	mem.getargs.0 ? mem.getargs ?+16 1 .ptr 0 0
 	.retry  ?+2     ?+2  0-?-1
-	0 ? uint.writestring .mem .memrem .z .retlen 0 .base
+	0 ? uint.write .mem .memrem .z .retlen 0 .base
 	.nres   .nres   .escchecklen
 .escuintfmt:
 	mem.getargs.0 ? mem.getargs ?+22 1 ?+21 1 .padlen 2 .padchr 2 .ptr 0 0
 	.retry  ?+2     ?+2  0-?-1
-	0 ? uint.writestring .mem .memrem .z .retlen 0 0
+	0 ? uint.write .mem .memrem .z .retlen 0 0
 	.nres   .nres   .escchecklen
 .escuintinl:
 	mem.getargs.0 ? mem.getargs ?+22 1 ?+21 0 .padlen 1 .padchr 1 .ptr 0 0
 	.retry  ?+2     ?+2  0-?-1
-	0 ? uint.writestring .mem .memrem .z .retlen 0 0
+	0 ? uint.write .mem .memrem .z .retlen 0 0
 	.nres   .nres   .escchecklen
 .escint:
 	mem.getargs.0 ? mem.getargs ?+16 1 .ptr 0 0
 	.retry  ?+2     ?+2  0-?-1
-	0 ? int.writestring .mem .memrem .z .retlen 0 .base .z
+	0 ? int.write .mem .memrem .z .retlen 0 .base .z
 	.nres   .nres   .escchecklen
 .escintfmt:
 	mem.getargs.0 ? mem.getargs ?+24 1 ?+23 1 .padlen 2 .padchr 2 ?+18 1 .ptr 0 0
 	.retry  ?+2     ?+2  0-?-1
-	0 ? int.writestring .mem .memrem .z .retlen 0 0 0
+	0 ? int.write .mem .memrem .z .retlen 0 0 0
 	.nres   .nres   .escchecklen
 .escintinl:
 	mem.getargs.0 ? mem.getargs ?+24 1 ?+23 0 .padlen 1 .padchr 1 ?+18 0 .ptr 0 0
 	.retry  ?+2     ?+2  0-?-1
-	0 ? int.writestring .mem .memrem .z .retlen 0 0 0
+	0 ? int.write .mem .memrem .z .retlen 0 0 0
 	.nres   .nres   .escchecklen
 .escchecklen:
 	# If we had enough space in the string, resume parsing.
@@ -455,25 +455,25 @@ string.print:
 	string.writeinline.arg2 .str1 string.writeinline+12
 .reenter:
 	string.writeinline.ret+2 .wset1 ?+1
-	.str+1  .z      .printdone
-	.z      .str+2  ?+1
+	.len    .z      .printdone
+	.z      .ptr    ?+1
 	.p0     .p0     ?+1
 	.p0     .z      ?+1
 	.z      .z      .printloop+3
 .printloop:
-	.str+1  .z+1    .printdone
+	.len    .z+1    .printdone
 	0-2     .p0:0   ?+1
 	.p0     .z-1    .printloop
 .printdone:
-	0 ? mem.free .str+2
-	.str+2  .str+2  string.writeinline.ret+3
+	0 ? mem.free .ptr
+	.ptr    .ptr    string.writeinline.ret+3
 	# Variables
 	0-1 .z:0 1 2
 	.wset0:string.writeinline.ret+3-.reenter
 	.wset1:.reenter-string.writeinline.ret-3
 	.str1:0-.str0
 	.str0:.str
-	.str:?+1 0 0
+	.str:?+1 .len:0 .ptr:0
 
 
 string.input:

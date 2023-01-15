@@ -1,7 +1,7 @@
 #|==============================================================================
 
 
-Unsigned Integer Library - v5.05
+Unsigned Integer Library - v5.06
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -55,8 +55,8 @@ Index
 
 
 Strings
-uint.writestring [str] [strlen] [stridx] retidx [num] [base]
-uint.readstring  [str] [strlen] [stridx] retidx retnum [base]
+uint.write [mem] [memlen] [memidx] retidx [num] [base]
+uint.read  [mem] [memlen] [memidx] retidx retnum [base]
 
 Comparisons
 uint.cmp [a] [b] lt eq gt
@@ -175,6 +175,9 @@ Version History
      Added uint.readstring.
 5.05
      Replaced ASCII codes with ASCII literals.
+5.06
+     Renamed readstring/writestring to read/write so that the functions no
+     longer imply that they work with string objects.
 
 
 --------------------------------------------------------------------------------
@@ -192,8 +195,8 @@ Optimize uint.mul to have same time complexity as uint.div
 Optimize or/and/xor. Simplify top bit setting by changing .done jump destination
 when terminating loop.
 
-Expand uint.writestring to allow base 36. Get rid of translation table.
-Simplify [char] to value translation in uint.readstring.
+Expand uint.write to allow base 36. Get rid of translation table. Simplify
+[char] to value translation in uint.readstring.
 
 Get rid of mod testing with uint_test.cpp and replace with uint_test.sico.
 
@@ -205,16 +208,16 @@ Get rid of mod testing with uint_test.cpp and replace with uint_test.sico.
 # Strings
 
 
-uint.writestring:
-	# Call  : 0 ? uint.writestring str strlen stridx retidx num base
+uint.write:
+	# Call  : 0 ? uint.write mem memlen memidx retidx num base
 	#
-	# Effect: Writes a signed integer to a string.
+	# Effect: Converts an unsigned integer to ASCII and writes it to memory.
 	#       : [base] <= 16
-	#       : The first character is written to [str]+[stridx].
-	#       : The function does not write after [str]+[strlen]-1 or if [str]=0,
+	#       : The first character is written to [mem]+[memidx].
+	#       : The function does not write after [mem]+[memlen]-1 or if [mem]=0,
 	#       : but [retidx] will still be updated.
-	#       : [retidx] = [stridx] + (length of the integer string)
-	#       : If [retidx]>[strlen], then the string needs to be resized.
+	#       : [retidx] = [memidx] + (length of the ASCII string)
+	#       : If [retidx]>[memlen], then the string needs to be resized.
 	#       : If retidx=0, then [retidx] is not written to.
 	#       : Base = 0: c0*0^0 + c1*0^1 + c2*0^2 + ... = c0
 	#       : Base = 1: c0*1^0 + c1*1^1 + c2*1^2 + ... = hash marks
@@ -238,38 +241,38 @@ uint.writestring:
 	.arg7   0       ?+1
 	.arg8   0       ?+1
 	0       0       ?+1
-	# Get [str].
+	# Get [mem].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
 	.p2     .p2     ?+1
 	.p2     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p2:0   ?+1
-	.str    .str    ?+1
-	.str    .tmp    ?+1
-	# Get [stridx].
+	.mem    .mem    ?+1
+	.mem    .tmp    ?+1
+	# Get [memidx].
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
 	.p4     .p4     ?+1
 	.p4     .tmp    ?+1
 	.nidx   .nidx   ?+1
 	.nidx   .p4:0   ?+1
-	# Get [strlen]. If [str]=0 or [strlen]<=[stridx], set [strlen]=0.
-	.str    .z      .len0
+	# Get [memlen]. If [mem]=0 or [memlen]<=[memidx], set [memlen]=0.
+	.mem    .z      .len0
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
 	.p3     .p3     ?+1
 	.p3     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p3:0   ?+1
-	.strlen .strlen ?+1
-	.strlen .tmp    ?+1
+	.memlen .memlen ?+1
+	.memlen .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .nidx   ?+1
-	.strlen .tmp    .len0
-	.strlen .z-1    ?+4
+	.memlen .tmp    .len0
+	.memlen .z-1    ?+4
 .len0:
-	.strlen .strlen ?+1
+	.memlen .memlen ?+1
 	# Get retidx.
 	.tmp    .tmp    ?+1
 	.tmp    .arg5:5 ?+1
@@ -294,13 +297,13 @@ uint.writestring:
 	.nbase  .nbase  ?+1
 	.nbase  .p7:0   ?+1
 	# Set string pointers.
-	.nidx   .str    ?+1
-	.str0   .str0   ?+1
-	.str0   .nidx   ?+1
-	.str1   .str1   ?+1
-	.str1   .nidx   ?+1
-	.str2   .str2   ?+1
-	.str2   .nidx   ?+1
+	.nidx   .mem    ?+1
+	.mem0   .mem0   ?+1
+	.mem0   .nidx   ?+1
+	.mem1   .mem1   ?+1
+	.mem1   .nidx   ?+1
+	.mem2   .mem2   ?+1
+	.mem2   .nidx   ?+1
 	.wret   .wret   ?+1
 	# Make sure [base] <= 16.
 	.nbase  .z      .base0loop
@@ -375,20 +378,20 @@ uint.writestring:
 	.nchar  .chr:0  .write
 .write:
 	# Mini function to write a character to the string.
-	.strlen .z+1    .writeskip
-	.str0:0 .str1:0 ?+1
-	.str2:0 .nchar  ?+1
-	.str2   .z-1    ?+1
-	.str1   .z-1    ?+4
+	.memlen .z+1    .writeskip
+	.mem0:0 .mem1:0 ?+1
+	.mem2:0 .nchar  ?+1
+	.mem2   .z-1    ?+1
+	.mem1   .z-1    ?+4
 .writeskip:
-	.strlen .strlen ?+1
-	.str0   .z-1    ?+1
+	.memlen .memlen ?+1
+	.mem0   .z-1    ?+1
 	.nchar  .nchar  .wret:0
 .ret:
-	# return [retidx] = [str0] - [str]
-	.str0   .ret0:0 ?+1
-	.str    .str0   ?+1
-	.ret1:0 .str    ?+1
+	# return [retidx] = [mem0] - [mem]
+	.mem0   .ret0:0 ?+1
+	.mem    .mem0   ?+1
+	.ret1:0 .mem    ?+1
 	0       0       .arg8:8
 	# Variables
 	0-2 0-1 .z:0 1 2
@@ -404,27 +407,27 @@ uint.writestring:
 	.nden:0
 	.nchar:0
 	.nidx:0
-	.strlen:0
-	.str:0
+	.memlen:0
+	.mem:0
 	.hex:
 		'0 '0 '1 '1 '2 '2 '3 '3 '4 '4 '5 '5 '6 '6 '7 '7
-          '8 '8 '9 '9 'a 'a 'b 'b 'c 'c 'd 'd 'e 'e 'f 'f
+	     '8 '8 '9 '9 'a 'a 'b 'b 'c 'c 'd 'd 'e 'e 'f 'f
 	.nhex:0-.hex
 	.wretb0:0-.ret
 	.wretb1:0-.base1loop-6
 	.wret0:0-.nextloop
 
 
-uint.readstring:
-	# Call  : 0 ? uint.readstring str strlen stridx retidx retnum base
+uint.read:
+	# Call  : 0 ? uint.read mem memlen memidx retidx retnum base
 	#
-	# Effect: Converts a string into an unsigned integer.
+	# Effect: Converts ASCII characters into an unsigned integer.
 	#       : [base] <= 36
 	#       : [retnum] = return value.
-	#       : The first character is read from [str]+[stridx].
-	#       : The function does not read after [str]+[strlen]-1 or if [str]=0,
+	#       : The first character is read from [mem]+[memidx].
+	#       : The function does not read after [mem]+[memlen]-1 or if [mem]=0,
 	#       : but [retidx] will still be updated.
-	#       : [retidx] = [stridx] + (number of read characters)
+	#       : [retidx] = [memidx] + (number of read characters)
 	#       : If retidx=0, then [retidx] is not written to.
 	#
 	# Time  : Base = 1: 94 + 19*MOD
@@ -444,28 +447,28 @@ uint.readstring:
 	.arg7   0       ?+1
 	.arg8   0       ?+1
 	0       0       ?+1
-	# Get [str].
+	# Get [mem].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
 	.p2     .p2     ?+1
 	.p2     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p2:0   ?+1
-	.str    .str    ?+1
-	.str    .tmp    ?+1
-	# Get [stridx].
+	.mem    .mem    ?+1
+	.mem    .tmp    ?+1
+	# Get [memidx].
 	.tmp    .tmp    ?+1
 	.tmp    .arg4:4 ?+1
 	.p4     .p4     ?+1
 	.p4     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p4:0   ?+1
-	.stridx .stridx ?+1
-	.stridx .tmp    ?+1
+	.memidx .memidx ?+1
+	.memidx .tmp    ?+1
 	# Set string pointers.
-	.tmp    .str    ?+1
-	.str0   .str0   ?+1
-	.str0   .tmp    ?+1
+	.tmp    .mem    ?+1
+	.mem0   .mem0   ?+1
+	.mem0   .tmp    ?+1
 	# Get retidx.
 	.tmp    .tmp    ?+1
 	.tmp    .arg5:5 ?+1
@@ -481,18 +484,18 @@ uint.readstring:
 	.ret3   .ret3   ?+1
 	.ret3   .tmp    ?+1
 	.num    .num    ?+1
-	# Get [strlen]. If [str]=0 or [strlen]<=[stridx], return.
-	.str    .z      .ret+3
+	# Get [memlen]. If [mem]=0 or [memlen]<=[memidx], return.
+	.mem    .z      .ret+3
 	.tmp    .tmp    ?+1
 	.tmp    .arg3:3 ?+1
 	.p3     .p3     ?+1
 	.p3     .tmp    ?+1
 	.tmp    .tmp    ?+1
 	.tmp    .p3:0   ?+1
-	.strlen .strlen ?+1
-	.strlen .tmp    ?+1
-	.strlen .stridx .ret+3
-	.strlen .z-1    ?+1
+	.memlen .memlen ?+1
+	.memlen .tmp    ?+1
+	.memlen .memidx .ret+3
+	.memlen .z-1    ?+1
 	# Get [base].
 	.tmp    .tmp    ?+1
 	.tmp    .arg7:7 ?+1
@@ -543,7 +546,7 @@ uint.readstring:
 	.nchar  .nchar  ?+1
 	.nchar  .char   ?+1
 	.char   .max    ?+4
-	.str    .z-1    .ret+3
+	.mem    .z-1    .ret+3
 	# num += num*(base-1)
 	.z+1    .base   ?+4
 	.tmp    .tmp    ?+13
@@ -556,17 +559,17 @@ uint.readstring:
 	.char   .char   .read
 .read:
 	# Mini function to read a character from the string.
-	.strlen .z+1    .ret+3
+	.memlen .z+1    .ret+3
 	.nchar  .nchar  ?+1
-	.nchar  .str0:0 ?+1
+	.nchar  .mem0:0 ?+1
 	.char   .nchar  ?+1
-	.str0   .z-1    .rret:0
+	.mem0   .z-1    .rret:0
 .ret:
-	# return [retidx] = [str0] - [str]
-	.str0   .z+1    ?+1
-	.str0   .ret0:0 ?+1
-	.str    .str0   ?+1
-	.ret1:0 .str    ?+1
+	# return [retidx] = [mem0] - [mem]
+	.mem0   .z+1    ?+1
+	.mem0   .ret0:0 ?+1
+	.mem    .mem0   ?+1
+	.ret1:0 .mem    ?+1
 	# return [retnum]
 	.tmp    .tmp    ?+1
 	.num    .ret2:0 ?+1
@@ -586,9 +589,9 @@ uint.readstring:
 	.nchar:0
 	.char:0
 	.max:0
-	.str:0
-	.strlen:0
-	.stridx:0
+	.mem:0
+	.memlen:0
+	.memidx:0
 	.rret0:0-.base0loop-6
 	.rret1:0-.whiteloop-6
 	.rret2:.whiteloop+6-.parseloop

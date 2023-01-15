@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.js - v1.27
+sico.js - v1.28
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -413,8 +413,8 @@ function SicoU64Dec(n) {
 // SICO architecture interpreter.
 
 
-var SICO_RUNNING     =0;
-var SICO_COMPLETE    =1;
+var SICO_COMPLETE    =0;
+var SICO_RUNNING     =1;
 var SICO_ERROR_PARSER=2;
 var SICO_ERROR_MEMORY=3;
 var SICO_MAX_PARSE   =1<<30;
