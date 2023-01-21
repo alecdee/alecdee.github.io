@@ -50,7 +50,7 @@ message and exit if it's not.
           int.sico  |  1966
        random.sico  |  3334
        string.sico  |  3941
-       memory.sico  |  4487
+       memory.sico  |  4493
 
 
 |#
@@ -3968,7 +3968,7 @@ random.shuffle:
 #|==============================================================================
 
 
-String Library - v2.02
+String Library - v2.03
 
 Copyright 2022 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -4051,6 +4051,8 @@ Version History
      Modified string.print to use string.writeinline.
 2.02
      Renamed uint.writestring to uint.write.
+2.03
+     Corrected reallocation in string.input.
 
 
 --------------------------------------------------------------------------------
@@ -4459,6 +4461,7 @@ string.input:
 	0       0       ?+1
 	# Reset our working memory.
 	.mem    .mem    ?+1
+	.mem0   .mem0   ?+1
 	.memlen .memlen ?+1
 	.memrem .memrem ?+1
 	.memrem .z-1    .loop+3
@@ -4474,18 +4477,20 @@ string.input:
 	.mem    .z-1    .loop
 .resize:
 	# Double the size of our working memory.
-	.mem    .memlen ?+1
 	.tmp    .tmp    ?+1
 	.memlen .z      ?+4
 	.tmp    .memlen ?+4
 	.tmp    .z16    ?+1
 	.memlen .tmp    ?+1
-	0 ? mem.realloc .mem .mem .memlen
+	.mem    .mem0   ?+1
+	0 ? mem.realloc .mem0 .mem0 .memlen
+	.z      .mem0   ?+1
+	.mem    .z      ?+1
+	.z      .z      ?+1
 	.memrem .tmp    .mem
 .done:
 	.memrem .z+1    ?+1
 	.memlen .memrem ?+1
-	.mem    .memlen ?+1
 	# Set [ret].
 	.tmp    .tmp    ?+1
 	.tmp    .arg2:2 ?+1
@@ -4495,10 +4500,10 @@ string.input:
 	.tmp    .ret1:0 ?+1
 	.ret2   .ret2   ?+1
 	.ret2   .tmp    ?+1
-	0 ? mem.setidx .ret2 string.struct.len .memlen
 	0 ? mem.getidx .tmp .ret2 string.struct.ptr
-	0 ? mem.free .tmp
-	0 ? mem.setidx .ret2 string.struct.ptr .mem
+	0 ? mem.free   .tmp
+	0 ? mem.setidx .ret2 string.struct.ptr .mem0
+	0 ? mem.setidx .ret2 string.struct.len .memlen
 	0       0       .arg3:3
 	# Variables
 	0-1 .z:0 1 2
@@ -4507,6 +4512,7 @@ string.input:
 	.eol:10
 	.neol:0-10
 	.nchar:0
+	.mem0:0
 	.memrem:0
 	.memlen:0
 	.ret2:0
@@ -4575,7 +4581,7 @@ Replace alloc hash table with AVL tree.
 	If there are multiple matches, choose the one with the smallest address.
 Simplify mem.alloc.verify using mem.get and mem.cmp.
 mem.binsearch mem len val cmp
-	use +-2^n instead of division by 2
+	use fibonacci instead of powers of 2
 Optimize mem.realloc. Don't use mem.zero, just mem.copy.
 Optimize mem.sort to n*log(n).
 
