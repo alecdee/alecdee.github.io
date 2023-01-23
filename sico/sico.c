@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.c - v1.49
+sico.c - v1.50
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -157,9 +157,9 @@ The entire assembly language is simple enough to fit on a single piece of paper:
                   |
      -------------+--------------------------------------------------------
                   |
-     Input /      |  For an instruction A B C, reading or writing from
-     Output       |  special addresses will interact with the host. When
-                  |  writing to these addresses, act as if mem[A]=0.
+     Input /      |  Addresses above 2^63-1 are considered special and
+     Output       |  reading or writing to them will interact with the
+                  |  host. For an instruction A, B, C:
                   |
                   |  A = -1: End execution.
                   |  A = -2: Write mem[B] to stdout.
@@ -556,7 +556,7 @@ void SicoRun(SicoState* st,u32 iters) {
 		return;
 	}
 	u32 dec=(iters+1)>0;
-	u64 a,b,c,ma,mb,ip=st->ip,io=(u64)-32;
+	u64 a,b,c,ma,mb,ip=st->ip;
 	u64 *mem=st->mem,alloc=st->alloc;
 	for (;iters;iters-=dec) {
 		// Load a, b, and c.
@@ -567,7 +567,7 @@ void SicoRun(SicoState* st,u32 iters) {
 		if (b<alloc) {
 			// Read mem[b].
 			mb=mem[b];
-		} else if (b<io) {
+		} else if (b<(1ULL<<63)) {
 			// b is out of bounds.
 			mb=0;
 		} else if (b==(u64)-3) {
@@ -594,7 +594,7 @@ void SicoRun(SicoState* st,u32 iters) {
 		}
 		// a is out of bounds or a special address.
 		ip=c;
-		if (a<io) {
+		if (a<(1ULL<<63)) {
 			// Execute a normal SICO instruction.
 			SicoSetMem(st,a,0-mb);
 			if (st->state!=SICO_RUNNING) {

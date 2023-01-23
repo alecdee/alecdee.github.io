@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.js - v1.28
+sico.js - v1.29
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -158,9 +158,9 @@ The rules of the assembly language are given below.
                   |
      -------------+--------------------------------------------------------
                   |
-     Input /      |  For an instruction A B C, reading or writing from
-     Output       |  special addresses will interact with the host. When
-                  |  writing to these addresses, act as if mem[A]=0.
+     Input /      |  Addresses above 2^63-1 are considered special and
+     Output       |  reading or writing to them will interact with the
+                  |  host. For an instruction A, B, C:
                   |
                   |  A = -1: End execution.
                   |  A = -2: Write mem[B] to stdout.
@@ -828,7 +828,6 @@ function SicoRun(st,stoptime) {
 	var ahi,alo,chi,clo;
 	var bhi,blo,mbhi,mblo;
 	var tmp0=SicoU64Create(),tmp1=SicoU64Create(),tmp2;
-	var io=0x100000000-32;
 	var timeiters=0;
 	while (true) {
 		// dbginst++;
@@ -870,7 +869,7 @@ function SicoRun(st,stoptime) {
 				mbhi=0;
 				mblo=0;
 			}
-		} else if (bhi<0xffffffff || blo<io) {
+		} else if (bhi<0x80000000) {
 			// Out of bounds. Use SicoGetMem to read mem[b].
 			tmp0.hi=bhi;tmp0.lo=blo;
 			tmp2=SicoGetMem(st,tmp0);
@@ -905,7 +904,7 @@ function SicoRun(st,stoptime) {
 				iplo=clo;
 			}
 			continue;
-		} else if (ahi<0xffffffff || alo<io) {
+		} else if (ahi<0x80000000) {
 			// Out of bounds. Use SicoSetMem to modify mem[a].
 			tmp0.hi=ahi;tmp0.lo=alo;
 			tmp2=SicoGetMem(st,tmp0);
@@ -927,7 +926,9 @@ function SicoRun(st,stoptime) {
 		// Special addresses.
 		iphi=chi;
 		iplo=clo;
-		if (alo===0xffffffff) {
+		if (ahi<0xffffffff) {
+			// The gap between special addresses and working memory.
+		} else if (alo===0xffffffff) {
 			// Exit.
 			st.state=SICO_COMPLETE;
 			break;

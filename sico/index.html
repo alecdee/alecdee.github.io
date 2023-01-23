@@ -173,8 +173,8 @@ Ex:<br>
 ?+1
 </div>
 </td></tr>
-<tr><td>Input / Output</td><td>For an instruction <i>A B C</i>, reading or writing from special
-addresses will interact with the host. When writing to these addresses, act as if <i>mem[A]=0</i>.
+<tr><td>Input / Output</td><td>Addresses above <i>2^63-1</i> are considered special and reading or
+writing to them will interact with the host. For an instruction <i>A, B, C</i>:
 <br>
 <br>
 <i>A = -1</i>: End execution.<br>
@@ -571,7 +571,7 @@ for the <a href="./sico.c">sico.c</a> interpreter.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 9 Apr 2020 - Modified on 18 Dec 2022<br>
+<div id="footer">Created on 9 Apr 2020 - Modified on 22 Jan 2023<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
 <a href="../index.html">Alec Dee's Homepage</a></div>
 </body>
