@@ -1,18 +1,22 @@
 """
-NTrace.py - v1.24
+
+NTrace.py - v1.29
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
+
 --------------------------------------------------------------------------------
 A N-Dimensional Ray Tracer
+
 
 Notes:
 * The scene can have any number of spatial dimensions.
 * Most processing time is spent in BVH.raypick() and BVHNode.intersect().
-* Epsilon for double precision: 1e-8, single: 1e-4.
+* Epsilon for double precision is 1e-8. For single precision it's 1e-4.
 * Mesh instancing is supported.
-* Wavefront OBJ mesh files are supported. Textures are not.
+* Textures are not supported.
+* Wavefront OBJ mesh files are supported.
 * Special effects can be done by manipulating how light behaves. Ex: materials
   with negative luminance will emit shadows.
 * Coordinate system for the 3D camera:
@@ -26,43 +30,100 @@ Notes:
           |.'
           +----------> +x
 
+
 --------------------------------------------------------------------------------
 TODO
 
-Render 2D scenes by using the nearest point we're inside.
-Reorganize how scatter length is used to limit ray traversal.
+
+Simplify text generation. Reduce to 5kb.
+Use quadtree/octtree.
+	Build from bottom up.
+	How to test if simplex / cube overlap?
+	Might not need to rebuild tree when adding or deleting.
+	Can terminate when first collision is found.
+Add denoising.
 Add recalcnorm() and applytransform() to mesh.
 Add vert/face unique id tracking. Add delete/get.
-Add text primitives.
+
+
 """
 
-import math,random,sys
+import math,random,sys,struct
 
 
 #---------------------------------------------------------------------------------
 # Algebra
-#---------------------------------------------------------------------------------
+#
 # Helper classes for matrix/vector linear algebra.
 
 
 class Matrix(object):
 	def __init__(self,rows=None,cols=None,copy=True):
 		if isinstance(rows,Matrix):
+			# Matrix( mat )
 			cols=(rows.rows,rows.cols)
 			rows=rows.elem
 		if hasattr(rows,"__getitem__"):
+			# Matrix( elem, (rows,cols) )
 			elem=rows
 			if cols: rows,cols=cols
 			elems=rows*cols
 			if copy: elem=list(elem)
 			assert(len(elem)==elems)
 		elif rows is not None:
+			# Matrix( rows, cols )
 			if cols is None: cols=0
-			elem=[0.0]*(rows*cols)
+			elem=[0]*(rows*cols)
 		else:
 			rows,cols,elem=0,0,[]
 		self.elem,self.elems=elem,rows*cols
 		self.rows,self.cols=rows,cols
+
+
+	def __str__(self):
+		"""String representation. Each row and column are padded individually."""
+		rows,cols=self.rows,self.cols
+		rpad,cpad=[1]*rows,[0]*cols
+		cell=[[0]*cols for r in range(rows)]
+		for r in range(rows):
+			for c in range(cols):
+				# Convert the element value into a string and split it by eol's.
+				s=self.elem[r*cols+c]
+				if isinstance(s,float):
+					s="{0:.6f}".format(s)
+				s=str(s).split("\n")
+				# Find the dimensions of the string.
+				h,w=len(s),max(map(len,s))
+				cell[r][c]=(h,w,s)
+				rpad[r]=max(rpad[r],h)
+				cpad[c]=max(cpad[c],w)
+		rsep,csep="",(" ",",")
+		if rpad and max(rpad)>1:
+			rsep="\n["+" "*(sum(cpad)+cols*3-1)+"]"
+			csep=("   "," , ")
+		# Generate the output line-by-line.
+		r,line,ret=0,0,""
+		while r<rows:
+			rp=rpad[r]
+			sep=csep[line==(rp-1)//2]
+			ret+="["
+			for c in range(cols):
+				h,w,s=cell[r][c]
+				i=line-(rp-h)//2
+				ret+=sep[(c==0)*2:]
+				ret+=("" if i<0 or i>=h else s[i]).rjust(cpad[c])
+			ret+=sep[2:]+"]"
+			line=(line+1)%rp
+			if line==0:
+				r+=1
+				if r<rows: ret+=rsep
+			if r<rows: ret+="\n"
+		return ret
+
+
+	def __repr__(self):
+		def rp(r): return "["+",".join([repr(e) for e in r])+"]"
+		return "Matrix(["+",".join([rp(r) for r in self])+"])"
 
 
 	@staticmethod
@@ -86,7 +147,7 @@ class Matrix(object):
 		elem=a.elem
 		n,cols=min(a.rows,a.cols),a.cols
 		for i in range(n):
-			elem[i*cols+i]=1.0
+			elem[i*cols+i]=1
 		return a
 
 
@@ -94,7 +155,7 @@ class Matrix(object):
 		"""Zeroize matrix A."""
 		elem=a.elem
 		for i in range(a.elems):
-			elem[i]=0.0
+			elem[i]=0
 		return a
 
 
@@ -106,7 +167,7 @@ class Matrix(object):
 		if isinstance(b,Vector):
 			# Vector A*v.
 			arows,acols,i=a.rows,a.cols,0
-			ae,be,ve=a.elem,b.elem,[0.0]*arows
+			ae,be,ve=a.elem,b.elem,[0]*arows
 			for r in range(arows):
 				sum=ae[i]*be[0]
 				for c in range(1,acols):
@@ -198,7 +259,7 @@ class Matrix(object):
 		assert(a.rows==cols)
 		if cols==0:
 			# The empty matrix has a determinant of 1.
-			return 1.0
+			return 1
 		# Copy the matrix. Use the upper triangular form to compute the determinant.
 		m=Matrix(a)
 		elem,elems=m.elem,m.elems
@@ -265,11 +326,19 @@ class Matrix(object):
 class Vector(object):
 	def __init__(self,x,copy=True):
 		if isinstance(x,int):
-			elem=[0.0]*x
+			elem=[0]*x
 		else:
 			elem=list(x) if copy else x
 		self.elem=elem
 		self.elems=len(elem)
+
+
+	def __str__(self):
+		return str(Matrix(self,(1,len(self)),False))
+
+
+	def __repr__(self):
+		return "Vector(["+",".join([repr(x) for x in self])+"])"
 
 
 	def __len__(self):
@@ -306,7 +375,7 @@ class Vector(object):
 
 	def zero(u):
 		ue=u.elem
-		for i in range(u.elems): ue[i]=0.0
+		for i in range(u.elems): ue[i]=0
 		return u
 
 
@@ -341,7 +410,7 @@ class Vector(object):
 		ue=u.elem
 		if isinstance(v,Vector):
 			# Vector dot product u*v=u.x*v.x+u.y*v.y+...
-			s,ve=0.0,v.elem
+			s,ve=0,v.elem
 			for i in range(u.elems):
 				s+=ue[i]*ve[i]
 			return s
@@ -377,7 +446,7 @@ class Vector(object):
 
 
 	def sqr(u):
-		s=0.0
+		s=0
 		for x in u.elem: s+=x*x
 		return s
 
@@ -400,15 +469,23 @@ class Transform(object):
 	# A class to easily hold spatial transformation information.
 
 
-	def __init__(self,off,angs=None,scale=1.0):
+	def __init__(self,off,angs=None,scale=None,mat=None):
 		if isinstance(off,Transform):
-			self.off=Vector(off.off)
-			self.mat=Matrix(off.mat)
+			mat=off.mat
+			off=off.off
+		off=Vector(off)
+		dim=len(off)
+		if mat is None:
+			mat=Matrix(dim,dim).one()
 		else:
-			self.off=Vector(off)
-			dim=len(self.off)
-			if angs is None: angs=[0]*(dim*(dim-1)//2)
-			self.mat=Matrix(dim,dim).one().rotate(angs)*scale
+			mat=Matrix(mat)
+		if not angs is None:
+			mat=mat.rotate(angs)
+		if not scale is None:
+			if not hasattr(scale,"__getitem__"): scale=[scale]*dim
+			for i in range(dim*dim): mat.elem[i]*=scale[i//dim]
+		self.mat=mat
+		self.off=off
 
 
 	def apply(self,v):
@@ -440,7 +517,6 @@ class Transform(object):
 
 #---------------------------------------------------------------------------------
 # Meshes
-#---------------------------------------------------------------------------------
 
 
 class Ray(object):
@@ -501,8 +577,9 @@ class MeshFace(object):
 	def __init__(self,vertarr,mat):
 		# Set up the face and its normal.
 		self.mat=mat
-		self.vertarr=vertarr
+		self.vertarr=list(vertarr)
 		self.calcnorm()
+
 
 	def calcnorm(self):
 		# Calculate the face's normal and barycentric vectors.
@@ -529,6 +606,7 @@ class MeshFace(object):
 			self.bary=(a.inv()*Vector(arr,False)).elem
 		except ZeroDivisionError:
 			self.bary=[Vector(dim+1) for i in range(dim)]
+
 
 	def intersect(self,ray):
 		# Return the distance from the ray origin to the face. Return false if the ray
@@ -574,7 +652,7 @@ class Mesh(object):
 			self.load(dim,mat,transform)
 
 
-	def load(self,path,mat=None,transform=None):
+	def loadobj(self,path,mat=None,transform=None):
 		# Load from a Wavefront OBJ file.
 		self.clear()
 		self.dim=3
@@ -592,7 +670,7 @@ class Mesh(object):
 				self.addface(faces,mat)
 
 
-	def save(self,path):
+	def saveobj(self,path):
 		# Save to a Wavefront OBJ file.
 		with open(path,"w") as f:
 			idmap=dict()
@@ -637,7 +715,8 @@ class Mesh(object):
 	def addvertex(self,coord,transform=None):
 		# Add a vertex and return it.
 		coord=Vector(coord)
-		if transform: coord=transform.apply(coord)
+		if not transform is None:
+			coord=transform.apply(coord)
 		arr,verts=self.vertarr,self.verts
 		if verts>=len(arr): arr+=[None]*verts
 		arr[verts]=MeshVertex(coord,verts)
@@ -675,23 +754,25 @@ class Mesh(object):
 		sim=min(dim-1,sides)
 		combos,perm=1,[0]*sim
 		for i in range(sim): combos*=i+1
+		vertarr=[0]*(sim+1)
 		for f in range(2*dim):
 			# Given a fixed axis and side of the cube, generate the dim-1 dimensioned surface.
 			# Each surface will be made up of sim! simplexes.
 			axis=f>>1
-			base=vbase+((f&1)<<axis)
 			for combo in range(combos):
+				# If the number of permutation inversions is odd, invert the normal.
+				inv=(axis^f)&1
 				for i in range(sim):
 					j=combo%(i+1)
 					combo//=i+1
-					perm[i],perm[j]=perm[j],1<<(i+(i>=axis))
-				# Find the vertices of the simplex. If the number of permutation inversions is
-				# odd, then the sign of the normal will be negative.
-				vertarr=[base]*(sim+1)
+					inv^=(i-j)&1
+					for k in range(i,j,-1): perm[k]=perm[k-1]
+					perm[j]=1<<(i+(i>=axis))
+				# Find the vertices of the simplex.
+				vertarr[0]=vbase+((f&1)<<axis)
 				for i in range(sim): vertarr[i+1]=vertarr[i]+perm[i]
 				if vertarr[sim]>=self.verts: continue
-				inv=(sum(sum(perm[j]>perm[i] for j in range(i)) for i in range(sim))^axis^f)&1
-				if dim>1 and inv==0: vertarr[0],vertarr[1]=vertarr[1],vertarr[0]
+				if dim>=2 and inv==0: vertarr[0],vertarr[1]=vertarr[1],vertarr[0]
 				face=self.addface(vertarr,mat)
 				if dim==1 and inv==0: face.norm=-face.norm
 
@@ -740,7 +821,7 @@ class Mesh(object):
 				for d in range(dim1):
 					u=((std//den[d])%segs)*(math.pi*2.0/segs)
 					v[d+1]=v[d]*math.sin(u)
-					v[d]*=math.cos(u)
+					v[d  ]=v[d]*math.cos(u)
 				vertmap[std]=self.addvertex(v.normalize(),trans).id
 			return std
 		# Determine if a face is valid and unique.
@@ -769,6 +850,163 @@ class Mesh(object):
 				varr=[vertarr[v.id] for v in idarr]
 				varr[0],varr[inv]=varr[inv],varr[0]
 				if facevalid(varr): self.addface(varr,mat)
+
+
+	def addtext(self,text,thickness,transform=None,mat=None):
+		# Adds 3D text faces to the mesh.
+		assert(self.dim==3)
+		width=0.520093
+		# Base 91 encoded vertices and faces.
+		font={
+			"!":("Wn+KU[VgI3VgFi+KPk]RT8^+W<_DY[bTYke5WxgAU<h^Q]iQLjiNIIhcF?g5D^dyDcc0F0a)I:^JLy]X","5'&4'54('3(43)(2)32*)1*20*10+*0,+/,0.,/.-,$!%$#!"),
+			"\"":("j.+Kgs?1XZ?1V;+KHd+KFJ?193?16q+K","(&)('&$!%$#!"),
+			"#":("w7WGe5WGb6hpT9hpW8WGB]WG?^hp3chp6bWG%MWG%MQz7gQz:]C8)XC8)X=j;c=j>J/vJ7/vGV=j]9=ja!/vl|/vj.=j{P=j{PC8i*C8f9Qzw7QzXDQz[5C8FQC8CcQz","132143576587/10:8;:98/.1-+*.@1#>&-@.>#<-A@'&A>;?&>A><;+-,4@??54!<#!=<1@4-*')'*-'A)('5?;%#&;85%$#"),
+			"$":("Qp(!^T(![K04f&0gmj1Rmj8#d26wYw6DU>HBcFK%k<MWpCP2sBRgt~UbtoZ6r=_)mnc1iMd|cufUXjh&MThlJtri?*riAhhi57h&*|f{+#_%7Xa_CJb=H1MH:sJA4OH,0)E_,zBk+f?8,E;^/H7r3b597~3O?61YFA0VOm/yN/64B97e=_9];&<(;(?P<vA]@tC]J%F+O6bDYEa@^l_:b{]oeVZCeqVUcrT;a!RlZ.Q4S<Oa","K#!K$#J$KJ%$I%JI&%I'&('IH(IG)H)(HFLGL)GS)LS*)FMLFNMENFEONDOEDPODQPCQDCRQBRCBSRB*SA*BA+*@+A?+@?,+>^?^,?^-,>T^]-^].-[.]Z.[Z/.Y/ZY0/X0YW0XW10V1WU1V;=<U21T2U;>=;T>;2T;32;43;54:5;:6596:869876"),
+			"%":("}C+K0rhp#Yhpo{+KP68nNd<QJb@8D$By=9Cz6aCw0gC*,fAm)G@%&T=/%/9p%*5m&Y2B(h0&+].'/U,J4]+9;8*oBX+DH>,xL;/*Nq1sP.4}C03$?H0f:-026{0X3n1s1M4N0k7v2-;p5r>.<%>a@^=NC_:gDP6{{~]<zWagwqdVt>fgo)hQhziDbCiAZKhQV0g.RweAP9bYNq^:NgYaP-U{SKR_X!P:]YO$c?NCj>NDp=O4tXPXwqRGzPU/{wXKopX>nVV/lFTei#SfdZScavT7]jUpZdY'Zs^S]Ras_Tc-dMd*hiczkyc(o+_dp7[=","687$!%$#!5865984954:93:4?:3>:?3@?>;:2@32A@=;>=<;2BA1B2I<=1CBI&<0C1H&I0DCH'&/D0G'H/EDG('F(G.E/.FE.(F-(.-)(,)-+),+*)[^]Z^[Y^ZY_^Ya_XaYhgXgaXgbaWhXWihfbgWjiebfecbdceWkjVkWscdsJcVlkUlVrJsrKJTlUTmlqKrTnmqLKTonpLqSoToLpSLoSMLRMSRNMQNRPNQPON"),
+			"&":("vqJ3v/OstUTQqAYMna]9~uhpl?hpe5d9aie^V~h(KwiBA=i=:ehU4lg@.Zd~*qbN(w_P&pZs&kUb(!R[*:Oj-xLz2[JS:GGb3AB60P>9/_:N0d6A34376I0x;c.eAe-EH&,fPq,kV7-F['.Kag08ds29f~4Ph;7Hh.;2fd=xd2@M_NBoYhD|NHH]e6V1gER9hdJ45OY/6k[U9r_,>)apDQc'M@c$Rub2X#_b[K^.AZLD:|O?7HQ|5:UXX+8hW'6=TN4MPr39L$2pGd3%D'3qA65->e7]><:l?L=mByA'G<D#P=A*T^>pVu<uW~:|","ACBADCAED@EA@FE?F@?GF>G?fG>>gfeGfeHG>hgdHe=h>=ihcHdcIH=jibIc<j=bJI<kjrJb<lkqJr;l<qKJpKqpLK;mloLp:m;oMLnMo:nmnNM9n:9Nn9ON9PO8]9]P97]8[P]R#!7^]6^7Q#R6_^Q$#5_65a_4a5P$Q[$P[%$3a43Sa3TS[&%['&3UTZ'[2U32VU1V2Y)Z)'Z1WVX)YW)X1)W0)10*)(')/*0/+*.+/-+.-,+"),
+			"'":("Xk+KVJ?1HS?1F;+K","$!%$#!"),
+			"(":("aNzNVXuuLlo_E(i5>3_s:iV5:8O,;bGj?R@BCg;7I'64RT/Haf(6i|,WbO0dX96>Qg<+KzCXI'KGHZQZI_WNL{_LRTg7Y=m%cerXi|u~","-/.-0/-10,1-,21+2,*2+*32)3*)43(4)(54'5('65&6'&76&87%8&%98$9%$:9#:$#;:#!;"),
+			")":("?N(9HD,qR23,Yw9WblA~f6JffhPxf-Uzd?[9_Cc}VUk|M&r|?:zR7!v0=BreEpm.M=fbQ{_iTeYHVJQCT|HTQyB=M2<9Fb6J>K0q7!,i",";#!:#;:$#9$:9%$8%98&%7&86&76'&5'65('5)(4)54*)3*43+*2+32,+1,21-,0-1/-0/.-"),
+			"*":("q^CRl0HSSK@eU>O*IhO*KR@e4@HS/8CZH'=;/86m4o1tKc9oIh+KU>+KS<9ol01mqn6|Vx=B","-/.-0/021+-,*-+032*0-*30)'*3*''$3$!3)('&$'&%$#!$"),
+			"+":("x4S-VJS-VJf;HSf;HSS-(kS-(kLgHSLgHS;eVJ;eVJLgx4Lg",")+*),+('&!-,,#!&#)%#&)#,%$#&)("),
+			",":("56qK:^qDA6pKE>o>HJmiJFkaJ4h?F[eICXc&Bw_sCV]lEO[/H3Y|KlYCP5YCTJZ2W[[TZ+^U[db&]=e/[dhnY3l{Scq8KStPAxvQ5:w<",".0/.10-1.-21,2-,32+3,+43*4+*54)5*)65(6)'6('76&7'%7&%87$8%#8$;#!;8#;98;:9"),
+			"-":("i^SD7@SD7@LNi^LN","#%$#!%"),
+			".":("O>YWRmYtVVZpZ%]a]'a5]'d2YRfxV5hMS!i;NBi^IIi&F,gzC&f(AOcYAUaKBd^YE#[lH$ZSKIYk","4#!3#43$#2$32%$1%21&%0&1/&0/'&.'/.('-(.-)(,)-,*)+*,"),
+			"/":("r.+K8cqs+<qsde+K","$!%$#!"),
+			"0":("whO*uaV[rd[Co=_vj*dFdnf^^Dh5TJiNHGiH?bh)7keO0__k+vXS)FPl)7Gc+?@1/T9q4Z5e;#2KB=0HJW/9VU/@__0Sfb2:kL4Tnn6nrv:rv7@|wcG2i_JVi#F':<WA<QZN?']pB*_bFnbGL?c9S/c7Z9ajag]~evXvh}RE7BMq7]P;fI>zbJ:E^78>XP6IRR5NLd5LH46+D$79@I9&=+;U9i@$7YF@","5765874854984:93:4S:3SR:R;:Q;R3TS3UT2U3P;QP<;2VUO<P2WVN<O1W21XWN=<M=N1YXM@=0Y1@>=MA@?>@?!>0LY/L0K!?/ML/AMK#!.A/J#K.BAJ$#I$J-B.-CBI%$-DCH%I-EDH&%G&H,E-,FE,GF,&G,'&+',+('*(+*)("),
+			"1":("tUhp05hp05b$KCb$KC7y2(?),v8rNQ/^Z{/^Z{b$tUb$","(*)(&*&+*('&%+&#%$#+%#,+#!,"),
+			"2":("uJhp-shp-sb;PRN=WcIv[sFO_=BZ_R>?^L;X[C9<XR7]Tv6JOv5eHz5bB-6[<U8=5};/.;6D1C4m7Z2C>g0NH-/9SF/:^!0VfB3&it5'l76}o!:dop?rnpCslHGJg:L#ZwR7@.aruJar","7986975965:94:54;:/;4.;/.<;3/4-<.30/213103,<-,=<+=,*=+)=*)>=(>)(?>'?('@?&@'&A@%A&%BA$B%$CB$DC$!D#!$"),
+			"3":("rlYapE^9l*bYfbe(_-g(RshzF+iZ8fiG/8hq/8b<8zb~EIc:O#bzVqas]Y_2bT[gd3Y>doUqbxR^^@PPXXO$RaN&KdMV<2MS<2GRLEGKReFXWFE5ZlC<^%@]^W=T]B:#Xv7cU&6PML5PBv5_9~6N2(7a2,18:O0(Ba/CKB/-U=/X[]0Rc/1phE4'l%6qn+:Jn)?RkLC<ftFJ[?Iid3JmkyMKq4P}sLU(","JLKILJIMLHMIHNMGFHFNHFENEONEDODPOCPDBPCAPBAQP@QA@RQ?R@?SR>S?>TS=T><T=;T<9;:9T;9UT9VU9WV98W7W86W76XW5X64X54YX3Y43!Y2!31!21#!0#10$#/$0.$/*,+-$.*-,*$-*%$*&%*'&)'*)('"),
+			"4":("zcZchbZchbhpX=hpX=Zc%LZc%LT:RM/vhb/vhbT:zcT:X=6|3RT:X=T:","(-)-*)-+*(.-/+-'.('/.!,+/'&!+#/&#%#&#+/%$#"),
+			"5":("rYW^p;[pkpaZe0du[=g9Q|hsEpi^7Wi:0Dhq0Db46Lbm@Lc5J)c3QDbMVya<[a^Qa=[)c.XPcdU{c,R{a<Pf]CNzWPMJN5L.27K}27/vm-/vm-6=?N6=?NEeNOEkYeF^d(H7kLJ|p!N<rFQz",":>;><;>=<:?>:@?:A@:BA:CB:9C9DC8D97D87ED6E75E64E54!E3!42!32#!1#21$#0$1/$0*,+.$/*-,.%$*.-*%.*&%*'&)'*)('"),
+			"6":("vLX8t3]Tp{a_l<dUeDg/]^h]TaiQICiIAGhE:YfS5-ce0V^l-5Wo+wQ7,1K,-:E|/NA'2M=,7c8Y?M4kHR21Qv0c[Z/}nO/vnO6=[P6CS,7+Kf8MD=;+?=>L<lAO;7Di:PHFD1F4NuE,YCE(b^Epi$G9o(IgrLL3u+O6vaS]gsSofqQ<dyN~a]M,[MKlUXK#N[J|FeKi?!MA:FNb;+U8<gYT?g^9C1a=FhbVL|cNSdcSZ5bea__md{]Ug+Yxg~W(","8:97:86:75:64;5;:54<;4=<4>=3>43?>2?32@?2A@1A2DFECFDCGF1BABGCBHG0B10HB0RHRQHQIH0SRPIQOIP0TSOJI/T0NJO/UTMJNMKJLKM/VU.V/L!Kc!L.WVb!c-W.b#!-XWa#b_#a_$#-YX^$_-ZY,Z-^%$,[Z]%^,][,%]+%,+&%*&+*'&)'*)('"),
+			"7":("tt6eFXhp6QhpfO6e+J6e+J/vtt/v","&('(&%%!($!%$#!"),
+			"8":("t{]/rAaamndahNfb_ehPSHiSHJiN=@h<4Nem.lbR,!]b+^X3-aT81:Q(9_M(AMJd8(GQ3CE//CAb-h=(/58V434B;m1FC+/yJt/5V!/9_t0+gk1XmE3npq6Nr[96s.=Tq.AOmpDDhIG+^]J-f=L(m(Nuq;QKtETsuKX3da;ccb9WaY7v]I6]V-5KJ25BCW6D@-7R=k9(<Q;!<N=z>H@FA@B/GLDPPoFy[^CVb=@~dH>LeCVbb~TG^4RFVCOwN>MrDhPa?0S=;{Uq:gY7;d]A@,a2F/bdLQc=R?c<Whbs^]accD^~e=]?f:Yo","9;:9<;8<98=<8>=7>8P>7PO>O?>7QPN?O6Q76RQM?NM@?6SRL@M6TSK@LKA@5T65UT]AK4U54VU[A][BA4WVZB[ZCB4XW3X4YCZYDC3YX2Y32DY2ED1E21FE0F10cFcGFbGc0dc/d0bHGaHb/ed.e/aIH_Ia.fe-f.^I_^JI-gfqJ^q!J-hg,h-p!qo!p,iho#!+i,n#o+jim#nm$#+kjl$mk$l+$k*$+*%$)%*)&%(&)('&"),
+			"9":("tzG:tDN&rnS/p4WSlW[Fg{_]_Fd0Qag7Akhf0Rhp0RbK@VbEKpaMV$^@^4Z%c-VUeMRGf/NLX{PkO~Q]ERQa>5Pv7lOO1*L^,WHg*IDU*'@b+9<4/U7A444K:A1wB!0-Il/6T@/=]e0Feh2DkC5Aol91sU?JJQ58D/62>W8=;@:n9J=U8lAu:-Ed=#HZAkJVF?KJLXKrU)KF_oIgfGH+eoB?d<=ka=9y[I7FVl5zPy55","ACBADC@DA@ED?E@?FE]F??I]>I?[F]>JIZF[ZGF>KJYGZ=K>=LKXGYXHG=ML<M=<NMWHX;N<W!HV!W;ON:O;:POU!V:QP9Q:T!UT#!9RQ9SRS#T9#S93#8392#32$#8437486476541$21%$0%10&%/&0/'&.'/.('-(.+-,+(-+)(+*)"),
+			":":("P{;sT}<VXV=x[7@4]%BnZmE$XwFSUDH'P@HoJRH@F0FZCYDBC+AwD0?bGb==L3<*PgZdT3[1XV]f[7a!]%c[ZmeoXwgBVEhOS+iAO&iZJ0i&F%g@D,egC/czCKaNES^>H7[yLEZp","C32B3CB43A4BA54@5A@65?6@>6?>76=7>=87<8=<98<:9;:<1#!0#10$#/$0/%$.%/.&%-&.-'&,'-,(',)(+),+*)"),
+			";":("P{;sT}<VXV=x[7@4]%BnZlE$XwFSUDH'P@HoJRH@F0FZCYDBC+AwD0?bGb==L3<*65qN>Zq*E0odHun+K?knK8hVHxfBDPc#Cu_gDJ]|F-[BHZZ0LxY>R(YNUDZ3XI[J[(^U]_b&^:e/]ahnZ0l{T^q8LOtPBtvQ67w;","=?>=@?=A@<A=;A<;BA:B;:CB9C:9DC8D98ED7E86E76FE5F65GF4G53G42G3JG2JHGJIH1#!0#10$#/$0/%$.%/.&%-&.-'&,'-,(',)(+),+*)"),
+			"<":("n1dteCiP-'OyeC8Bn1=$@.Oq","$&%$'&$!'#!$"),
+			"=":("t7Kb,gKb,gEPt7EPt7Z>,gZ>,gT.t7T.","')('&)#%$#!%"),
+			">":("2s=$;Y8BsvOy;YiP2sdt_wP#","!$#'$!'%$&%'"),
+			"?":("J,]LNO^.QY_PSabZSle5RCg&P?h;LCiJH(iVDKi#ATgq?efO>_d3?Fb*Ac_,Ev]jn6@ukhEJf/I!^>K#UjL*P-LFONVgCJVgBEF]NmFYT-F-XlDu[HC7]gAF^9>y]a;uZM8~W'6^Qr4SIm2o@i2':M2#:M+KDq+XRb-9[L/Pd@2=iG5Sl182n?<'","GIHGJIKELJGFFEKDLEDMLCMDCNMBNCBONAOB@OA@2O?2@?32>3?=3><3=;3<9;:97;73;7437547659871#!0#10$#0%$/%0.%/.&%-&.-'&,'-,('+(,+)(*)+FKJ"),
+			"@":("b<XjbP]rd(_:fx_lj2_2lb]XouXHr8OOrDF2q-?,nS9KjG4}dX1s^00VVe0#O80WHH2GB65=<Z967j>'20FN.iQM.8Yl/Bc_2bj{81p/>Zs:FFtwQtu)]SsshPqghPw1]Py-Q0z9C!z$6mwc-gs+'wm-$9eF![VM$NKk'?Dh+:>H0g8E783F>s/KH1,JQ}+$^P+1hQ,ipY/sw>5.{L;[}YCh}NP2yQ[3s{bXnqdxhef,_(evY_d:WIb%W%_-QOdBKSf$COf$=qd3;*aw8g['90Rn;iKxA3EGI,ABPF@(WG@-^'A+iN?pXkFeV-EZP$EZK5H?H'LfEjSHEaZ+F^^>H8_KJ__hLm_BO^]tSIY2","PRQPSRPTSOTPO0TO10/T0.T/N1ON21.UT-U.N32M3N,U-M43,VUL4ML54+V,+WVo!plnmL65lonlrorqoq!oK6L*W+krlsrk}!qktsJ6K*XWjtk)X*jutJ76I7Jiujivu(X)(YXI87hvihwv|!}|#!'Y(hxwI98&Y'H9I|$#b$|hyxa$b{b|gyh&ZYa%$%Z&zb{gzygbzaZ%gcbfcg_Za_[Z^[_ecfedc^][H:9G:HG;:F;GF<;?A@F=<>A?E=FE>=EA>EBADBEDCB"),
+			"A":("~1hpnNhpg.Zr92Zr1ghp!lhpEr/vYW/vc#T2O06m==T2","'+(+)(+!)',+*!+'%,%*,%$*$!*'&%#!$"),
+			"B":("u}Xks%^]nRbrh&eU[hgkP'hj.hhp.h/vVt0+dc1llC4IqG9$r7>{peBCmpE<iMGPaHIcftJRmoLaqnN|t3Q1ukS|cC=jb_;Sa,9dZz7fR>6@=.65=.GFNMGCT:FvYzEf_;CbblA%fWTid5R'_qP7YdNlQbMf=.MZ=.bRSfbD](a%b8^Pe([HfXXe","(=)=*)=+*=,+=<,<-,(>=;-<:-;9-:9.-8.9C.8C/.B/CB0/A0BA10@1A?1@(I>I?>I1?I21I32I43IH4(JIH54G5HF5GF65E6FE76D7ED!7O!DN!ON#!M#NL#ML$#K$L(KJ($K(%$(&%('&"),
+			"C":("tEflluh1ari@QuiJE:h*:je54Ga|/E]&+&UH)@M4*<E*-T>c2k958p5O?I2hG~0YR4/Aat/BkG07tB1otE97oS7}fB6FY)5pRT61LZ7'GC8WBL:l=F>k:5CU8TJ;9oRd<qWvAa[vI/a&Rrb[[|bne<bElSaGtD^i","243142154051085875765/90980/:9/;:.;/.<;.=<-=.->=,>-,?>,@?+@,+A@*A+*BA)B*)CB)DC(D)H!IG!H(ED'E(F!G'FE'!F&!'&#!&$#%$&"),
+			"D":("y,I#xnN^wNS^s|YJnF_0hRc9bAeCY9g#Pkh1GNhk*lhp*l/vLz/~Z?1:gL4$mx7)s#:rwHACiyHjhFB?dd=.]O9CTQ77Jj6;926592bCHCb=QWaLY~^HbGZ9fvUxiIPG",",:-:.-:/.:0/:90910,;:8198217286276325365!34!5A!4A#!A$#@$A@%$?%@>%?>&%=&>='&<'=,<;,'<,(',)(,*),+*"),
+			"E":("p:hp26hp26/vp:/vp:65@Y65@YG7nNG7nNMS@YMS@YbKp:bK","#'$'%$'&%#('#+(+)(+*)#,+#-,#!-"),
+			"F":("p+6=A96=A9H,miH,miNDA9NDA9hp2Thp2T/vp+/v",")#*#+*#!+)$#)'$'%$'&%)('"),
+			"G":("u;9>nk7fg~6Ya%5|Sz5~L<7&FH8W?U;f:9@A7BEB6EIp6TO58YUC;TY&>c[UCr_+I|akQbbpYjb}b0b[gRasgSNDO{NDO{H4uiH4uif;p@gKg(hmZaiTN9iFDwh9=/fO4Bby-E[e)TV7'NO{'eF}*=@j.p;34Y7)9o4M@O22G?0[Qw/<_e/6ia/qu01g","MONLOMLPOKPLK$P$#P#!P%$KJ%KI&J&%JI'&I('H(IH)(H*)G*HF*GF+*F,+8:987:7;:E,FE-,6;7E.-D.ED/.C/DC0/C10B1CB215;6B324;5B43B;4A;BA<;@<A@=<?=@?>="),
+			"H":("v)hpgchpgcMZ9@MZ9@hp*zhp*z/v9@/v9@G/gcG/gc/vv)/v","')('*)+-,+!-'%*%+*%$+$!+'&%#!$"),
+			"I":("H465/t65/t/vq(/vq(65Vh65VhbKq(bKq(hp/thp/tbKH4bK","#%$'%!-'!#!%-('+-,+(-+)(+*)&%'"),
+			"J":("jq/vjiWvi@](fma<cEcz]-fIUdh5Mwi;DZiF<^hl4AgJ0bfB0c]q5$_;;BajCGbmJ6btPzb$V:^aXq[*Z-WzZ66D2'6D2'/v","8!987!7#!6#75#65$#4$5-/.4%$3%4-0/3&%-102&3-21-&2-'&,'-,('+(,+)(*)+"),
+			"K":("xWhpfNhp<|Kv<|hp.Whp.W/v<|/v<|IHea/vvf/vK%J!","&('&)()+*),+&$)$,)$!,&%$#!$"),
+			"L":("sVhp4mhp4m/vCI/vCIbKsVbK","#%$#&%#'&#!'"),
+			"M":("{#hplzhpi~7_SITyIOTy:[?x5p7d3Qhp%yhp+,/v<0/vNxKBdE/vuw/v","*(+(,+(-,-$.$/.$!/'-(-%$&-'#!$*)(&%-"),
+			"N":("uIhpbbhp9$:#9#hp+Xhp+X/v>+/vg~]Vh#/vuI/v","&$'$('$)(*!+)!*#)$&%$#!)"),
+			"O":("zWJ+ysQMw*X0qa_6jad^a*gxSYiPJLiRADhc8bfK3Od..G_c*,YR(*U0&lOz&aHT($Bb*}=3/k845A4]:i2CAw0HL%/5TM/6[A/lcC0vhn2SoA5^u>:ry5Ask9FDi&@*eV;^_Z8MZ46wTZ5tKP5lE+6{?<9A:P=47ZAO5]Gr5lOX7!T68pWw<^]'Bqa?JEbvS}b{Ywam_c^}eSZ]i%V5kCO^","8:97:87;:7<;6<75<65=<5F=FE=4F54GFD=EC=D4HGC>=B>C3H43IHB?>A?B3JI2J3@?A2KJ1K2@!?W!@0K10LKW#!0ML/M0V#WV$#/NM.N/U$V.ONU%$-O.T%U-POS%TS&%R&S-QP,Q-,RQ,&R+&,+'&*'+*(')(*"),
+			"P":("v.A5u)E0qYIljJN3cUPN[$QyPnS$=.S-=.hp.hhp.h/vQ3/{]a0vhP3)m{5FrU8OuK<hg(?dej<bbY9x[S7tUm6dO361=.6-=.LgN-LdU0L/[2JyaxI)e/FYfsCK","+9,9-,9.-9/.90/980810+:97186175165214253243!2@!3@#!?#@?$#>$?=$><$=<%$;%<+):);:)%;)&%)'&)('+*)"),
+			"Q":("GbiH>Xh,7Sf)1dc--*^O(wWX&mPD&aHu(e@{-l:%3=5m8Q36>41=Dd/~L%/5TM/6[A/kcD0thn2Pmz4qs@8cwH=xy=B?zIGUz6OgxJU:ugYqq+_WlucAh4e[agg]YGhtT|iGWYm3[7oVaTpuh$qXoNq/tbp!xXnY~uslwcv;mlwpc$wqYyv|SkuJMCr?H~mZk9FHi&@.eV;e_Z8TZ36~TZ5|J|5wDc70?<9E:P=27ZAG5]G[5lOG7!T*8pWo<^]!Bna9JDboS}bsYwaf_c^yeSZZi%V6kCOc","021/20/32.3/.43-4.-54,5-X5,W5XW65V6W,YX+Y,U6V+ZYT6U+[ZT76*[+S7T*][S87R8S*^]R98)^*R:9k:R)_^(_)(a_k;:j;k'a('baj<;i<j'cb&c'i=<h=i&dcg=h%d&f=g%edf>=%fe%>f%?>$?%$@?#@$#A@!A#!BAQB!QCBQDCHJIPDQPEDGJHPFEFJGPJFOJPOKJNKONLKMLN"),
+			"R":("xvhph_hpUZStR,Q*NUOVK0NiFkNF>+ND>+hp/ehp/e/vQR/|Zf0ibQ1rgd3HlJ5|nw8FpT;Mpu?HoyBLmSEYhtHfc~J]^/KwXRL]^@N*bvP-fzSQab=4_B:p[u8|X97VQG6B>+65>+HCLlH@R_GoWYFk[LE6^xCIad@r","+C,C-,C.-C/.C0/C10CB1+DCA1BA21@2A@32?3@>3?>43J4>J54I5JI65H6IG6HG76F7GE7F+)D)ED)7E)87)98):9);:)(;+*)';('<;&<'%<&%=<$=%$!=#!$"),
+			"S":("t?ZUqo_RmscRh|edbLgTVYi#KXiX@giL3<h^*zge+$_W8/b>BYbxMob|U;bNZIa^___Dct]CeBYue@VvbTT*[.QoU$P.B#L*9AIf3hGM/6DS,U@w,:=A-2:V/f7E3X4k8J2d@c0VI0/RRS/,[F/Cfd0$mh0kmg7Nbl64T~5WJg5wDu6c?/8M;p;8;7=W;m?Z>iB.D?DBJ*Exa8JMj&M:o3OqrNRWt;UT","DFEDGFCGDCHGCIHBJCJICAKBKJBALK@LA@ML@NM?N@?ON>O?>PO>QP=Q>=RQ<R=<SR<TS;T<;UT:U;9U:9VU8V98WV7W87XW6X76YX5Y65!Y4!53!43#!2#31#2+-,1$#0$1+.-/$0+/.+$/+%$+&%*&+*'&)'*)('"),
+			"T":("x#6=Vg6=VghpH4hpH46=(x6=(x/vx#/v","')()'&&#)%#&!)#%$#"),
+			"U":("v.V)ttZ'rJ^hmHcnerf~]Sh[T8iQF0iC;}gm62e|2Cd(/=ai,X]H*vWF*k/v91/v97V5:0Y]<#]E>Z_=B%ajH<c%P[cBX|b^_|_gdL]DfgYEgkUygq/vv7/v","/10/21=?>=!?<!=/32<#!.3/;#<.43;$#:$;.54-5.-65:%$9%:-76,7-8%9,87,%8+%,+&%*&+*'&)'*)('"),
+			"V":("~]/vXihpEChp!=/v2S/vOnaco</v","$&%$'&'!('#!$#'"),
+			"W":("{?/vt5hpaThpNnMB>vhp,thp%Y/v33/v8MaEJDBJT?BJima?nM/v","')('*)-!.-#!*,+*%,%-,$-%*&%'&*$#-"),
+			"X":("}$hpjphpO/P^5Chp#IhpFVJi&9/v7>/vOLDWil/vzB/vWzJI","')('*)*,+*-,'-*-$!&$'-'$&%$#!$"),
+			"Y":("~u/vViS5VihpH6hpH6S&!!/v3C/vP3KunO/v","&('&)()!*)#!&#)%#&%$#"),
+			"Z":("tr5l<{aruwaruwhp*yhp*yc8c16e,F6e,F/vtr/v",")+*)!+)(!(#!'#('$#'%$&%'"),
+			"[":("gbz(=qz(=q)}gb)}gb/sK:/sK:t3gbt3","#'$'%$'&%#('#)(#!)"),
+			"\\":("uhqsh@qs.v+K<>+K","#%$#!%"),
+			"]":("c)z(98z(98t3SPt3SP/s98/s98)}c))}","')('&)&!)%!&#%$#!%"),
+			"^":("uvJigqJiNO5d8QJi+hJiI?/vTl/v","$'&$!(&%$#!$'$("),
+			"_":("~uz(!!z(!!t#~ut#","#%$#!%"),
+			"`":("Wz5[Iu5[0$+KDE+K","#%$#!%"),
+			"a":("e#hpdbc7]SewVLgqLRiLAkiN:_h]4Pfw0:dS-eaa,g]U-&X~.zUu2sRu9nP<A~NkKcN*cNN&c4H-^^D]XpB}T&B<LQB*C2B_:UCq3PE13R>R<M=0GJ<*SW;u]x<^e|>+jQ?tmnAzpJDyqTH5q[hpcNS[JBSfB^Tu>^VS<0Xl;^]U=fa.@[bLE!cCJJcNOVb}Vra=^F]{cN[,",">@?=@>=A@<A=;:<:9<9A<9BA98B8CB7C86C76DC5D64D54ED4FE3F42G3GF31G20G1/G0HG/TFG/IH.I/.JI-J.-KJ-LK,L-SFT#FS+L,R#S+ML+NMQ#R+ON*O+!F#P#Q*PO*#P*$#)$*)%$(%)(&%'&("),
+			"b":("u|Tys;ZeniaHf}eZZ]hAOFiBE7i3;dhJ.{fK.u+K<{+K<SCJB/@+IY=PR8<(]0;|en=4ku?So~B?ssFqv%MIgDLFeAH!bdEA]~CGY(BNTvB9O}B_J$D2CaG$<}K(=#abEqc!MIcMU)bx[:aPbs]NfVWzgrRj","*,+*-,021/20/32.3/.43.<4-<.;4<-=<:4;->=*@-@?-?>-:5495:859758765*A@H67H!6G!HG#!F#GF$#E$FD$E*BA*CBC$DC%$*%C*&%)&*(&)('&"),
+			"c":("owg>ehhqYPiHNti6D@gr:hdx57aS1f])/,VH.lP//tL91uHi6ADE;|A0B4>lL-<bW=<#c8<@jE=&ox>$omDsemB|^bBIW&B9PTBjJ~D%EmF)ASI&>pL@=PP,=dU%@0Z,E)^aKEawS8c$^)c+hab)ow_O","132143154051075765870/8098/.9/.:9.;:.<;-<.-=<->=,>-+>,+?>+@?*@+*A@)A*)BA(B)(CBF!G'C('DCE!F'ED'!E&!'&#!%#&%$#"),
+			"d":("*jQ-,,KQ.sGB2%D=7DA&>#>XDZ=0K5<DSO<,Zn<IcL=0cN+KqZ+KqZhpe#hpdP_{]tdOX!fePMhpFYi_=@hn6-fN0~c4-A]r+/W593T%:'XL</]?@=aTEuc/K%c?PKbOX>^EcJWZcMCv]zC!U-B7LlB@G6C/BJDV>%G&;$JH9FNl",",.-,/.)+*(+)(,+(D,D/,ED('E(&F'FE'&GF%G&%HG%IHC/D%JI$J%$KJ#K$#LK!L#!;L:;!:<;:=<9=:B1C1/C9>=8>9A1B0/18?>A21@2A8@?82@728732743647546"),
+			"e":("uJP|u+T*:-T*:EVg<-Z;?t^MEUakL$c%S-cO^)cBkYbEq'acq&gff>hyXuiSLwiPCahW;gfr56d.0=_S,NXe+AQC,KL(/KG+34Cc7R@{<n>kBM=2K0;}VR<%^^<yf$>JkX@joHC7s3G<u&KufnNLf^KPe2H@bIEc]NCaX<BOSTAoLxAjHOBBCZCe>RFc;GJL:(NK","=?>=@?=A@<A=;A<;BAMB;MLBLCB;NMKCL:N;:ONJCKICJ9O:IDC9POHDI9QP8Q9GDHGED8RQFEGF!E7R87FR7!F7#!$#77%$6%76&%6'&5'65(',.-5)(4)5+.,4*)*.+4.*3.42.32/.1/210/"),
+			"f":("xt25is1(]@1JVC34SO5%Q+8OPpBkvEBkvEHsPpHsPphpBRhpBRHs(IHs(IBkBRBkB]9fC}5GG91MLB.MS=,D].+4jR*|xt+w","7986976!95!6#!54#5$#44%$3%43&%3'&2'32('1(2/101/.+(1.+1+)(-+.+*)-,+"),
+			"g":("kGBZmmDYoqGpo~L2nTO@l,Q~ghThaPV~Y;X8ROXwGHXj=eW':OYu:C]Z=6_?A~a8^}asg2bPmDcdr?eLv-g}wxk#wxmyv@q@qvtkipww^QyeT=zIFxzF<ty]51x=.sv7*ks2)Poa*/lu,=j(4Veb1'dM-}b1,m^l-!Zv.aXG11V84xS_0#OK.WKg/&Gb0~DE5v@V>t=CI*<!Q=;wX6<PxC<]xCBY8Roh:7qc>GsBHqtUV6tOa1s5ehqSgto|i)mahLkSfEiz^PhGAEgd<qiS:!kS8jmI=,LU?5OABKQDG&RkKNSFPnSHVvRT]9P9aYLZaiHy_SFW[nD9WhBWS#AZM6ADGQAzBfCK?pE,=-H7","TVUSVTSWVSXWRXSyXRxXyRzywXxQzR!XwQ{zv!wv#!Q|{u#vu$#Q}|P}Qt$uO}Pt%$s%tOk}NkOs&%Nlkr&sNmlr'&MmNq'rMnmMonp'qp('MpoM(pL(ML)(-)LK-L-*)K.-,*-,+*J.KJ/.I/JI0/H0IH10H21H32H43G4HG54F5GF65g6Ff6gEgFEhge6fe76Eihd7eDiEc7dDjic87CjDCYjc98b9ca9bCZYBZC_9aB[Z_:9^:_B][A]B]:^A:]A;:@;A?;@?<;?=<>=?"),
+			"h":("r+hpd&hpcnH}aqEa^ZD#YxB_U7B2O]BKJjCcE6F'<{Jp<{hp.uhp.u+K<{+K<]C0@_@qG!>6L?<lRx;z[b<$e-=0l1@!pODHr#I/",".0/.105764753743872832(8(982)('9(1)21*)&9'.,1,+1+*1%9&$9%$:9.-,$!:#!$"),
+			"i":("SA+6WA,WY7-{Z?/HZP1=YY3+W,4{Sn6&PK6MKV63Gc4tED33D;0cE7.FGm,IJy+HN(*zJRBc2RBc2R<]Xh<]Xhbgrwbgrwhp/rhp/rbgJRbg","465436376<73:<;:7<:87:981!20!10#!0$#/$0/%$.%/.&%-&.-'&-(',(-+(,+)(+*)"),
+			"j":("^0*wc%+7fv,DiF.6jE/wj;1li$3Zem5Nb!6@]C6MX>5vT84-RL1uRB/fT)-LVx+{Ya+8gp<]g^k)dvpn^[u/XDwMS&x{Lpy{E+zO;.z=22yE,TxB,TqD0crC7VsP?qt6G_t0NTs!T$p5VSm3WTi}WZBc/rBc/r<]","H3IHG3G43F4GE4FE54D5EC5D=?>=@?C65B6C=A@A6B=6A=76=87<8=<98;9<;:92#!1#21$#0$10%$/%0/&%.&/.'&.('-(.-)(,)-,*)+*,"),
+			"k":("yrhpfThp>]P(>fhp0ahp0a+K>f+Ke2<]wi<]OcP+","&('&$($*)$+*$!+&%$#!$"),
+			"l":("JR1L2R1L2R+KXh+KXhbgrwbgrwhp/rhp/rbgJRbg","#%$#!%!&%+&!)+*)&+)'&)('"),
+			"m":("jhhpjbFFifC@gbB-d0B&_qCCZzFMUpKfUphpH~hpHnEZGSB}EeB*C1A~A/BC>}CJ<#Ea61Kb61hp)7hp)7<]3}<]4^DU:(?H>H=/BI<-H%;rND<xRI?fT'DiXC@O[j>1b;<Mfy;ul)<(p&<vtM?9wLDbwahp","BDC;=<BED:=;576587AEBAFE9=:9>=@FA@%F%GF&%@9?>90//.9.?9?&@809-?.$G%?'&810,?-821538328?('#G$,(?#HG!H#+),)(,543+*)"),
+			"n":(".u<];H<];}CJAL@EG<>*Kn<qRR;{[p<$eG=0k3?EnOAqpkDzr$I/r+hpd%hpcmHyaWEC]tC^XGBGQXB7MpBiIqCtDCFE<|Jk<zhp.uhp","(*)'*(;#!;$#&*'&+*%+&%,+%5,54,$5%$654-,3-4$76;9$98$87$2-31-21.-;:91/.0/1"),
+			"o":("w-UGtdZmq<_RmZc6gbf(_xh#Vji>KgiXDFi'=lg|5feE.~a*++Y{)UU#)WNd+XIc.BF+3aA|:l>tA2=5GT<:Pq;oYu<Bc,=Pk3@)p7C*ssFKvUK<wRP)hbMcfiIbcRFO]1ClV9BRP3B'ISBGDmC>?(EV:jI)8cL_7eQ#8EV@:NZ<>*^RD'b.KFc>S/cAY'bM^)a3cC]~fjYWhGV?i1RM","6875865984954:93:43D:D;:3EDC;D3FEB;CB<;3GF2G3A<B2HG1H2@<A@=<1IH0I1?=@?>=0JIV>?/J0V!>/KJU!V.K/U#!T#U.LKS#T.ML-M.S$#R$S-NMR%$Q%RP%Q-ON,O-,PO,%P,&%+&,+'&+('*(+)(*"),
+			"p":("v9QhuDVgsNZJo|_LiWdOaog4Y0hNR(i6Gui==!hN<zz(.uz(.u<];H<]<=CbAV@HG|=yMw<]T.;|]e;~en=6kv?QpRBnspFwunLCgnOhg.KmeMH3b,Du[IBxV!B6QMBNN'C%HjD^BZGX<{K,<~aaDMbsJVcER1c:YzaxbP]he{X{gXT[","354365-/.-0/2632761721871@80@10A@?8@0BA0CB>8?-E0ED0DC0>98=9>=:9<:=-FE;:<;!:M!;M#!L#ML$#K$LK%$J%KJ&%-+F+GFI&J+HGH&I+&H+'&+('-,++)(*)+"),
+			"q":("*gQc+}K}.ZGc1tDG8O@JBN=IN&</X7<;e/=KqZ;tqZz(cMz(cya?^.dHTKgvL)iFCQiT<>hX7Xg+3Ye0/Aa^,O[:++Vj9-Q79PVG;G[7>P_EAFaxDob{IgcCOPbfVo_*]XZscMWRcMCw^oC-UyB2L[B9EICJ?sEm<9Hn9~Lb","*,+')('*)'E*ED*D,*&F'FE'&GF%G&%HGC,D%IH$I%$JI#J$#KJ#9K!9#!:98:!7:87;:B.C.,CA.B7<;6<7A/.@/A6=<6>=?/@6?>5?65/?50/405304310213-,."),
+			"r":("24<]?&<]?KDDENA$K@>XR{<WZ!;ubs<&hs<ymw>PrFA4uCDkvnI>vsLghpLdgrGSf@E?d#Cf_]BXXBB0RDC%MPDYFeGp@HKf@Hhp24hp","')('*);#!;$#'+*&+'&,+%,&5,%4,5$5%4-,$653-4$762-3;9$98$87$1-21.-0.10/.;:9"),
+			"s":("q,]<ohaElGd)i%eecqgDZ}hbR]iPG6iT;ii+0ah$0daA>AbqGVcBRlc?Z-bH_<a&b5^CbY[MayY}_NXl[WW[U,V(GnSu>0Qs7:O43sLl1|J&1lFo3+D34zB=8+@?<}>JCc<wKz<$WA;wc+<Akl=*klCZb>BUSiAzJVB=EXC0BnD)A)E7@1F^@CHoC'JwKOM7YDOOdeQFlDT4oVVjptY6","CEDBECBFEBGFAGBHGA@HAIH@?I@?JI?KJ>K?>LK>ML=M>=NM=ON<O=<PO;P<;QP:Q;:RQ:SR9S:9TS8T97T87UT6U76VU5V64V53V43!V2!32#!1#20#1+-,/#0/$#+.-+/.+$/+%$+&%+'&*'+*(')(*"),
+			"t":("r9h9kshz^*iMQOhyHLg5BHd5?=_u=rZu=iBk'&Bk'&<]=i<]=i1&Kn/0Kn<]r9<]r9BkKnBkL%ZTN-^RQ2aDUTbX^#c?k!bkr9az",".0/-0.+-,30-+*-*3-203)3*102)43)54(5)(65(769!:'7('878!9'!8&!'%!&%#!%$#"),
+			"u":("r+hpeOhpe!b%^Ye#WJgMRsh_LmiOC(iK<>hO6vfc2rd(04_V.|ZE.t<]<z<]=/ZA?s_[EQb|LTc?QPbdWo_TcyXmd%<]r+<]",".0/.107987!9-1.-216$7$!7-325$6,3-#!$5%$4%5,43,%4+%,+&%*&+*'&)'*)('"),
+			"v":("'<<]7<<]OLa(iZ<]y&<]W5hpG&hp","(#!($#$&%$'&('$"),
+			"w":("|%<]p7hp^3hpO*Q.A7hp0_hp$z<]2b<]:yaaJ4G/T=G/fZaAn.<]","')('*)-!.-#!*,+*%,%-,$-%*&%$#-'&*"),
+			"x":("z#hpgAhpOKVg9lhp'ZhpG&Q^)(<];*<]PHLrgA<]xe<]X9Qo","')('*)*,+*-,'-*&-'&$-$!-&%$#!$"),
+			"y":("y&<]XoghS/mnN1qrG^u_@Fx7:#yT1Dz?&hz2&nsU0'sr59sK9lrJ>zp:CHm*Gehw'<<]7<<]P(_yiY<]","1321434!54#!1#41$#0$1/$0/%$.%/-%.-&%,&-*,+*&,*'&*('*)("),
+			"z":("rWhp/5hp/5cW^$Bk0ABk0A<]ow<]owBB@vb_rWb_","&('&)(&%)%*)$*%$+*$!+#!$"),
+			"{":("lJz(b*z$W_y<OqwLJEtUGTqREpmPEUXRDRV/BvTR@=S9<IR76?QZ/&QV/&Kf6(Kc;zK;@fJ:C^H^EKEwEl6wGd2)K^.WP@,MU0+6[:*@lE)rlJ/sbJ0!Y11NUT3QS36bRcE}OIJhJIM0C6N_HXOHN'QPPaSSRqW5SAm8V9p}Z;rpbNt&lJt3",";=<:=;9=:8=9>=87>87?>7@?7A@6A75A65BA4B54CB3C42C31C2/10/C1/DC/ED/FE/GF/.G-G.-HG,H-+H,+IH*I+)I*)JI(J)(KJ'K('LK&L'&ML&NM&!N%!&$!%#!$"),
+			"|":("V)z(Hoz(Ho!!V)!!","#%$#!%"),
+			"}":("4K)}>m*%G7*iN8,BSL.iWE2JY-70Y>DXZdGe^VI]cTJuj4KaqyKfqyQVjvQYd|R$_ER}[7T[YGWYY2l<XAocV1s0RzuZOEw>Inxq@vy{4Kz(4Kt3>Pt'EhrUIBpRKdmCL5W?NCSeRLPn[bNbV=MvPpKkN6IhL&F)KT6mI63WE^1P>L0!4K/s","N#!N$#N%$N&%NM&M'&L'MK'LJ'KJ('J)(I)JI*)H*IH+*H,+G,HG-,G.-G/.F/GE/FD/E0/DD10C1DC21C32B3CB43B54A5BA65@6A?6@?76>7?<>=<7><87<98<:9<;:"),
+			"~":("yfIWy4McwjPYu+SWp;V5kFW]edXA]nX9V$V{OHTNDQO,@&Mx;KMo7mNs5}P94WRa44U}';U}'BSZ(NP#*rLz-mJc1VH}6yGX>8G,E'G^LYImR0LHWzOA]^Q2b3QffvQQjVOxl-MXltIY","9;:8;98<;7<8D#!7=<6=7C#D6.=-=.5.6->=,>-B#C5/.50/B$#,?>A$B+?,510A%$+@?@%A+%@415421324+&%*&+*'&)'*)('")
+		}
+		base91str="!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~"
+		base91inv={base91str[i]:i for i in range(len(base91str))}
+		if transform is None: transform=Transform([0]*3)
+		def addedge(a,b):
+			pt=(a,b) if a<b else (b,a)
+			edge=edgecount.get(pt,[a,b,0])
+			edge[2]+=1
+			edgecount[pt]=edge
+		x0,y0=0.0,0.0
+		for char in text:
+			data=font.get(char,None)
+			if data is None:
+				if char=="\n": x0,y0=0.0,y0+1.0
+				elif char=="\t": x0+=width*4
+				elif char==" ": x0+=width
+				continue
+			vertstr,facestr=data
+			toparr,botarr=[],[]
+			# Convert the font data to vertices.
+			for i in range(0,len(vertstr),4):
+				x=(base91inv[vertstr[i+0]]*91+base91inv[vertstr[i+1]])*(width/8281.0)+x0
+				y=(base91inv[vertstr[i+2]]*91+base91inv[vertstr[i+3]])*(  1.0/8281.0)+y0
+				toparr+=[self.addvertex([x,0.0,y],transform)]
+				botarr+=[self.addvertex([x,-thickness,y],transform)]
+			# Convert the font data to top and bottom faces.
+			edgecount={}
+			for i in range(0,len(facestr),3):
+				v0=base91inv[facestr[i+0]]
+				v1=base91inv[facestr[i+1]]
+				v2=base91inv[facestr[i+2]]
+				self.addface([toparr[v0],toparr[v1],toparr[v2]],mat)
+				self.addface([botarr[v1],botarr[v0],botarr[v2]],mat)
+				addedge(v0,v1)
+				addedge(v2,v0)
+				addedge(v1,v2)
+			# Fill in the edges between the top and bottom faces.
+			for edge in edgecount.values():
+				a,b,count=edge
+				if count==1:
+					self.addface([toparr[b],toparr[a],botarr[a]],mat)
+					self.addface([botarr[a],botarr[b],toparr[b]],mat)
+			x0+=width
+
+
+	def textdim(self,text,thickness):
+		# Returns the physical dimensions for a block of text.
+		width=0.520093
+		maxx,x0,y0=0.0,0.0,1.0
+		for char in text:
+			if char=="\n": x0,y0=0.0,y0+1.0
+			elif char=="\t": x0+=width*4
+			else: x0+=width
+			if maxx<x0: maxx=x0
+		return Vector([maxx,thickness,y0],False)
 
 
 	def buildbvh(self):
@@ -813,7 +1051,6 @@ class MeshInstance(object):
 
 #---------------------------------------------------------------------------------
 # Bounding Volume Hierarchy
-#---------------------------------------------------------------------------------
 
 
 class BVHNode(object):
@@ -1117,7 +1354,6 @@ class BVH(object):
 
 #---------------------------------------------------------------------------------
 # Scenes
-#---------------------------------------------------------------------------------
 
 
 class Scene(object):
@@ -1189,9 +1425,12 @@ class Scene(object):
 				cosi=-cosi
 				matcol=mat.color
 				matlum=mat.luminosity
+				colsum=0.0
 				for i in range(3):
 					col[i]*=matcol[i]
 					ret[i]+=matlum*col[i]
+					colsum+=abs(col[i])
+				if colsum<1e-5: break
 			refract=0
 			if uniform()<mat.refractprob:
 				# Perform refraction and determine if we have total internal reflection.
@@ -1318,7 +1557,6 @@ class Scene(object):
 
 #---------------------------------------------------------------------------------
 # Example Scene
-#---------------------------------------------------------------------------------
 
 
 if __name__=="__main__":

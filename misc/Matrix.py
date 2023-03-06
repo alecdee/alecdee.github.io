@@ -1,11 +1,14 @@
 """
-Matrix.py - v1.08
+
+Matrix.py - v1.09
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
 
+
 --------------------------------------------------------------------------------
 Standards
+
 
 Make no assumptions about the element types. Using aggregate functions like
 sum() assumes int, float, etc.
@@ -15,8 +18,10 @@ element (ex: +=, -=, ...). If the elements are mutable types, then only their
 references will be copied and the subsequent __i__ operations will modify both
 the current and original elements.
 
+
 --------------------------------------------------------------------------------
 Properties
+
 
 Matrix dimensions are given by (rows,cols). Coordinates are (r,c).
 Let A=(Ar,Ac) and B=(Br,Bc), then AB=(Bc,Ac).
@@ -30,29 +35,33 @@ Swapping two rows will multiply the determinant by -1.
 Multiplying a row by a constant c will multiply the determinant by c.
 A matrix is orthogonal if A^-1=A^t.
 
+
 --------------------------------------------------------------------------------
 TODO
 
+
 Increase inverse matrix stability.
-Increase determinant algorithm stability. Ex: raytracer normal errors.
-Division free determinant, Richard Bird or Samuelson-Berkowitz.
-See: http://www.pkoprowski.eu/lcm/lcm.pdf
 Add generalized inverse. Get rid of reduced().
-Add example if name=main for solving polynomial.
+
+
 """
 
 import math,random
 from copy import deepcopy
 
+
 class VecInterface(object):
 	"""A helper class to allow rows and columns to be treated as vectors."""
 	# Keep class definition here for compatibility with pickle.
 
+
 	def __init__(self,elem,step,start,count,l):
 		self.arr=[Vector(elem,False,i*step,start,count) for i in range(l)]
 
+
 	def __getitem__(self,i):
 		return self.arr[i]
+
 
 	def __setitem__(self,i,v):
 		u=self.arr[i]
@@ -60,11 +69,14 @@ class VecInterface(object):
 		for i in range(len(u)):
 			u[i]=v[i]
 
+
 	def __len__(self):
 		return len(self.arr)
 
+
 	def __iter__(self):
 		return iter(self.arr)
+
 
 class Matrix(object):
 	"""
@@ -72,9 +84,9 @@ class Matrix(object):
 	Makes no assumptions about element types.
 	"""
 
-	#---------------------------------------------------------------------------------
+	# ----------------------------------------
 	# Management
-	#---------------------------------------------------------------------------------
+
 
 	def __init__(self,rows=None,cols=None,copy=True):
 		if hasattr(rows,"__getitem__"):
@@ -108,21 +120,22 @@ class Matrix(object):
 		self.row=VecInterface(elem,cols,1,cols,rows)
 		self.col=VecInterface(elem,1,cols,rows,cols)
 
+
 	def __getitem__(self,r):
 		return self.row[r]
+
 
 	def __setitem__(self,r,v):
 		self.row[r]=v
 
+
 	def __len__(self):
 		return self.rows
+
 
 	def __iter__(self):
 		return iter(self.row)
 
-	def __repr__(self):
-		def rp(r): return "["+",".join([repr(e) for e in r])+"]"
-		return "Matrix(["+",".join([rp(r) for r in self])+"])"
 
 	def __str__(self):
 		"""String representation. Each row and column are padded individually."""
@@ -132,7 +145,7 @@ class Matrix(object):
 		for r in range(rows):
 			for c in range(cols):
 				# Convert the element value into a string and split it by eol's.
-				s=self[r][c]
+				s=self.elem[r*cols+c]
 				if isinstance(s,float):
 					s="{0:.6f}".format(s)
 				s=str(s).split("\n")
@@ -164,12 +177,19 @@ class Matrix(object):
 			if r<rows: ret+="\n"
 		return ret
 
-	#---------------------------------------------------------------------------------
+
+	def __repr__(self):
+		def rp(r): return "["+",".join([repr(e) for e in r])+"]"
+		return "Matrix(["+",".join([rp(r) for r in self])+"])"
+
+
+	# ----------------------------------------
 	# Helper Functions
-	#---------------------------------------------------------------------------------
+
 
 	_zero=0
 	_one=1
+
 
 	@staticmethod
 	def dcopy(e):
@@ -177,11 +197,12 @@ class Matrix(object):
 			return deepcopy(e)
 		return e
 
+
 	@staticmethod
 	def getinverse(x):
 		if type(x) in (int,bool,float):
 			y=abs(x)
-			if y<1e-20 or y>1e20:
+			if y<1e-10 or y>1e10:
 				return None
 			return 1.0/x
 		try:
@@ -189,22 +210,27 @@ class Matrix(object):
 		except (ArithmeticError,ZeroDivisionError,TypeError):
 			return None
 
+
 	@staticmethod
 	def setunit(unit):
 		Matrix._zero=unit-unit
 		Matrix._one=Matrix._zero+unit
 
+
 	@staticmethod
 	def getzero():
 		return Matrix._zero+Matrix._zero
+
 
 	@staticmethod
 	def getone():
 		return Matrix._zero+Matrix._one
 
+
 	def checkdims(a,r,c):
 		if a.rows!=r or a.cols!=c:
 			raise AttributeError("Bad dimensions: ("+str(a.rows)+","+str(a.cols)+")!=("+str(r)+","+str(c)+")")
+
 
 	def replace(a,b):
 		assert(isinstance(b,Matrix))
@@ -214,9 +240,10 @@ class Matrix(object):
 		a.col.arr=b.col.arr
 		return a
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Basic
-	#---------------------------------------------------------------------------------
+
 
 	def __eq__(a,b):
 		rows,cols=a.rows,a.cols
@@ -240,8 +267,10 @@ class Matrix(object):
 			return True
 		return False
 
+
 	def __ne__(a,b):
 		return not a==b
+
 
 	def dist(a,b):
 		"""Frobenius norm."""
@@ -253,6 +282,7 @@ class Matrix(object):
 			dist+=dif*dif
 		return dist**0.5
 
+
 	def one(a):
 		"""Make A the identity matrix."""
 		a.zero()
@@ -262,6 +292,7 @@ class Matrix(object):
 			elem[i*cols+i]=one()
 		return a
 
+
 	def zero(a):
 		"""Zeroize matrix A."""
 		elem,zero=a.elem,Matrix.getzero
@@ -269,15 +300,17 @@ class Matrix(object):
 			elem[i]=zero()
 		return a
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Algebra
-	#---------------------------------------------------------------------------------
+
 
 	def __add__(a,b):
 		# Return A+B as a separate matrix.
 		a.checkdims(b.rows,b.cols)
 		ae,be=a.elem,b.elem
 		return Matrix([ae[i]+be[i] for i in range(a.elems)],(a.rows,a.cols),False)
+
 
 	def __iadd__(a,b):
 		# Calculate A+=B.
@@ -286,11 +319,13 @@ class Matrix(object):
 		for i in range(a.elems): ae[i]+=be[i]
 		return a
 
+
 	def __sub__(a,b):
 		# Return A-B as a separate matrix.
 		a.checkdims(b.rows,b.cols)
 		ae,be=a.elem,b.elem
 		return Matrix([ae[i]-be[i] for i in range(a.elems)],(a.rows,a.cols),False)
+
 
 	def __isub__(a,b):
 		# Calculate A-=B.
@@ -299,8 +334,10 @@ class Matrix(object):
 		for i in range(a.elems): ae[i]-=be[i]
 		return a
 
+
 	def __neg__(a):
 		return Matrix([-e for e in a.elem],(a.rows,a.cols),False)
+
 
 	def __mul__(a,b):
 		if isinstance(b,Vector):
@@ -329,43 +366,51 @@ class Matrix(object):
 			else: aval-=brows
 		return m
 
+
 	def __imul__(a,b):
 		return a.replace(a*b)
+
 
 	def __rmul__(a,b):
 		# We will only get here if b is not a matrix.
 		return Matrix([b*e for e in a.elem],(a.rows,a.cols),False)
+
 
 	def __truediv__(a,b):
 		if not isinstance(b,Matrix):
 			return Matrix([e/b for e in a.elem],(a.rows,a.cols),False)
 		return a*b.inv()
 
+
 	def __itruediv__(a,b):
 		return a.replace(a/b)
+
 
 	def __rtruediv__(a,b):
 		# We will only get here if b is not a matrix.
 		return b*a.inv()
 
-	# python2 mappings for a/b.
-	__div__=__truediv__
-	__idiv__=__itruediv__
-	__rdiv__=__rtruediv__
 
 	def __floordiv__(a,b):
 		if not isinstance(b,Matrix):
 			return Matrix([e//b for e in a.elem],(a.rows,a.cols),False)
 		return a*b.inv()
 
+
 	def __ifloordiv__(a,b):
 		return a.replace(a//b)
 
+
+	# python2 mappings for a/b.
+	__div__=__truediv__
+	__idiv__=__itruediv__
+	__rdiv__=__rtruediv__
 	__rfloordiv__=__rtruediv__
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Exponentiation
-	#---------------------------------------------------------------------------------
+
 
 	def inv(a):
 		"""Returns the multiplicative inverse of A."""
@@ -419,6 +464,7 @@ class Matrix(object):
 				elem[dval+perm[i]]=tmp[i]
 		return ret
 
+
 	def __pow__(a,exp):
 		# exp=-1,0,+1 should evaluate in one operation.
 		# Need A=(V^-1)*P*V decomposition or ln(A) for non integer exp.
@@ -446,21 +492,22 @@ class Matrix(object):
 			iexp>>=1
 		return val
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Misc
-	#---------------------------------------------------------------------------------
+
 
 	def T(a):
 		"""Transposition of A."""
 		elem,r,c,dcopy=a.elem,a.rows,a.cols,Matrix.dcopy
 		return Matrix([dcopy(elem[(i%r)*c+i//r]) for i in range(a.elems)],(c,r),False)
 
+
 	def __abs__(a):
 		"""Returns the determinant of A."""
 		cols=a.cols
 		if a.rows!=cols:
-			# It may be acceptable to return sqrt(abs(A^t*A)) here. This would coincide with
-			# finding the magnitude of a column vector.
+			# It may be acceptable to return sqrt(abs(A^t*A)) here.
 			raise AttributeError("Determinant is only defined for square matrices: ("+str(a.rows)+","+str(cols)+")")
 		if cols==0:
 			# The empty matrix has a determinant of 1.
@@ -497,6 +544,7 @@ class Matrix(object):
 			det=det*elem[i*cols+i]
 		return -det if sign else det
 
+
 	def reduced(a):
 		"""Returns the matrix in reduced row echelon form."""
 		rows,cols=a.rows,a.cols
@@ -529,9 +577,10 @@ class Matrix(object):
 					elem[sval+c]-=elem[dval+c]*mul
 		return ret
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Geometry
-	#---------------------------------------------------------------------------------
+
 
 	def ortho(a):
 		"""Returns the orthonormal basis of the matrix. Non orthogonal rows are
@@ -579,6 +628,7 @@ class Matrix(object):
 					elem[sval+c]=zero()
 		return ret
 
+
 	def rotate(a,angs):
 		# Perform a counter-clockwise, right-hand rotation given n*(n-1)/2 angles. In 3D,
 		# angles are expected in ZYX order.
@@ -625,15 +675,16 @@ class Matrix(object):
 					jval+=dim
 		return ret
 
+
 class Vector(object):
 	"""
 	n-dimensional vector class.
 	Makes no assumptions about element types.
 	"""
 
-	#---------------------------------------------------------------------------------
+	# ----------------------------------------
 	# Management
-	#---------------------------------------------------------------------------------
+
 
 	def __init__(self,x=None,copy=True,start=0,step=1,elems=None):
 		"""
@@ -658,22 +709,28 @@ class Vector(object):
 		self.step=step
 		self.elems=elems
 
+
 	def __str__(self):
 		return str(Matrix(self,(1,len(self)),False))
+
 
 	def __repr__(self):
 		return "Vector(["+",".join([repr(x) for x in self])+"])"
 
+
 	def __len__(self):
 		return self.elems
+
 
 	def __getitem__(self,i):
 		assert(i>=0 and i<self.elems)
 		return self.elem[self.start+i*self.step]
 
+
 	def __setitem__(self,i,v):
 		assert(i>=0 and i<self.elems)
 		self.elem[self.start+i*self.step]=v
+
 
 	def __iter__(self):
 		elem=self.elem
@@ -682,14 +739,16 @@ class Vector(object):
 			yield elem[pos]
 			pos+=step
 
+
 	def checkdims(u,v):
 		ul,vl=len(u),len(v)
 		if ul!=vl:
 			raise AttributeError("Vector lengths different: "+str(ul)+"!="+str(vl))
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Basic
-	#---------------------------------------------------------------------------------
+
 
 	def __eq__(u,v):
 		if not isinstance(v,Vector):
@@ -702,11 +761,14 @@ class Vector(object):
 				return False
 		return True
 
+
 	def __ne__(a,b):
 		return not a==b
 
+
 	def dist(u,v):
 		return abs(u-v)
+
 
 	def randomize(u):
 		"""Turn u into a random unit vector."""
@@ -723,36 +785,43 @@ class Vector(object):
 		for i in range(n): u[i]*=mag
 		return u
 
+
 	def zero(u):
 		zero=Matrix.getzero
 		for i in range(len(u)):
 			u[i]=zero()
 		return u
 
-	#---------------------------------------------------------------------------------
+
+	# ----------------------------------------
 	# Algebra
-	#---------------------------------------------------------------------------------
+
 
 	def __add__(u,v):
 		u.checkdims(v)
 		return Vector([u[i]+v[i] for i in range(len(u))],False)
+
 
 	def __iadd__(u,v):
 		u.checkdims(v)
 		for i in range(len(u)): u[i]+=v[i]
 		return u
 
+
 	def __sub__(u,v):
 		u.checkdims(v)
 		return Vector([u[i]-v[i] for i in range(len(u))],False)
+
 
 	def __isub__(u,v):
 		u.checkdims(v)
 		for i in range(len(u)): u[i]-=v[i]
 		return u
 
+
 	def __neg__(u):
 		return Vector([-x for x in u],False)
+
 
 	def __mul__(u,v):
 		"""Returns the scalar dot product if v is a vector: u.x*v.x+u.y*v.y+...
@@ -768,31 +837,34 @@ class Vector(object):
 		# Elementwise scalar product u*s.
 		return Vector([x*v for x in u],False)
 
+
 	def __rmul__(u,v):
 		# Make sure to use the scalar on the left side (s*u instead of u*s).
 		return Vector([v*x for x in u],False)
+
 
 	def __imul__(u,v):
 		for i in range(len(u)): u[i]*=v
 		return u
 
+
 	def __truediv__(u,v):
 		return Vector([x/v for x in u],False)
+
 
 	def __itruediv__(u,v):
 		for i in range(len(u)): u[i]/=v
 		return u
 
-	# python2 mappings for a/b.
-	__div__=__truediv__
-	__idiv__=__itruediv__
 
 	def __floordiv__(u,v):
 		return Vector([x//v for x in u],False)
 
+
 	def __ifloordiv__(u,v):
 		for i in range(len(u)): u[i]//=v
 		return u
+
 
 	@staticmethod
 	def cross(vecarr):
@@ -810,12 +882,18 @@ class Vector(object):
 			ret[i]=abs(m)*(1,-1)[i&1]
 		return ret
 
-	#---------------------------------------------------------------------------------
-	# Misc
-	#---------------------------------------------------------------------------------
 
-	def sqr(u):
-		return u*u
+	# python2 mappings for a/b.
+	__div__=__truediv__
+	__idiv__=__itruediv__
+
+
+	# ----------------------------------------
+	# Misc
+
+
+	def sqr(u): return u*u
+
 
 	def __abs__(u):
 		s=u*u
@@ -826,20 +904,25 @@ class Vector(object):
 
 	def norm(u): return Vector(u).normalize()
 
+
 	def normalize(u):
 		mag=Matrix.getinverse(abs(u))
 		if mag is None: u.randomize()
 		else: u*=mag
 		return u
 
+
+	@staticmethod
 	def angle(u,v):
 		return math.acos((u*v)/(abs(u)*abs(v)))
 
-	def randomangle(ret,norm,ang):
+
+	@staticmethod
+	def randomangle(norm,ang):
 		# Generate a random vector R such that acos(R*N)<=ang.
 		#
 		# We do this by generating a random unit vector on the dim-1 sphere that's
-		# perpendicular to N. We then rotate the random vector towards N along the
+		# orthogonal to N. We then rotate the random vector towards N along the
 		# plane between the two unit vectors.
 		#
 		# Given
@@ -849,24 +932,26 @@ class Vector(object):
 		#      P=(N+(R-N)*u)/|N+(R-N)*u|
 		#
 		# We want u such that N*P=C.
-		dim=len(ret)
-		if dim<2:
-			for i in range(dim): ret[i]=norm[i]
-			return
-		# Generate a random vector that's not colinear with norm.
+		rand=Vector(norm)
+		if len(norm.elem)<2: return rand
+		# Generate a random vector that's orthogonal to norm.
 		while True:
-			ret.randomize()
-			dot=ret*norm
-			if dot>-0.9999 and dot<0.9999: break
-		# Make ret perpendicular to norm. ret=ret-norm*(ret*norm).
-		ret=ret-norm*dot
-		ret.normalize()
-		# Randomly rotate towards norm. ret=norm+(ret-norm)*u.
+			rand.randomize()
+			dot=rand*norm
+			rand-=norm*dot
+			mag=rand*rand
+			if mag>1e-10: break
+		# Randomly rotate towards norm. Solve u for rand=norm+(rand-norm)*u.
 		while True:
-			cs =cos(random.random()*ang)
-			sn2=1.0-cs*cs
-			u  =(sn2-cs*math.sqrt(sn2))/(sn2*2-1)
+			cs=math.cos(random.random()*ang)
+			sn=1.0-cs*cs
+			u =(sn-abs(cs)*math.sqrt(sn))/(sn*2-1)
 			if u>-1e-10 and u<=1.0: break
-		ret=norm+(ret-norm)*u
-		ret.normalize()
+		smul=u/math.sqrt(mag)
+		nmul=1.0-u
+		# If the angle is wide enough, we'll need to point away from norm.
+		if cs<0.0: smul,nmul=-smul,-nmul
+		rand=rand*smul+norm*nmul
+		rand.normalize()
+		return rand
 
