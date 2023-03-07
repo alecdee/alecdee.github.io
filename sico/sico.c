@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.c - v1.50
+sico.c - v1.51
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -323,9 +323,9 @@ void SicoParseAssembly(SicoState* st,const char* str) {
 			j=i;
 			if (ISOP(c)) {
 				// Operator. Decrement addr since we're modifying the previous value.
+				if (addr--==0) {err="Leading operator";}
 				if (op) {err="Double operator";}
 				if (op==':') {err="Operating on declaration";}
-				if (addr--==0) {err="Leading operator";}
 				op=c;
 				NEXT;
 			} else if (CNUM(c)<10) {

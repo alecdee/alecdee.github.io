@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.js - v1.29
+sico.js - v1.30
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -555,9 +555,9 @@ function SicoParseAssembly(st,str) {
 			j=i;
 			if (ISOP(c)) {
 				// Operator. Decrement addr since we're modifying the previous value.
+				if (SicoU64IsZero(addr)) {err="Leading operator";}
 				if (op!==0 ) {err="Double operator";}
 				if (op===58) {err="Operating on declaration";}
-				if (SicoU64IsZero(addr)) {err="Leading operator";}
 				SicoU64Dec(addr);
 				op=c;
 				NEXT();
