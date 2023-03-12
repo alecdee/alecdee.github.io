@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-editor.js - v1.04
+editor.js - v1.05
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -18,8 +18,10 @@ TODO
 
 
 function SicoInitEditor() {
-	var runbutton=document.getElementById("sico_run");
+	var runbutton  =document.getElementById("sico_run");
 	var resetbutton=document.getElementById("sico_reset");
+	var savebutton =document.getElementById("sico_save");
+	var loadbutton =document.getElementById("sico_load");
 	var input=document.getElementById("sico_editor");
 	var output=document.getElementById("sico_output");
 	var graphics=document.getElementById("sico_canvas");
@@ -57,26 +59,68 @@ function SicoInitEditor() {
 		}
 	}
 	// Setup the run button.
-	runbutton.onclick=function() {
-		if (sico.state===SICO_RUNNING) {
-			running=1-running;
-		} else {
-			sico.ParseAssembly(input.value);
-			running=1;
-		}
-		if (running===1) {
-			setTimeout(update,0);
-		}
-	};
-	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Resume&nbsp;";
-	runbutton.style.width=runbutton.clientWidth.toString()+"px";
-	runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Run";
+	if (runbutton!==null) {
+		runbutton.onclick=function() {
+			if (sico.state===SICO_RUNNING) {
+				running=1-running;
+			} else {
+				sico.ParseAssembly(input.value);
+				running=1;
+			}
+			if (running===1) {
+				setTimeout(update,0);
+			}
+		};
+		runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Resume&nbsp;";
+		runbutton.style.width=runbutton.clientWidth.toString()+"px";
+		runbutton.innerHTML="&#9654;&nbsp;&nbsp;&nbsp;Run";
+	}
 	// Setup the reset button.
-	resetbutton.onclick=function() {
-		sico.Clear();
-		running=0;
-		setTimeout(update,0);
-	};
+	if (resetbutton!==null) {
+		resetbutton.onclick=function() {
+			sico.Clear();
+			running=0;
+			setTimeout(update,0);
+		};
+	}
+	// Setup the save button.
+	if (savebutton!==null) {
+		savebutton.onclick=function() {
+			var file=new Blob([input.value],{type:"text/plain"});
+			var a=document.createElement("a");
+			var url=window.URL.createObjectURL(file);
+			a.href=url;
+			a.download="sico_source.txt";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			window.URL.revokeObjectURL(url);
+		};
+	}
+	// Setup the load button.
+	if (loadbutton!==null) {
+		loadbutton.onclick=function() {
+			var prompt=document.createElement("input");
+			prompt.type="file";
+			prompt.onchange=function() {
+				if (prompt.files.length>0) {
+					var file=prompt.files[0];
+					var reader=new FileReader();
+					reader.onload=function(event) {
+						sico.Clear();
+						running=0;
+						input.value=event.target.result;
+						updatetext();
+						sico.Print("Loaded "+file.name+"\n");
+					};
+					reader.readAsText(file);
+				} else {
+					sico.Print("No file selected\n");
+				}
+			};
+			prompt.click();
+		};
+	}
 	// Setup the advanced menu.
 	advanced.onclick=function() {
 		if (menu.style.display==="none") {
@@ -124,8 +168,8 @@ function SicoInitEditor() {
 				if (xhr.status===200) {
 					var name=path.split("/");
 					input.value=xhr.response;
-					sico.Print("Loaded "+name[name.length-1]+"\n");
 					updatetext();
+					sico.Print("Loaded "+name[name.length-1]+"\n");
 				} else {
 					sico.Print("Unable to open "+path+"\n");
 				}
