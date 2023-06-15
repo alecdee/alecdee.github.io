@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
 
 
-sico.js - v1.30
+sico.js - v1.31
 
 Copyright 2020 Alec Dee - MIT license - SPDX: MIT
 alecdee.github.io - akdee144@gmail.com
@@ -856,7 +856,7 @@ function SicoRun(st,stoptime) {
 			tmp1=SicoGetMem(st,tmp0);bhi=tmp1.hi;blo=tmp1.lo;SicoU64Inc(tmp0);
 			tmp1=SicoGetMem(st,tmp0);chi=tmp1.hi;clo=tmp1.lo;SicoU64Inc(tmp0);
 			iphi=tmp0.hi;iplo=tmp0.lo;
-			timeiters-=32;
+			timeiters-=3;
 		}
 		// Input
 		if (bhi===0) {
@@ -881,10 +881,9 @@ function SicoRun(st,stoptime) {
 			mblo=0;
 		} else if (blo===0xfffffffb) {
 			// Read time. time = (seconds since 1 Jan 1970) * 2^32.
-			var date=performance.timing.navigationStart+performance.now();
+			var date=performance.timeOrigin+performance.now();
 			mbhi=(date/1000)>>>0;
 			mblo=((date%1000)*4294967.296)>>>0;
-			timeiters-=2;
 		} else {
 			// We couldn't find a special address to read.
 			mbhi=0;
@@ -920,7 +919,7 @@ function SicoRun(st,stoptime) {
 			mem=st.mem;
 			alloc=st.alloc;
 			alloc2=alloc-2;
-			timeiters-=8;
+			timeiters-=3;
 			continue;
 		}
 		// Special addresses.
@@ -935,7 +934,7 @@ function SicoRun(st,stoptime) {
 		} else if (alo===0xfffffffe) {
 			// Print to stdout.
 			SicoPrint(st,String.fromCharCode(mblo&255));
-			timeiters-=1;
+			timeiters-=2;
 		} else if (alo===0xfffffffa) {
 			// Sleep.
 			var sleep=mbhi*1000+mblo*(1000.0/4294967296.0);

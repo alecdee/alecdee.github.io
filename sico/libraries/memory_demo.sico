@@ -265,7 +265,7 @@ Optimize uint.mul to have same time complexity as uint.div
 	fib0 or fib1 to hval0 and hval1 when a carry occurs.
 	Unroll first loop iteration and simplify loop?
 	See if 2*fib0+fib1<MOD limit works better than fib0+fib1<MOD.
-	Calculate inverse (~high or ~low) instead to flip carrying operation.
+	mul_opt.cpp, map lval0/lval1 carries to integers. See if unique.
 
 Optimize or/and/xor. Simplify top bit setting by changing .done jump destination
 when terminating loop.
