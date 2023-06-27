@@ -2,199 +2,25 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>SICO - Libraries</title>
-	<link rel="stylesheet" href="../../style/style.css" type="text/css">
-	<script type="text/javascript" src="../../style/style.js"></script>
+	<meta http-equiv="refresh" content="0; url=https://deegen1.github.io/sico/libraries/index.html">
+	<title>Site has moved</title>
+	<link rel="stylesheet" href="../style/style.css" type="text/css">
+	<script type="text/javascript" src="../style/style.js"></script>
 </head>
 <body>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="header"><a href="../../index.html">Alec Dee's Homepage</a></div>
+<div id="header"><a href="./index.html">Alec Dee's Homepage</a></div>
 
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Libraries ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content"><h1>Libraries</h1>
-<p>This page lists the libraries I've worked on to build <a href="../index.html">SICO</a> up from
-one instruction into an easy to use architecture.</p>
+<div class="content"><h1>Redirect</h1>
 <br>
-<p>Libraries:<br>
+<p>The site has moved. Click <a href="https://deegen1.github.io/sico/libraries/index.html">here</a> if you have not
+been redirected.</p>
 <br>
-<a href="#master" style="margin-left:4rem">Master Library</a><br>
-<a href="#strings" style="margin-left:4rem">Strings</a><br>
-<a href="#uint" style="margin-left:4rem">Unsigned Math</a><br>
-<a href="#int" style="margin-left:4rem">Signed Math</a><br>
-<a href="#random" style="margin-left:4rem">Random Number Generation</a><br>
-<a href="#memory" style="margin-left:4rem">Memory</a><br></p>
-</div>
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Master Library ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="master"><h1>Master Library</h1>
-<p><a href="./master.sico">master.sico</a> contains all libraries for ease of use in other
-projects.</p>
-</div>
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Strings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="strings"><h1>Strings</h1>
-<p>Download <a href="./string.sico">string.sico</a> or try the live demo
-<a href="../index.html?demo=String%20Printing">here</a>.</p>
-<br>
-<p><a href="./string.sico">string.sico</a> is fundamental to working on other libraries. It defines
-the <i>print</i> function which allows us to print ASCII strings as well as numerical values. This
-is needed to print diagnostic messages and see what other libraries are actually doing. It can be
-called like this:</p>
-<br>
-<div class="codeblock langsico">0 ? string.print 'x ' '= '  string.uint x 10 0</div>
-<br>
-<p>The example can be broken up into a few parts:</p>
-<br>
-<table class="listtable">
-<tr><td><i>0 ? string.print</i></td><td>the SICO instruction that jumps to the <i>string.print</i>
-function and gives it our calling address.</td></tr>
-<tr><td><i>'x '  '= '      </i></td><td>the ASCII literal values for "x = ". We could also use
-<i>120 32 61 32</i></td></tr>
-<tr><td><i>string.uint     </i></td><td>a special value that tells <i>string.print</i> that the
-next value is an unsigned integer.</td></tr>
-<tr><td><i>x               </i></td><td>the unsigned integer to output.</td></tr>
-<tr><td><i>10              </i></td><td>the ASCII value for an end-of-line.</td></tr>
-<tr><td><i>0               </i></td><td>the end of the string.</td></tr>
-</table>
-<br>
-<p>So if <i>[x]</i> is <i>20</i>, then this will get output to the console:</p>
-<br>
-<div class="consoleblock">x = 20</div>
-<br>
-<p><a href="./string_demo.sico">string_demo.sico</a> shows how to use the library. It's also used in
-the live version linked above.</p>
-</div>
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Unsigned Math ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="uint"><h1>Unsigned Math</h1>
-<p>Download <a href="./uint.sico">uint.sico</a> or try the live demo
-<a href="../index.html?demo=Unsigned%20Math">here</a>.</p>
-<br>
-<p><a href="./uint.sico">uint.sico</a> defines all of the usual functions for handling unsigned
-integer arithmetic and bitwise operations. For example, to compute the bitwise AND of <i>[B]</i> and
-<i>[C]</i> and store it <i>[A]</i>, we would call</p>
-<br>
-<div class="codeblock langsico">0 ? uint.and A B C</div>
-<br>
-<p>All of the functions are fairly well optimized. The table below gives the worst case number of
-instructions required per function call.</p>
-<br>
-<table class="datatable insttable headerrow">
-<tr><td>Function</td><td>Time (64 bits)</td></tr>
-<tr><td>write</td><td>2303</td></tr>
-<tr><td>read</td><td>1456</td></tr>
-<tr><td>cmp</td><td>29</td></tr>
-<tr><td>min</td><td>34</td></tr>
-<tr><td>max</td><td>34</td></tr>
-<tr><td>set</td><td>24</td></tr>
-<tr><td>neg</td><td>25</td></tr>
-<tr><td>add</td><td>30</td></tr>
-<tr><td>sub</td><td>31</td></tr>
-<tr><td>mul</td><td>885</td></tr>
-<tr><td>div</td><td>613</td></tr>
-<tr><td>gcd</td><td>1330</td></tr>
-<tr><td>shl</td><td>168</td></tr>
-<tr><td>shr</td><td>543</td></tr>
-<tr><td>not</td><td>26</td></tr>
-<tr><td>and</td><td>485</td></tr>
-<tr><td>or</td><td>486</td></tr>
-<tr><td>xor</td><td>487</td></tr>
-</table>
-<br>
-<p><a href="./uint_demo.sico">uint_demo.sico</a> shows how to use the library. It's also used in
-the live version linked above.</p>
-</div>
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Signed Math ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="int"><h1>Signed Math</h1>
-<p>Download <a href="./int.sico">int.sico</a>.</p>
-<br>
-<p><a href="./int.sico">int.sico</a> covers all of the signed integer functions that
-<a href="./uint.sico">uint.sico</a> doesn't cover. The table below gives the worst case number of
-instructions required per function call.</p>
-<br>
-<table class="datatable insttable headerrow">
-<tr><td>Function</td><td>Time (64 bits)</td></tr>
-<tr><td>write</td><td>2317</td></tr>
-<tr><td>read</td><td>1472</td></tr>
-<tr><td>cmp</td><td>37</td></tr>
-<tr><td>min</td><td>43</td></tr>
-<tr><td>max</td><td>43</td></tr>
-<tr><td>abs</td><td>30</td></tr>
-<tr><td>mul</td><td>893</td></tr>
-<tr><td>div</td><td>640</td></tr>
-<tr><td>shr</td><td>555</td></tr>
-</table>
-</div>
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Random Number Generation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="random"><h1>Random Number Generation</h1>
-<p>Download <a href="./random.sico">random.sico</a> or try the live demo
-<a href="../index.html?demo=Random%20Numbers">here</a>.</p>
-<br>
-<p><a href="./random.sico">random.sico</a> defines a PRNG with a period of 2^64. It provides five
-functions for handling random numbers:</p>
-<br>
-<div class="codeblock langsico">random.hash    ret num
-random.seed    num
-random.jump    num
-random.get     dst
-random.mod     dst mod
-random.shuffle arr len</div>
-<br>
-<p>For instance, to get a random number modulo 52 and store it in <i>rand</i>, call:</p>
-<br>
-<div class="codeblock langsico">0 ? random.get rand mod
-rand: 0
-mod:  52</div>
-<br>
-<p><a href="./random_demo.sico">random_demo.sico</a> shows how to use the library. It's also used in
-the live version linked above.</p>
-</div>
-
-<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Memory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div class="content" id="memory"><h1>Memory</h1>
-<p>Download <a href="./memory.sico">memory.sico</a> or try the live demo
-<a href="../index.html?demo=Memory">here</a>.</p>
-<br>
-<p><a href="./memory.sico">memory.sico</a> defines functions for managing and allocating memory. In
-order to allocate memory safely, the library needs to be last when concatenating with other
-libraries.</p>
-<br>
-<div class="codeblock langsico">mem.getargs dst0 refs0 dst1 refs1 ... 0
-
-mem.get     val mem
-mem.getidx  val mem idx
-mem.set     mem val
-mem.setidx  mem idx val
-
-mem.zero    dst len
-mem.copy    dst src len
-mem.sort    arr len cmp
-
-mem.alloc   mem len
-mem.realloc ret mem len
-mem.free    mem
-mem.alloc.verifyfree</div>
-<br>
-<p>For instance, to allocate a block of memory with <i>30</i> cells and set <i>arr[2]=400</i>:</p>
-<br>
-<div class="codeblock langsico">0 ? mem.alloc arr len
-0 ? mem.set   arr idx val
-0 ? mem.free  arr
-
-arr: 0
-len: 30
-idx: 2
-val: 400</div>
-<br>
-<p><a href="./memory_demo.sico">memory_demo.sico</a> shows how to use the library. It's also used in
-the live version linked above.</p>
 </div>
 
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Footer ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
-<div id="footer">Created on 18 Dec 2020 - Modified on 19 Dec 2022<br>
+<div id="footer">Created on 31 Dec 2017 - Modified on 1 Dec 2022<br>
 Questions and comments: akdee<b>OBFUS</b>144@g<b>CATE</b>mail.com<br>
-<a href="../../index.html">Alec Dee's Homepage</a></div>
+<a href="./index.html">Alec Dee's Homepage</a></div>
 </body>
 </html>
